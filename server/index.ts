@@ -15,8 +15,14 @@ declare module "express-session" {
 }
 
 const app = express();
-app.use(express.json({ limit: '1024mb' }));
-app.use(express.urlencoded({ extended: false, limit: '1024mb' }));
+app.use(express.json({ limit: "1024mb" }));
+app.use(express.urlencoded({ extended: false, limit: "1024mb" }));
+
+// Enable compression for all responses
+import compression from "compression";
+app.use(compression());
+
+
 
 const MemoryStore = (await import("memorystore")).default(session);
 
@@ -28,8 +34,8 @@ app.use(
     }),
     resave: false,
     saveUninitialized: false,
-    secret: process.env.SESSION_SECRET || "gcmn-library-secret-2024",
-  })
+    secret: process.env.SESSION_SECRET || "gcfm-library-secret-2026",
+  }),
 );
 
 app.use((req, res, next) => {
@@ -91,7 +97,7 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  const port = 5000;
+  const port = 5001;
   server.listen(
     {
       port,
@@ -99,6 +105,9 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
-    }
+      console.log(
+        `[Server] Restarted at ${new Date().toISOString()} to apply latest DB schema changes.`,
+      );
+    },
   );
 })();
