@@ -1,10 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
-import { registerRoutes } from '../server/routes';
 
 const app = express();
 
+// Trust Vercel's proxy for secure cookies
 app.set('trust proxy', 1);
 
 app.use(cors({
@@ -12,11 +12,9 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 
-// Simple memory session — works on Vercel
-// Users will need to re-login on cold starts (acceptable for now)
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret-key',
   resave: false,
@@ -29,15 +27,29 @@ app.use(session({
   }
 }));
 
+// Health check BEFORE registerRoutes — so if routes fail we still get a response
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     supabaseUrl: process.env.SUPABASE_URL ? 'set' : 'MISSING',
-    supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'set' : 'MISSING',
+    supabaseKey: (process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) ? 'set' : 'MISSING',
     nodeEnv: process.env.NODE_ENV
   });
 });
 
-registerRoutes(app);
+try {
+  // Use require for routes to catch import-time crashes in serverless logs
+  const { registerRoutes } = require('../server/routes');
+  registerRoutes(app);
+} catch (err: any) {
+  console.error('[STARTUP ERROR]', err.message, err.stack);
+  app.use('/api/*', (req, res) => {
+    res.status(500).json({ 
+      error: 'Server startup failed', 
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  });
+}
 
 export default app;

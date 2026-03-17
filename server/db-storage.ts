@@ -4,23 +4,35 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error("CRITICAL ERROR: Missing Supabase URL or Key in environment variables. Backend will fail.");
-}
-
 const SUPABASE_BACKEND_SECRET =
   process.env.SUPABASE_BACKEND_SECRET || "admin-backend-secret-8829";
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  global: {
-    headers: {
-      "x-backend-secret": SUPABASE_BACKEND_SECRET,
-    },
-  },
+let _supabase: any = null;
+export function getSupabase() {
+  if (!_supabase) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !key) {
+      console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      throw new Error("Missing Supabase credentials");
+    }
+    _supabase = createClient(url, key, {
+      global: {
+        headers: {
+          "x-backend-secret": SUPABASE_BACKEND_SECRET,
+        },
+      },
+    });
+  }
+  return _supabase;
+}
+
+// Keep the export named 'supabase' but make it a lazy getter
+export const supabase = new Proxy({} as any, {
+  get: (target, prop) => getSupabase()[prop],
 });
+
 
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
@@ -2133,4 +2145,15 @@ class DbStorage {
   }
 }
 
-export const storage = new DbStorage();
+let _storage: DbStorage | null = null;
+export function getStorage() {
+  if (!_storage) {
+    _storage = new DbStorage();
+  }
+  return _storage;
+}
+
+export const storage = new Proxy({} as any, {
+  get: (target, prop) => (getStorage() as any)[prop],
+});
+
