@@ -5,6 +5,14 @@ import { registerRoutes } from '../server/routes';
 
 const app = express();
 
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
+}
+
+
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
   credentials: true
@@ -32,6 +40,15 @@ app.use(session({
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
 }));
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    supabaseUrl: process.env.SUPABASE_URL ? 'set' : 'MISSING',
+    supabaseKey: (process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) ? 'set' : 'MISSING',
+    nodeEnv: process.env.NODE_ENV
+  });
+});
 
 registerRoutes(app);
 
