@@ -8,7 +8,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  throw new Error("Missing Supabase URL or Key in environment variables");
+  console.error("CRITICAL ERROR: Missing Supabase URL or Key in environment variables. Backend will fail.");
 }
 
 const SUPABASE_BACKEND_SECRET =
