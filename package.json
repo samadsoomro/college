@@ -4,13 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npx tsx watch --exclude .vite --exclude dist --exclude vite.config.ts.timestamp-* server/index.ts\" \"vite\"",
-    "server": "cross-env VITE_EXTERNAL=true tsx watch --exclude .vite --exclude dist --exclude \"vite.config.ts.timestamp-*\" server/index.ts",
-    "vite": "vite --port 5173",
-    "start": "tsx server/index.ts",
+    "dev": "concurrently \"npx tsx server/index.ts\" \"vite\"",
     "build": "vite build",
-    "db:push": "drizzle-kit push",
-    "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -51,6 +46,7 @@
     "@types/multer": "^1.4.11",
     "@types/pg": "^8.16.0",
     "@types/uuid": "^10.0.0",
+    "@vercel/node": "^5.6.15",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

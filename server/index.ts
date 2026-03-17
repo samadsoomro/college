@@ -33,22 +33,25 @@ app.use(
 
 
 
-const MemoryStore = (await import("memorystore")).default(session);
+import connectPgSimple from "connect-pg-simple";
+const PgSession = connectPgSimple(session);
 
 app.use(
   session({
+    store: new PgSession({
+      conString: process.env.SUPABASE_DB_URL,
+      tableName: "user_sessions",
+      createTableIfMissing: true,
+    }),
     name: "gcfm.sid",
     secret: process.env.SESSION_SECRET || "gcfm-library-secret-2026",
     resave: false,
     saveUninitialized: false,
-    store: new MemoryStore({
-      checkPeriod: 86400000,
-    }),
     cookie: {
       maxAge: 86400000,
       httpOnly: true,
-      secure: false, // Set to true if using HTTPS
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
   }),
 );
