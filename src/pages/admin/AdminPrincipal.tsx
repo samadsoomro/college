@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Save, Upload, Loader2 } from "lucide-react";
 
 const AdminPrincipal: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [formData, setFormData] = useState({ name: "", message: "" });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
@@ -21,7 +23,7 @@ const AdminPrincipal: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const res = await api.get("/api/principal");
+      const res = await api.get(`/api/${collegeSlug}/principal`);
       if (res.data) {
         setFormData({
           name: res.data.name || "",
@@ -48,7 +50,7 @@ const AdminPrincipal: React.FC = () => {
         data.append("image", imageFile);
       }
 
-      await api.post("/api/admin/principal", data, {
+      await api.post(`/api/${collegeSlug}/admin/principal`, data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

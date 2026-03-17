@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Menu,
   X,
@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import collegeLogo from "@/assets/images/college-logo.png";
@@ -23,8 +23,9 @@ const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, isAdmin, isLibraryCard, logout } = useAuth();
-  const { settings } = useBranding();
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { user, profile, isAdmin, isSuperAdmin, isLibraryCard, logout } = useAuth();
+  const { settings } = useCollege();
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   useEffect(() => {
@@ -42,27 +43,27 @@ const Header: React.FC = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/");
+    navigate(`/${collegeSlug}`);
   };
 
   const navLinks = [
-    { path: "/", label: "Home" },
-    { path: "/blog", label: "Blog" },
-    { path: "/books", label: "Books" },
-    { path: "/notes", label: "Notes" },
-    { path: "/rare-books", label: "Rare Books" },
-    { path: "/events", label: "Events" },
-    { path: "/notifications", label: "Notifications" },
-    { path: "/library-card", label: "Library Card" },
+    { path: `/${collegeSlug}`, label: "Home" },
+    { path: `/${collegeSlug}/blog`, label: "Blog" },
+    { path: `/${collegeSlug}/books`, label: "Books" },
+    { path: `/${collegeSlug}/notes`, label: "Notes" },
+    { path: `/${collegeSlug}/rare-books`, label: "Rare Books" },
+    { path: `/${collegeSlug}/events`, label: "Events" },
+    { path: `/${collegeSlug}/notifications`, label: "Notifications" },
+    { path: `/${collegeSlug}/library-card`, label: "College Card" },
     {
       label: "About",
       children: [
-        { path: "/history", label: "History of College" },
-        { path: "/principal-message", label: "Principal’s Message" },
-        { path: "/faculty", label: "Faculty & Staff" },
+        { path: `/${collegeSlug}/history`, label: "History of College" },
+        { path: `/${collegeSlug}/principal-message`, label: "Principal’s Message" },
+        { path: `/${collegeSlug}/faculty`, label: "Faculty & Staff" },
       ],
     },
-    { path: "/contact", label: "Contact" },
+    { path: `/${collegeSlug}/contact`, label: "Contact" },
   ];
 
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
@@ -84,7 +85,7 @@ const Header: React.FC = () => {
         <nav className="flex items-center justify-between py-4 gap-6">
           {/* Logo */}
           <Link
-            to="/"
+            to={`/${collegeSlug}`}
             className="flex items-center gap-3 hover:scale-[1.02] transition-transform"
           >
             <img
@@ -107,7 +108,7 @@ const Header: React.FC = () => {
             {isAdminRoute && isAdmin && (
               <li>
                 <Link
-                  to="/"
+                  to={`/${collegeSlug}`}
                   className="relative font-medium transition-colors py-2 flex items-center gap-1 text-sm text-foreground hover:text-primary"
                   title="Back to Home"
                 >
@@ -183,7 +184,7 @@ const Header: React.FC = () => {
             {/* Admin Secret Menu (Desktop) */}
             {!isAdminRoute && isAdmin && (
               <li>
-                <Link to="/admin-dashboard">
+                <Link to={`/${collegeSlug}/admin-dashboard`}>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -197,21 +198,21 @@ const Header: React.FC = () => {
             )}
           </ul>
 
-          {/* Theme Toggle, Library Card, Donate & Auth Buttons */}
+          {/* Theme Toggle, College Card, Donate & Auth Buttons */}
           <div className="hidden lg:flex items-center gap-3">
             {!isAdminRoute && !isAdmin && (
               <>
-                <Link to="/library-card">
+                <Link to={`/${collegeSlug}/library-card`}>
                   <Button
                     variant="outline"
                     size="icon"
                     className="border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground"
-                    title="Library Card"
+                    title="College Card"
                   >
                     <CreditCard size={18} />
                   </Button>
                 </Link>
-                <Link to="/donate">
+                <Link to={`/${collegeSlug}/donate`}>
                   <Button
                     variant="outline"
                     size="icon"
@@ -229,17 +230,23 @@ const Header: React.FC = () => {
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary">
                   <User size={18} className="text-primary" />
                   <span className="text-sm font-medium">
-                    {isLibraryCard
-                      ? user.name || user.email?.split("@")[0]
-                      : profile?.full_name ||
-                        user.email?.split("@")[0] ||
-                        "User"}
+                    {isSuperAdmin 
+                      ? "Super Admin" 
+                      : isLibraryCard
+                        ? user.name || user.email?.split("@")[0]
+                        : profile?.full_name ||
+                          user.email?.split("@")[0] ||
+                          "User"}
                   </span>
-                  {isAdmin && (
+                  {isSuperAdmin ? (
+                    <span className="text-xs px-1.5 py-0.5 bg-indigo-600 text-white rounded font-bold">
+                      Super Admin
+                    </span>
+                  ) : isAdmin ? (
                     <span className="text-xs px-1.5 py-0.5 bg-primary text-primary-foreground rounded">
                       Admin
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   <LogOut size={16} className="mr-2" />
@@ -248,12 +255,12 @@ const Header: React.FC = () => {
               </>
             ) : (
               <>
-                <Link to="/login">
+                <Link to={`/${collegeSlug}/login`}>
                   <Button variant="ghost" size="sm">
                     Login
                   </Button>
                 </Link>
-                <Link to="/register">
+                <Link to={`/${collegeSlug}/register`}>
                   <Button size="sm" className="bg-primary hover:bg-primary/90">
                     Register
                   </Button>
@@ -266,17 +273,17 @@ const Header: React.FC = () => {
           <div className="lg:hidden flex items-center gap-2">
             {!isAdminRoute && !isAdmin && (
               <>
-                <Link to="/library-card">
+                <Link to={`/${collegeSlug}/library-card`}>
                   <Button
                     variant="outline"
                     size="icon"
                     className="border-primary/50 text-primary"
-                    title="Library Card"
+                    title="College Card"
                   >
                     <CreditCard size={18} />
                   </Button>
                 </Link>
-                <Link to="/donate">
+                <Link to={`/${collegeSlug}/donate`}>
                   <Button
                     variant="outline"
                     size="icon"
@@ -319,7 +326,7 @@ const Header: React.FC = () => {
                   {!isAdminRoute && isAdmin && (
                     <li className="px-4 pb-2">
                       <Link
-                        to="/admin-dashboard"
+                        to={`/${collegeSlug}/admin-dashboard`}
                         className="flex items-center gap-3 p-3 bg-primary text-primary-foreground rounded-lg font-bold shadow-sm"
                       >
                         <Shield size={18} />
@@ -331,7 +338,7 @@ const Header: React.FC = () => {
                   {isAdminRoute && isAdmin && (
                     <li>
                       <Link
-                        to="/"
+                        to={`/${collegeSlug}`}
                         className="block px-4 py-3 rounded-lg transition-colors hover:bg-secondary flex items-center gap-2"
                         title="Back to Home"
                       >
@@ -408,12 +415,12 @@ const Header: React.FC = () => {
                       </div>
                     ) : (
                       <div className="flex gap-2 px-4">
-                        <Link to="/login" className="flex-1">
+                        <Link to={`/${collegeSlug}/login`} className="flex-1">
                           <Button variant="outline" className="w-full">
                             Login
                           </Button>
                         </Link>
-                        <Link to="/register" className="flex-1">
+                        <Link to={`/${collegeSlug}/register`} className="flex-1">
                           <Button className="w-full">Register</Button>
                         </Link>
                       </div>

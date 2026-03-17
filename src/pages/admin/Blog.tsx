@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
 import { Switch } from "@/components/ui/switch"; // Assuming we might have this, if not I'll just use status dropdown
 
 const AdminBlog: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -58,7 +60,7 @@ const AdminBlog: React.FC = () => {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/blog", { credentials: "include" });
+      const res = await fetch(`/api/${collegeSlug}/admin/blog`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setPosts(data);
@@ -113,7 +115,7 @@ const AdminBlog: React.FC = () => {
         formData.append("image", file);
 
         try {
-          const res = await fetch("/api/admin/blog/upload-image", {
+          const res = await fetch(`/api/${collegeSlug}/admin/blog/upload-image`, {
             method: "POST",
             body: formData,
             credentials: "include",
@@ -188,8 +190,8 @@ const AdminBlog: React.FC = () => {
       }
 
       const url = currentPost
-        ? `/api/admin/blog/${currentPost.id}`
-        : "/api/admin/blog";
+        ? `/api/${collegeSlug}/admin/blog/${currentPost.id}`
+        : `/api/${collegeSlug}/admin/blog`;
       const method = currentPost ? "PATCH" : "POST";
 
       const res = await fetch(url, {
@@ -228,7 +230,7 @@ const AdminBlog: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this post?")) return;
     try {
-      const res = await fetch(`/api/admin/blog/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/blog/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -253,7 +255,7 @@ const AdminBlog: React.FC = () => {
 
   const handleTogglePin = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/blog/${id}/pin`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/blog/${id}/pin`, {
         method: "POST",
         credentials: "include",
       });
@@ -456,7 +458,7 @@ const AdminBlog: React.FC = () => {
                       variant="ghost"
                       className="h-7 w-7 text-blue-600"
                       onClick={() =>
-                        window.open(`/blog/${post.slug}`, "_blank")
+                        window.open(`/${collegeSlug}/blog/${post.slug}`, "_blank")
                       }
                       title="Preview"
                     >

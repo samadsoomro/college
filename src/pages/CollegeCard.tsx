@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 import {
   BookOpen,
   Wifi,
@@ -70,6 +71,7 @@ interface CustomField {
   showOnCard: boolean;
   showInAdmin: boolean;
   displayOrder: number;
+  options?: string[]; // Added options property
 }
 interface FormData {
   firstName: string;
@@ -97,8 +99,9 @@ interface SubmissionResult {
   formData: FormData;
 }
 
-const LibraryCard = () => {
-  const { settings } = useBranding();
+const CollegeCard = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { settings } = useCollege();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -126,10 +129,30 @@ const LibraryCard = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [emailDebounce, setEmailDebounce] = useState<any>(null);
+
+  const checkEmail = async (email: string) => {
+    if (!email || !email.includes("@")) {
+      setEmailStatus("idle");
+      return;
+    }
+    setEmailStatus("checking");
+    try {
+      const res = await fetch(
+        `/api/${collegeSlug}/auth/check-email?email=${encodeURIComponent(email)}`,
+      );
+      const data = await res.json();
+      setEmailStatus(data.available ? "available" : "taken");
+    } catch {
+      setEmailStatus("idle");
+    }
+  };
+
   useEffect(() => {
     const fetchFields = async () => {
       try {
-        const res = await fetch("/api/library-card-fields");
+        const res = await fetch(`/api/${collegeSlug}/library-card-fields`);
         if (res.ok) {
           const data = await res.json();
           setCustomFields(data);
@@ -141,7 +164,7 @@ const LibraryCard = () => {
       }
     };
     fetchFields();
-  }, []);
+  }, [collegeSlug]);
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -177,7 +200,7 @@ const LibraryCard = () => {
 
     // Validate dynamic fields
     const missingRequired = customFields
-      .filter((f) => f.isRequired && f.showOnForm)
+      .filter((f) => f.isRequired && f.showOnForm && f.fieldKey !== "class" && f.fieldKey !== "field")
       .filter((f) => !formData.dynamicFields?.[f.fieldKey]);
 
     if (missingRequired.length > 0) {
@@ -197,6 +220,14 @@ const LibraryCard = () => {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields including password.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (emailStatus === "taken") {
+      toast({
+        title: "Email Taken",
+        description: "This email is already registered. Please use a different one.",
         variant: "destructive",
       });
       return false;
@@ -252,24 +283,28 @@ const LibraryCard = () => {
 
     setIsSubmitting(true);
     try {
-      const res = await apiRequest("POST", "/api/library-card-applications", {
-        userId: user?.id || null,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        fatherName: formData.fatherName,
-        dob: formData.dob,
-        class: formData.studentClass,
-        field: formData.field,
-        rollNo: formData.rollNo,
-        email: formData.email,
-        phone: formData.phone,
-        addressStreet: formData.addressStreet,
-        addressCity: formData.addressCity,
-        addressState: formData.addressState,
-        addressZip: formData.addressZip,
-        password: formData.password,
-        dynamicFields: formData.dynamicFields,
-      });
+      const res = await apiRequest(
+        "POST",
+        `/api/${collegeSlug}/library-card-applications`,
+        {
+          userId: user?.id || null,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          fatherName: formData.fatherName,
+          dob: formData.dob,
+          class: formData.studentClass,
+          field: formData.field,
+          rollNo: formData.rollNo,
+          email: formData.email,
+          phone: formData.phone,
+          addressStreet: formData.addressStreet,
+          addressCity: formData.addressCity,
+          addressState: formData.addressState,
+          addressZip: formData.addressZip,
+          password: formData.password,
+          dynamicFields: formData.dynamicFields,
+        },
+      );
 
       const data = await res.json();
 
@@ -284,7 +319,7 @@ const LibraryCard = () => {
       toast({
         title: "Application Submitted!",
         description:
-          "Your library card application has been submitted successfully.",
+          "Your college card application has been submitted successfully.",
       });
     } catch (error: any) {
       console.error("Error submitting application:", error);
@@ -308,7 +343,7 @@ const LibraryCard = () => {
 
     const qrDestination = settings.cardQrEnabled
       ? settings.cardQrUrl
-      : `https://gcmn-library.replit.dev/library-card/${cardNumber}`;
+      : `${window.location.origin}/${collegeSlug}/library-card/${cardNumber}`;
     const qrCodeUrl = getQRCodeUrl(qrDestination, 100);
 
     // Fetch QR Code
@@ -396,7 +431,7 @@ const LibraryCard = () => {
 
     doc.setFontSize(10);
     doc.text(
-      settings.cardSubheaderText || "LIBRARY CARD",
+      settings.cardSubheaderText || "COLLEGE CARD",
       pageW / 2,
       topY + 25,
       { align: "center" },
@@ -482,17 +517,17 @@ const LibraryCard = () => {
     );
     addDetail("Roll Number:", formData.rollNo);
 
-    // Render Dynamic Fields (that were configured for card)
+    // Render Dynamic Fields (that were configured for card, excluding hardcoded ones)
     customFields
-      .filter((f) => f.showOnCard)
+      .filter((f) => f.showOnCard && f.fieldKey !== "class" && f.fieldKey !== "field")
       .forEach((f) => {
         const val = formData.dynamicFields?.[f.fieldKey] || "-";
         addDetail(`${f.fieldLabel}:`, val);
       });
 
-    // HIGHLIGHT LIBRARY CARD ID
+    // HIGHLIGHT COLLEGE CARD ID
     currentY += 1;
-    addDetail("Library Card ID:", cardNumber, true, true);
+    addDetail("College Card ID:", cardNumber, true, true);
     currentY += 1;
 
     addDetail("Issue Date:", new Date(issueDate).toLocaleDateString("en-GB"));
@@ -572,7 +607,7 @@ const LibraryCard = () => {
       termY,
     );
 
-    doc.save(`library-card-${cardNumber}.pdf`);
+    doc.save(`college-card-${cardNumber}.pdf`);
   };
 
   if (submissionResult) {
@@ -591,7 +626,7 @@ const LibraryCard = () => {
               Application Submitted Successfully!
             </h1>
             <p className="text-muted-foreground mb-8">
-              Your library card PDF is ready for download.
+              Your college card PDF is ready for download.
             </p>
 
             <Card className="mb-8">
@@ -603,7 +638,7 @@ const LibraryCard = () => {
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Library Card ID - Use this to register for library access
+                  College Card ID - Use this to register for college services
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Student ID: {submissionResult.studentId}
@@ -618,7 +653,7 @@ const LibraryCard = () => {
               data-testid="button-download-pdf"
             >
               <Download className="w-5 h-5" />
-              Download Library Card PDF
+              Download College Card PDF
             </Button>
           </motion.div>
         </div>
@@ -635,10 +670,10 @@ const LibraryCard = () => {
           className="text-center mb-12"
         >
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 md:whitespace-nowrap">
-            Get Your Library Card
+            Get Your College Card
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            A library card is your key to unlimited learning. Apply online and
+            A college card is your key to unlimited learning. Apply online and
             start exploring today.
           </p>
         </motion.div>
@@ -653,7 +688,7 @@ const LibraryCard = () => {
             Card Benefits
           </h2>
           <p className="text-muted-foreground text-center mb-8">
-            Everything included with your free library card:
+            Everything included with your free college card:
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {benefits.map((benefit, index) => (
@@ -948,12 +983,37 @@ const LibraryCard = () => {
                         id="email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) =>
-                          handleInputChange("email", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleInputChange("email", val);
+                          if (emailDebounce) clearTimeout(emailDebounce);
+                          setEmailDebounce(setTimeout(() => checkEmail(val), 600));
+                        }}
                         placeholder="Enter email address"
                         data-testid="input-email"
+                        className={
+                          emailStatus === "taken"
+                            ? "border-red-500 focus-visible:ring-red-500"
+                            : emailStatus === "available"
+                              ? "border-green-500 focus-visible:ring-green-500"
+                              : ""
+                        }
                       />
+                      {emailStatus === "taken" && (
+                        <p className="text-[10px] text-red-500 font-bold">
+                          ❌ Email already registered.
+                        </p>
+                      )}
+                      {emailStatus === "available" && (
+                        <p className="text-[10px] text-green-600 font-bold">
+                          ✅ Email is available.
+                        </p>
+                      )}
+                      {emailStatus === "checking" && (
+                        <p className="text-[10px] text-muted-foreground italic">
+                          Checking availability...
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number *</Label>
@@ -1106,4 +1166,4 @@ const LibraryCard = () => {
   );
 };
 
-export default LibraryCard;
+export default CollegeCard;

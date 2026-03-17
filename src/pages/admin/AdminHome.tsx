@@ -1,78 +1,133 @@
 import React, { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { 
+  Save, Plus, Trash2, Layout, Image as ImageIcon, 
+  BarChart3, Users, ExternalLink, RefreshCw, Upload,
+  XCircle, CheckCircle, Info
+} from "lucide-react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
 import {
-  Trash2,
-  Plus,
-  GripVertical,
-  CheckCircle,
-  XCircle,
-  Save,
-  Upload,
-} from "lucide-react";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 
+interface HomeContent {
+  heroHeading: string;
+  heroSubheading: string;
+  heroOverlayText?: string;
+  featuresHeading: string;
+  featuresSubheading: string;
+  affiliationsHeading: string;
+  ctaHeading: string;
+  ctaSubheading: string;
+}
+
+interface SliderImage {
+  id: string;
+  imageUrl: string;
+  order: number;
+  isActive: boolean;
+}
+
+interface HomeStat {
+  id: string;
+  label: string;
+  number: string;
+  icon: string;
+  iconUrl?: string;
+  color: string;
+  order: number;
+}
+
+interface Affiliation {
+  id: string;
+  name: string;
+  logoUrl: string;
+  link: string;
+  order: number;
+  isActive: boolean;
+}
+
 const AdminHome: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
-  // Content State
-  const [content, setContent] = useState({
-    heroHeading: "",
-    heroSubheading: "",
-    featuresHeading: "",
-    featuresSubheading: "",
-    affiliationsHeading: "",
-    ctaHeading: "",
-
-    ctaSubheading: "",
-    heroOverlayText: "",
+  // Queries
+  const { data: content, isLoading: contentLoading } = useQuery<HomeContent>({
+    queryKey: [`/api/${collegeSlug}/admin/home/content`],
+    queryFn: async () => {
+      const res = await fetch(`/api/${collegeSlug}/admin/home/content`);
+      if (!res.ok) throw new Error("Failed to fetch content");
+      return res.json();
+    }
   });
 
-  // Slider State
-  const [sliderImages, setSliderImages] = useState<any[]>([]);
-  const [sliderFile, setSliderFile] = useState<File | null>(null);
+  const { data: sliderImages = [], isLoading: sliderLoading } = useQuery<SliderImage[]>({
+    queryKey: [`/api/${collegeSlug}/admin/home/slider`],
+    queryFn: async () => {
+      const res = await fetch(`/api/${collegeSlug}/admin/home/slider`);
+      if (!res.ok) throw new Error("Failed to fetch slider");
+      return res.json();
+    }
+  });
 
-  // Affiliations State
-  const [affiliations, setAffiliations] = useState<any[]>([]);
+  const { data: stats = [], isLoading: statsLoading } = useQuery<HomeStat[]>({
+    queryKey: [`/api/${collegeSlug}/admin/home/stats`],
+    queryFn: async () => {
+      const res = await fetch(`/api/${collegeSlug}/admin/home/stats`);
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    }
+  });
+
+  const { data: affiliations = [], isLoading: affiliationsLoading } = useQuery<Affiliation[]>({
+    queryKey: [`/api/${collegeSlug}/admin/home/affiliations`],
+    queryFn: async () => {
+      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations`);
+      if (!res.ok) throw new Error("Failed to fetch affiliations");
+      return res.json();
+    }
+  });
+
+  // Local state for editing hero content
+  const [editedContent, setEditedContent] = useState<HomeContent | null>(null);
+
+  useEffect(() => {
+    if (content) {
+      setEditedContent(content);
+    }
+  }, [content]);
+
+  // Form states for new items
+  const [sliderFile, setSliderFile] = useState<File | null>(null);
   const [affiliationFile, setAffiliationFile] = useState<File | null>(null);
   const [affiliationName, setAffiliationName] = useState("");
   const [affiliationLink, setAffiliationLink] = useState("");
-
-  // Stats State
-  const [stats, setStats] = useState<any[]>([]);
+  
   const [newStatLabel, setNewStatLabel] = useState("");
   const [newStatNumber, setNewStatNumber] = useState("");
   const [newStatIcon, setNewStatIcon] = useState("BookOpen");
   const [newStatColor, setNewStatColor] = useState("text-pakistan-green");
   const [newStatFile, setNewStatFile] = useState<File | null>(null);
-  const [showNewStatCustomIcon, setShowNewStatCustomIcon] = useState(false);
-  const [showCustomIconMap, setShowCustomIconMap] = useState<
-    Record<string, boolean>
-  >({});
 
-  const ICON_OPTIONS = [
-    "BookOpen",
-    "Users",
-    "Award",
-    "TrendingUp",
-    "Search",
-    "Star",
-    "Heart",
-    "Clock",
-  ];
+  const ICON_OPTIONS = ["BookOpen", "Users", "Award", "TrendingUp", "Search", "Star", "Heart", "Clock"];
   const COLOR_OPTIONS = [
     { label: "Green", value: "text-pakistan-green" },
     { label: "Light Green", value: "text-pakistan-green-light" },
@@ -82,1040 +137,437 @@ const AdminHome: React.FC = () => {
   ];
 
   const getPositionLabel = (index: number) => {
-    const labels = [
-      "First",
-      "Second",
-      "Third",
-      "Fourth",
-      "Fifth",
-      "Sixth",
-      "Seventh",
-      "Eighth",
-      "Ninth",
-      "Tenth",
-    ];
+    const labels = ["First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth"];
     return labels[index] || `#${index + 1}`;
   };
 
-  const fetchContent = async () => {
-    try {
-      const res = await fetch("/api/admin/home/content");
-      if (res.ok) {
-        const data = await res.json();
-        if (data) setContent(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch content", error);
-    }
-  };
-
-  const fetchSlider = async () => {
-    try {
-      const res = await fetch("/api/admin/home/slider");
-      if (res.ok) setSliderImages(await res.json());
-    } catch (error) {
-      console.error("Failed to fetch slider", error);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const res = await fetch("/api/admin/home/stats");
-      if (res.ok) setStats(await res.json());
-    } catch (error) {
-      console.error("Failed to fetch stats", error);
-    }
-  };
-
-  const fetchAffiliations = async () => {
-    try {
-      const res = await fetch("/api/admin/home/affiliations");
-      if (res.ok) setAffiliations(await res.json());
-    } catch (error) {
-      console.error("Failed to fetch affiliations", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchContent();
-    fetchSlider();
-    fetchStats();
-    fetchAffiliations();
-  }, []);
-
-  // Content Handlers
+  // Handlers
   const handleContentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editedContent) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/home/content", {
+      const res = await fetch(`/api/${collegeSlug}/admin/home/content`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(content),
+        body: JSON.stringify(editedContent),
       });
       if (res.ok) {
-        toast({
-          title: "Success",
-          description: "Home content updated successfully",
-        });
-        fetchContent();
-      } else {
-        throw new Error("Failed to update");
+        toast({ title: "Success", description: "Home content updated" });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/content`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update content",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update content", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  // Slider Handlers
   const handleUploadSlider = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sliderFile) return;
-
     setLoading(true);
     const formData = new FormData();
     formData.append("file", sliderFile);
-
     try {
-      const res = await fetch("/api/admin/home/slider", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(`/api/${collegeSlug}/admin/home/slider`, { method: "POST", body: formData });
       if (res.ok) {
-        toast({ title: "Success", description: "Image uploaded successfully" });
+        toast({ title: "Success", description: "Image uploaded" });
         setSliderFile(null);
-        // Reset file input if possible or just rely on state
-        const fileInput = document.getElementById(
-          "slider-upload",
-        ) as HTMLInputElement;
+        const fileInput = document.getElementById("slider-upload") as HTMLInputElement;
         if (fileInput) fileInput.value = "";
-
-        fetchSlider();
-      } else {
-        throw new Error("Upload failed");
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload image",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Upload failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteSlider = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this image?")) return;
+    if (!confirm("Are you sure?")) return;
     try {
-      const res = await fetch(`/api/admin/home/slider/${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast({ title: "Deleted", description: "Image deleted successfully" });
-        fetchSlider();
+        toast({ title: "Deleted", description: "Image removed" });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete image",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Delete failed", variant: "destructive" });
     }
   };
 
   const toggleSliderStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const res = await fetch(`/api/admin/home/slider/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !currentStatus }),
       });
       if (res.ok) {
-        toast({ title: "Updated", description: "Status changed" });
-        fetchSlider();
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update status",
-        variant: "destructive",
-      });
-    }
+    } catch (error) {}
   };
 
-  const handleUpdateSliderImage = async (id: string, file: File) => {
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
+  const updateSliderOrder = async (id: string, order: number) => {
     try {
-      const res = await fetch(`/api/admin/home/slider/${id}/image`, {
-        method: "POST",
-        body: formData,
+      const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order }),
       });
       if (res.ok) {
-        toast({ title: "Success", description: "Image updated successfully" });
-        fetchSlider();
-      } else {
-        throw new Error("Update failed");
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update image",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) {}
   };
 
-  // Affiliations Handlers
   const handleUploadAffiliation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!affiliationFile || !affiliationName) return;
-
     setLoading(true);
     const formData = new FormData();
     formData.append("file", affiliationFile);
     formData.append("name", affiliationName);
     formData.append("link", affiliationLink);
-
     try {
-      const res = await fetch("/api/admin/home/affiliations", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations`, { method: "POST", body: formData });
       if (res.ok) {
         toast({ title: "Success", description: "Affiliation added" });
         setAffiliationFile(null);
         setAffiliationName("");
         setAffiliationLink("");
-        const fileInput = document.getElementById(
-          "affiliation-upload",
-        ) as HTMLInputElement;
+        const fileInput = document.getElementById("affiliation-upload") as HTMLInputElement;
         if (fileInput) fileInput.value = "";
-        fetchAffiliations();
-      } else {
-        throw new Error("Upload failed");
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add affiliation",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Add failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteAffiliation = async (id: string) => {
-    if (!confirm("Delete this affiliation?")) return;
+    if (!confirm("Delete affiliation?")) return;
     try {
-      const res = await fetch(`/api/admin/home/affiliations/${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast({ title: "Deleted", description: "Affiliation removed" });
-        fetchAffiliations();
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Delete failed", variant: "destructive" });
     }
   };
 
-  const toggleAffiliationStatus = async (
-    id: string,
-    currentStatus: boolean,
-  ) => {
+  const toggleAffiliationStatus = async (id: string, currentStatus: boolean) => {
     try {
-      await fetch(`/api/admin/home/affiliations/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !currentStatus }),
       });
-      fetchAffiliations();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update status",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleStatIconUpload = async (id: string, file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const res = await fetch(`/api/admin/home/stats/${id}/icon`, {
-        method: "POST",
-        body: formData,
-      });
       if (res.ok) {
-        toast({ title: "Success", description: "Icon updated" });
-        fetchStats();
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload icon",
-        variant: "destructive",
-      });
-    }
+    } catch (error) {}
   };
 
-  // Stats Handlers
-  const updateStat = async (id: string, key: string, value: any) => {
+  const updateAffiliationOrder = async (id: string, order: number) => {
     try {
-      const body = key === "all" ? value : { [key]: value };
-      const res = await fetch(`/api/admin/home/stats/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ order }),
       });
       if (res.ok) {
-        toast({ title: "Updated", description: "Stat saved successfully" });
-        fetchStats();
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update stat",
-        variant: "destructive",
-      });
-    }
+    } catch (error) {}
   };
 
   const handleAddStat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStatLabel || !newStatNumber) return;
     setLoading(true);
-
     const formData = new FormData();
     formData.append("label", newStatLabel);
     formData.append("number", newStatNumber);
     formData.append("icon", newStatIcon);
     formData.append("color", newStatColor);
     formData.append("order", (stats.length + 1).toString());
-    if (newStatFile) {
-      formData.append("file", newStatFile);
-    }
-
+    if (newStatFile) formData.append("file", newStatFile);
     try {
-      const res = await fetch("/api/admin/home/stats", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(`/api/${collegeSlug}/admin/home/stats`, { method: "POST", body: formData });
       if (res.ok) {
         toast({ title: "Success", description: "Stat added" });
         setNewStatLabel("");
         setNewStatNumber("");
         setNewStatFile(null);
-        const fileInput = document.getElementById(
-          "new-stat-icon",
-        ) as HTMLInputElement;
+        const fileInput = document.getElementById("new-stat-icon") as HTMLInputElement;
         if (fileInput) fileInput.value = "";
-        fetchStats();
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/stats`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add stat",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Add failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteStat = async (id: string) => {
-    if (!confirm("Delete this statistic?")) return;
+    if (!confirm("Delete statistic?")) return;
     try {
-      const res = await fetch(`/api/admin/home/stats/${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/${collegeSlug}/admin/home/stats/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast({ title: "Deleted", description: "Stat removed" });
-        fetchStats();
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/stats`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete stat",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Delete failed", variant: "destructive" });
     }
   };
 
+  if (contentLoading || !editedContent) return <div className="p-8 text-center text-muted-foreground">Loading Home Settings...</div>;
+
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold tracking-tight">
-        Home Page Management
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Home Page Management</h2>
+        <Button variant="outline" size="sm" onClick={() => window.open(`/${collegeSlug}`, "_blank")}>
+          <ExternalLink className="w-4 h-4 mr-2" /> View Public Site
+        </Button>
+      </div>
 
       <Tabs defaultValue="content" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="content">Text Content</TabsTrigger>
-          <TabsTrigger value="slider">Image Slider</TabsTrigger>
-          <TabsTrigger value="affiliations">Affiliations</TabsTrigger>
-          <TabsTrigger value="stats">Statistics</TabsTrigger>
+          <TabsTrigger value="content"><Layout className="w-4 h-4 mr-2" /> Content</TabsTrigger>
+          <TabsTrigger value="slider"><ImageIcon className="w-4 h-4 mr-2" /> Slider</TabsTrigger>
+          <TabsTrigger value="affiliations"><Users className="w-4 h-4 mr-2" /> Affiliations</TabsTrigger>
+          <TabsTrigger value="stats"><BarChart3 className="w-4 h-4 mr-2" /> Stats</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="content">
+        <TabsContent value="content" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Edit Home Page Text</CardTitle>
-              <CardDescription>
-                Update headings and subheadings across the home page.
-              </CardDescription>
+              <CardTitle>Hero & Text Content</CardTitle>
+              <CardDescription>Update high-level headings and call-to-action text.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleContentSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Hero Heading</Label>
-                  <Input
-                    value={content.heroHeading}
-                    onChange={(e) =>
-                      setContent({ ...content, heroHeading: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Hero Overlay Text (Top Pill)</Label>
-                  <Input
-                    value={content.heroOverlayText || ""}
-                    onChange={(e) =>
-                      setContent({
-                        ...content,
-                        heroOverlayText: e.target.value,
-                      })
-                    }
-                    placeholder="e.g. Welcome to Digital Learning"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Hero Subheading</Label>
-                  <Textarea
-                    value={content.heroSubheading}
-                    onChange={(e) =>
-                      setContent({ ...content, heroSubheading: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleContentSubmit} className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Hero Heading</Label>
+                    <Input value={editedContent.heroHeading} onChange={e => setEditedContent({...editedContent, heroHeading: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hero Overlay Text</Label>
+                    <Input value={editedContent.heroOverlayText || ""} onChange={e => setEditedContent({...editedContent, heroOverlayText: e.target.value})} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Hero Subheading</Label>
+                    <Textarea value={editedContent.heroSubheading} onChange={e => setEditedContent({...editedContent, heroSubheading: e.target.value})} />
+                  </div>
                   <div className="space-y-2">
                     <Label>Features Heading</Label>
-                    <Input
-                      value={content.featuresHeading}
-                      onChange={(e) =>
-                        setContent({
-                          ...content,
-                          featuresHeading: e.target.value,
-                        })
-                      }
-                    />
+                    <Input value={editedContent.featuresHeading} onChange={e => setEditedContent({...editedContent, featuresHeading: e.target.value})} />
                   </div>
                   <div className="space-y-2">
                     <Label>Affiliations Heading</Label>
-                    <Input
-                      value={content.affiliationsHeading}
-                      onChange={(e) =>
-                        setContent({
-                          ...content,
-                          affiliationsHeading: e.target.value,
-                        })
-                      }
-                    />
+                    <Input value={editedContent.affiliationsHeading} onChange={e => setEditedContent({...editedContent, affiliationsHeading: e.target.value})} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Features Subheading</Label>
+                    <Input value={editedContent.featuresSubheading} onChange={e => setEditedContent({...editedContent, featuresSubheading: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CTA Heading</Label>
+                    <Input value={editedContent.ctaHeading} onChange={e => setEditedContent({...editedContent, ctaHeading: e.target.value})} />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>CTA Subheading</Label>
+                    <Textarea value={editedContent.ctaSubheading} onChange={e => setEditedContent({...editedContent, ctaSubheading: e.target.value})} />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Features Subheading</Label>
-                  <Input
-                    value={content.featuresSubheading}
-                    onChange={(e) =>
-                      setContent({
-                        ...content,
-                        featuresSubheading: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>CTA Heading</Label>
-                  <Input
-                    value={content.ctaHeading}
-                    onChange={(e) =>
-                      setContent({ ...content, ctaHeading: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>CTA Subheading</Label>
-                  <Textarea
-                    value={content.ctaSubheading}
-                    onChange={(e) =>
-                      setContent({ ...content, ctaSubheading: e.target.value })
-                    }
-                  />
-                </div>
-                <Button type="submit" disabled={loading}>
-                  {loading ? (
-                    <span className="animate-spin mr-2">⏳</span>
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  Save Changes
+                <Button type="submit" disabled={loading} className="w-full md:w-auto">
+                  {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save All Text Changes
                 </Button>
               </form>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="affiliations">
+        <TabsContent value="slider" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Image Slider</CardTitle>
+              <CardDescription>Upload images to be displayed in the home page carousel.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <form onSubmit={handleUploadSlider} className="flex flex-col md:flex-row gap-4 items-end border p-4 rounded-lg bg-secondary/20">
+                <div className="flex-1 space-y-2 w-full">
+                  <Label htmlFor="slider-upload">Select Image</Label>
+                  <Input id="slider-upload" type="file" accept="image/*" onChange={e => setSliderFile(e.target.files?.[0] || null)} />
+                </div>
+                <Button type="submit" disabled={!sliderFile || loading} className="w-full md:w-auto">
+                  <Upload className="w-4 h-4 mr-2" /> Upload Image
+                </Button>
+              </form>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {sliderImages.map(img => (
+                  <div key={img.id} className="flex gap-4 p-4 border rounded-xl bg-card shadow-sm group">
+                    <div className="h-24 w-36 relative rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      <img src={img.imageUrl} alt="Slider" className="object-cover w-full h-full" />
+                    </div>
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs">Order:</Label>
+                          <Input 
+                            type="number" 
+                            className="w-14 h-8 text-xs" 
+                            value={img.order} 
+                            onChange={e => updateSliderOrder(img.id, parseInt(e.target.value))} 
+                          />
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleDeleteSlider(img.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={img.isActive} onCheckedChange={() => toggleSliderStatus(img.id, img.isActive)} />
+                        <span className="text-xs font-medium">{img.isActive ? "Visible" : "Hidden"}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {sliderImages.length === 0 && <div className="md:col-span-2 py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">No slider images uploaded yet.</div>}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="affiliations" className="mt-4">
           <Card>
             <CardHeader>
               <CardTitle>Affiliations & Partners</CardTitle>
-              <CardDescription>
-                Manage logos displayed in the affiliations section.
-              </CardDescription>
+              <CardDescription>Manage partner logos displayed on the home page.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form
-                onSubmit={handleUploadAffiliation}
-                className="grid md:grid-cols-4 gap-4 items-end border p-4 rounded-lg bg-gray-50/50"
-              >
-                <div className="space-y-2 md:col-span-1">
-                  <Label htmlFor="affiliation-upload">Logo</Label>
-                  <Input
-                    id="affiliation-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) =>
-                      setAffiliationFile(e.target.files?.[0] || null)
-                    }
-                  />
+              <form onSubmit={handleUploadAffiliation} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border p-4 rounded-lg bg-secondary/20">
+                <div className="space-y-2">
+                  <Label>Logo</Label>
+                  <Input id="affiliation-upload" type="file" accept="image/*" onChange={e => setAffiliationFile(e.target.files?.[0] || null)} />
                 </div>
-                <div className="space-y-2 md:col-span-1">
+                <div className="space-y-2">
                   <Label>Name</Label>
-                  <Input
-                    value={affiliationName}
-                    onChange={(e) => setAffiliationName(e.target.value)}
-                    placeholder="e.g. BIEK"
-                  />
+                  <Input value={affiliationName} onChange={e => setAffiliationName(e.target.value)} placeholder="e.g. Higher Education Commission" />
                 </div>
-                <div className="space-y-2 md:col-span-1">
-                  <Label>Link (Optional)</Label>
-                  <Input
-                    value={affiliationLink}
-                    onChange={(e) => setAffiliationLink(e.target.value)}
-                    placeholder="https://..."
-                  />
+                <div className="space-y-2">
+                  <Label>Link</Label>
+                  <Input value={affiliationLink} onChange={e => setAffiliationLink(e.target.value)} placeholder="https://..." />
                 </div>
-                <Button
-                  type="submit"
-                  disabled={!affiliationFile || !affiliationName || loading}
-                >
-                  <Plus className="w-4 h-4 mr-2" /> Add
+                <Button type="submit" disabled={!affiliationFile || !affiliationName || loading}>
+                  <Plus className="w-4 h-4 mr-2" /> Add Partner
                 </Button>
               </form>
 
               <div className="grid gap-4">
-                {affiliations.map((aff) => (
-                  <div
-                    key={aff.id}
-                    className="flex items-center gap-4 p-4 border rounded-lg bg-card text-card-foreground shadow-sm"
-                  >
-                    <div className="h-16 w-16 relative rounded overflow-hidden bg-white border flex-shrink-0 flex items-center justify-center p-1">
-                      <img
-                        src={aff.logoUrl}
-                        alt={aff.name}
-                        className="object-contain w-full h-full"
-                      />
+                {affiliations.map(aff => (
+                  <div key={aff.id} className="flex items-center gap-4 p-4 border rounded-xl bg-card shadow-sm">
+                    <div className="h-16 w-16 relative rounded-lg overflow-hidden bg-white border p-2 flex-shrink-0">
+                      <img src={aff.logoUrl} alt={aff.name} className="object-contain w-full h-full" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold">{aff.name}</h4>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {aff.link}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Label className="text-xs">Position:</Label>
-                        <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded">
-                          {getPositionLabel(aff.order - 1)}
-                        </span>
-                        <Input
-                          type="number"
-                          className="w-12 h-7 text-xs"
-                          value={aff.order}
-                          onChange={(e) => {
-                            const newVal = parseInt(e.target.value);
-                            const updated = affiliations.map((a) =>
-                              a.id === aff.id ? { ...a, order: newVal } : a,
-                            );
-                            setAffiliations(updated);
-                            fetch(`/api/admin/home/affiliations/${aff.id}`, {
-                              method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ order: newVal }),
-                            });
-                          }}
-                        />
-                      </div>
+                      <p className="text-xs text-muted-foreground truncate max-w-xs">{aff.link}</p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id={`aff-active-${aff.id}`}
-                          checked={aff.isActive}
-                          onCheckedChange={() =>
-                            toggleAffiliationStatus(aff.id, aff.isActive)
-                          }
-                        />
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">Order:</Label>
+                        <Input type="number" className="w-14 h-8 text-xs" value={aff.order} onChange={e => updateAffiliationOrder(aff.id, parseInt(e.target.value))} />
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive/90"
-                        onClick={() => handleDeleteAffiliation(aff.id)}
-                      >
+                      <Switch checked={aff.isActive} onCheckedChange={() => toggleAffiliationStatus(aff.id, aff.isActive)} />
+                      <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteAffiliation(aff.id)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
                 ))}
-                {affiliations.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    No affiliations added.
-                  </p>
-                )}
+                {affiliations.length === 0 && <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">No affiliations added.</div>}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="slider">
+        <TabsContent value="stats" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Home Page Slider</CardTitle>
-              <CardDescription>
-                Manage images for the main home page slider.
-              </CardDescription>
+              <CardTitle>Statistics Counters</CardTitle>
+              <CardDescription>Numerical callouts for achievements (e.g., "5000+ Books").</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form
-                onSubmit={handleUploadSlider}
-                className="flex items-end gap-4 border p-4 rounded-lg bg-gray-50/50"
-              >
-                <div className="w-full space-y-2">
-                  <Label htmlFor="slider-upload">Upload New Image</Label>
-                  <Input
-                    id="slider-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setSliderFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-                <Button type="submit" disabled={!sliderFile || loading}>
-                  <Upload className="w-4 h-4 mr-2" /> Upload
-                </Button>
-              </form>
-
-              <div className="grid gap-4">
-                {sliderImages.map((img) => (
-                  <div
-                    key={img.id}
-                    className="flex items-center gap-4 p-4 border rounded-lg bg-card text-card-foreground shadow-sm"
-                  >
-                    <div className="h-20 w-32 relative rounded overflow-hidden bg-gray-100 flex-shrink-0">
-                      <img
-                        src={img.imageUrl}
-                        alt="Slider"
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Label>Position:</Label>
-                        <span className="text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded">
-                          {getPositionLabel(img.order - 1)}
-                        </span>
-                        <Input
-                          type="number"
-                          className="w-16 h-8"
-                          value={img.order}
-                          onChange={(e) => {
-                            const newVal = parseInt(e.target.value);
-                            // Optimistic update
-                            const updated = sliderImages.map((i) =>
-                              i.id === img.id ? { ...i, order: newVal } : i,
-                            );
-                            setSliderImages(updated);
-                            // API call (debouncing would be better, but direct for simplicity)
-                            fetch(`/api/admin/home/slider/${img.id}`, {
-                              method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ order: newVal }),
-                            });
-                          }}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            id={`active-${img.id}`}
-                            checked={img.isActive}
-                            onCheckedChange={() =>
-                              toggleSliderStatus(img.id, img.isActive)
-                            }
-                          />
-                          <Label htmlFor={`active-${img.id}`}>Active</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs">Replace Image:</Label>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            className="h-8 text-xs w-48"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleUpdateSliderImage(img.id, file);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => handleDeleteSlider(img.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-                {sliderImages.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">
-                    No images uploaded yet.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="stats">
-          <Card>
-            <CardHeader>
-              <CardTitle>Statistics Section</CardTitle>
-              <CardDescription>
-                Update the numbers displayed in the stats section.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-lg font-semibold">
-                  Add New Statistic{" "}
-                  {stats.length >= 8 && (
-                    <span className="text-destructive text-sm font-normal">
-                      (Limit of 8 reached)
-                    </span>
-                  )}
-                </Label>
-              </div>
-              <form
-                onSubmit={handleAddStat}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end border p-4 rounded-lg bg-gray-50/50"
-              >
+              <form onSubmit={handleAddStat} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end border p-4 rounded-lg bg-secondary/20">
                 <div className="space-y-2">
                   <Label>Label</Label>
-                  <Input
-                    value={newStatLabel}
-                    onChange={(e) => setNewStatLabel(e.target.value)}
-                    placeholder="e.g. Active Students"
-                    disabled={stats.length >= 8}
-                  />
+                  <Input value={newStatLabel} onChange={e => setNewStatLabel(e.target.value)} placeholder="e.g. Active Students" />
                 </div>
                 <div className="space-y-2">
                   <Label>Number</Label>
-                  <Input
-                    value={newStatNumber}
-                    onChange={(e) => setNewStatNumber(e.target.value)}
-                    placeholder="e.g. 1000+"
-                    disabled={stats.length >= 8}
-                  />
+                  <Input value={newStatNumber} onChange={e => setNewStatNumber(e.target.value)} placeholder="e.g. 5000+" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Standard Icon</Label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={newStatIcon}
-                    onChange={(e) => setNewStatIcon(e.target.value)}
-                    disabled={stats.length >= 8 || showNewStatCustomIcon}
-                  >
-                    {ICON_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
+                  <Label>Icon Type</Label>
+                  <select className="w-full h-10 px-3 border rounded-md" value={newStatIcon} onChange={e => setNewStatIcon(e.target.value)}>
+                    {ICON_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Color</Label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={newStatColor}
-                    onChange={(e) => setNewStatColor(e.target.value)}
-                    disabled={stats.length >= 8}
-                  >
-                    {COLOR_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                  <Label>Custom Icon (Optional)</Label>
+                  <Input id="new-stat-icon" type="file" accept="image/*" onChange={e => setNewStatFile(e.target.files?.[0] || null)} />
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <Label>Icon Mode</Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-[10px]"
-                      onClick={() => {
-                        setShowNewStatCustomIcon(!showNewStatCustomIcon);
-                        if (!showNewStatCustomIcon) setNewStatFile(null);
-                      }}
-                      disabled={stats.length >= 8}
-                    >
-                      {showNewStatCustomIcon ? "Use Standard" : "Upload Custom"}
-                    </Button>
-                  </div>
-                  {showNewStatCustomIcon ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="new-stat-icon"
-                        type="file"
-                        accept="image/*"
-                        className="h-9 text-xs"
-                        onChange={(e) =>
-                          setNewStatFile(e.target.files?.[0] || null)
-                        }
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-9 flex items-center bg-muted/30 rounded border px-3 text-xs text-muted-foreground">
-                      Standard icon selected
-                    </div>
-                  )}
-                </div>
-                <Button
-                  type="submit"
-                  disabled={
-                    !newStatLabel ||
-                    !newStatNumber ||
-                    loading ||
-                    stats.length >= 8
-                  }
-                  className="w-full"
-                >
+                <Button type="submit" disabled={!newStatLabel || !newStatNumber || loading}>
                   <Plus className="w-4 h-4 mr-2" /> Add Stat
                 </Button>
               </form>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, idx) => (
-                  <div
-                    key={stat.id}
-                    className="p-4 border rounded-xl space-y-4 relative group bg-card hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center justify-between gap-2 border-b pb-2">
-                      <div className="flex items-center gap-2 font-semibold text-primary overflow-hidden">
-                        {stat.iconUrl ? (
-                          <img
-                            src={stat.iconUrl}
-                            alt="Icon"
-                            className="w-5 h-5 object-contain flex-shrink-0"
-                          />
-                        ) : (
-                          <span className="text-xs flex-shrink-0">
-                            {stat.icon || "📍"}
-                          </span>
-                        )}
-                        <span className="truncate text-sm">
-                          {getPositionLabel(idx)} Stat
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteStat(stat.id)}
-                        >
+              <div className="grid gap-4 md:grid-cols-2">
+                {stats.map(stat => (
+                  <div key={stat.id} className="flex gap-4 p-4 border rounded-xl bg-card shadow-sm">
+                    <div className="h-12 w-12 flex items-center justify-center rounded-xl bg-primary/10 text-primary flex-shrink-0">
+                      {stat.iconUrl ? <img src={stat.iconUrl} className="w-8 h-8 object-contain" /> : <ImageIcon className="w-6 h-6" />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-bold text-lg">{stat.number}</h4>
+                          <p className="text-sm text-muted-foreground">{stat.label}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteStat(stat.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Number</Label>
-                      <Input
-                        className="h-8 text-sm"
-                        value={stat.number}
-                        onChange={(e) => {
-                          const updated = stats.map((s) =>
-                            s.id === stat.id
-                              ? { ...s, number: e.target.value }
-                              : s,
-                          );
-                          setStats(updated);
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Label</Label>
-                      <Input
-                        className="h-8 text-sm"
-                        value={stat.label}
-                        onChange={(e) => {
-                          const updated = stats.map((s) =>
-                            s.id === stat.id
-                              ? { ...s, label: e.target.value }
-                              : s,
-                          );
-                          setStats(updated);
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs">Icon Configuration</Label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-1 text-[9px] text-primary"
-                          onClick={() => {
-                            setShowCustomIconMap({
-                              ...showCustomIconMap,
-                              [stat.id]: !showCustomIconMap[stat.id],
-                            });
-                          }}
-                        >
-                          {showCustomIconMap[stat.id] || stat.iconUrl
-                            ? "Replace/Standard"
-                            : "Upload Custom"}
-                        </Button>
-                      </div>
-                      {showCustomIconMap[stat.id] || stat.iconUrl ? (
-                        <div className="space-y-2">
-                          {stat.iconUrl && (
-                            <div className="flex items-center gap-2 mb-1">
-                              <img
-                                src={stat.iconUrl}
-                                alt="Icon"
-                                className="w-6 h-6 object-contain border rounded"
-                              />
-                              <span className="text-[10px] text-muted-foreground">
-                                Current custom icon
-                              </span>
-                            </div>
-                          )}
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            className="text-[10px] h-8 px-2"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleStatIconUpload(stat.id, file);
-                            }}
-                          />
-                          {!stat.iconUrl && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-full text-[9px]"
-                              onClick={() => {
-                                setShowCustomIconMap({
-                                  ...showCustomIconMap,
-                                  [stat.id]: false,
-                                });
-                              }}
-                            >
-                              Switch to Standard Icon
-                            </Button>
-                          )}
-                        </div>
-                      ) : (
-                        <select
-                          className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          value={stat.icon}
-                          onChange={(e) => {
-                            const updated = stats.map((s) =>
-                              s.id === stat.id
-                                ? { ...s, icon: e.target.value }
-                                : s,
-                            );
-                            setStats(updated);
-                          }}
-                        >
-                          {ICON_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Color Theme</Label>
-                      <select
-                        className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        value={stat.color}
-                        onChange={(e) => {
-                          const updated = stats.map((s) =>
-                            s.id === stat.id
-                              ? { ...s, color: e.target.value }
-                              : s,
-                          );
-                          setStats(updated);
-                        }}
-                      >
-                        {COLOR_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="w-full mt-2 h-8"
-                      onClick={() => updateStat(stat.id, "all", stat)}
-                    >
-                      <Save className="w-4 h-4 mr-2" /> Save
-                    </Button>
                   </div>
                 ))}
+                {stats.length === 0 && <div className="md:col-span-2 py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">No statistics defined.</div>}
               </div>
-              {stats.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  No stats added yet.
-                </p>
-              )}
             </CardContent>
           </Card>
         </TabsContent>

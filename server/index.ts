@@ -5,6 +5,7 @@ import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./db-storage";
+import cors from "cors";
 
 declare module "express-session" {
   interface SessionData {
@@ -16,11 +17,19 @@ declare module "express-session" {
 
 const app = express();
 app.use(express.json({ limit: "1024mb" }));
-app.use(express.urlencoded({ extended: false, limit: "1024mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1024mb" }));
 
 // Enable compression for all responses
 import compression from "compression";
 app.use(compression());
+
+// CORS configuration - must be before session
+app.use(
+  cors({
+    origin: true, // Allow all origins for now to avoid local development issues, but with credentials
+    credentials: true,
+  })
+);
 
 
 
@@ -28,13 +37,19 @@ const MemoryStore = (await import("memorystore")).default(session);
 
 app.use(
   session({
-    cookie: { maxAge: 86400000 },
+    name: "gcfm.sid",
+    secret: process.env.SESSION_SECRET || "gcfm-library-secret-2026",
+    resave: false,
+    saveUninitialized: false,
     store: new MemoryStore({
       checkPeriod: 86400000,
     }),
-    resave: false,
-    saveUninitialized: false,
-    secret: process.env.SESSION_SECRET || "gcfm-library-secret-2026",
+    cookie: {
+      maxAge: 86400000,
+      httpOnly: true,
+      secure: false, // Set to true if using HTTPS
+      sameSite: "lax",
+    },
   }),
 );
 
@@ -91,20 +106,20 @@ app.use((req, res, next) => {
   const uploadDir = path.join(process.cwd(), "server", "uploads");
   app.use("/server/uploads", express.static(uploadDir));
 
-  if (app.get("env") === "development") {
+  if (app.get("env") === "development" && process.env.VITE_EXTERNAL !== "true") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  const port = 5001;
+  const PORT = process.env.PORT || 5001;
   server.listen(
     {
-      port,
+      port: PORT,
       host: "0.0.0.0",
     },
     () => {
-      log(`serving on port ${port}`);
+      console.log(`Server running on port ${PORT}`);
       console.log(
         `[Server] Restarted at ${new Date().toISOString()} to apply latest DB schema changes.`,
       );

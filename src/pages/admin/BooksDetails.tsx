@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Book,
@@ -11,6 +12,7 @@ import {
   RefreshCw,
   Download,
   FileSpreadsheet,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,11 +21,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { useCollege } from "@/contexts/CollegeContext";
 import { jsPDF } from "jspdf";
 import * as XLSX from "xlsx";
 
 const Books: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { settings } = useCollege();
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,12 +35,15 @@ const Books: React.FC = () => {
   const [selectedBook, setSelectedBook] = useState<any>(null);
   const [formData, setFormData] = useState({
     bookName: "",
+    authorName: "",
     shortIntro: "",
     description: "",
     totalCopies: "1",
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [borrows, setBorrows] = useState<any[]>([]);
+  const [issuingBookId, setIssuingBookId] = useState<string | null>(null);
+  const [cardNumber, setCardNumber] = useState("");
   const { toast } = useToast();
   const { isAdmin } = useAuth();
 
@@ -47,7 +54,9 @@ const Books: React.FC = () => {
 
   const fetchBorrows = async () => {
     try {
-      const res = await fetch("/api/admin/borrowed-books");
+      const res = await fetch(`/api/${collegeSlug}/admin/borrowed-books`, {
+        credentials: "include",
+      });
       if (res.ok) {
         const data = await res.json();
         setBorrows(data);
@@ -60,7 +69,9 @@ const Books: React.FC = () => {
   const fetchBooks = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/books");
+      const res = await fetch(`/api/${collegeSlug}/admin/books`, {
+        credentials: "include",
+      });
       if (res.ok) {
         const data = await res.json();
         setBooks(data);
@@ -88,6 +99,7 @@ const Books: React.FC = () => {
     }
     const excelData = books.map((book) => ({
       "Book Name": book.bookName,
+      Author: book.authorName || "-",
       "Short Intro": book.shortIntro || "-",
       Description: book.description || "-",
       "Created At": new Date(book.createdAt).toLocaleDateString(),
@@ -123,8 +135,9 @@ const Books: React.FC = () => {
       doc.setFont("helvetica", "bold");
       doc.text(`${i + 1}. ${book.bookName}`, 10, y);
       doc.setFont("helvetica", "normal");
-      doc.text(`Intro: ${book.shortIntro || "N/A"}`, 15, y + 5);
-      y += 15;
+      doc.text(`Author: ${book.authorName || "N/A"}`, 15, y + 5);
+      doc.text(`Intro: ${book.shortIntro || "N/A"}`, 15, y + 10);
+      y += 20;
     });
     doc.save("books-report.pdf");
     toast({ title: "Success", description: "PDF report downloaded." });
@@ -134,6 +147,7 @@ const Books: React.FC = () => {
     setSelectedBook(book);
     setFormData({
       bookName: book.bookName,
+      authorName: book.authorName || "",
       shortIntro: book.shortIntro || "",
       description: book.description || "",
       totalCopies: String(book.totalCopies || 1),
@@ -144,7 +158,10 @@ const Books: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this book?")) return;
     try {
-      const res = await fetch(`/api/admin/books/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/${collegeSlug}/admin/books/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
       if (res.ok) {
         toast({ title: "Success", description: "Book deleted successfully" });
         fetchBooks();
@@ -157,12 +174,40 @@ const Books: React.FC = () => {
       });
     }
   };
+  
+  const handleIssueBook = async (bookId: string) => {
+    if (!cardNumber.trim()) {
+      toast({ title: "Error", description: "Please enter a College Card Number", variant: "destructive" });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/${collegeSlug}/admin/issue-book`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookId, cardNumber }),
+        credentials: "include",
+      });
+      if (res.ok) {
+        toast({ title: "Success", description: "Book issued successfully" });
+        setIssuingBookId(null);
+        setCardNumber("");
+        fetchBorrows();
+        fetchBooks();
+      } else {
+        const err = await res.json();
+        toast({ title: "Error", description: err.error || "Failed to issue book", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to issue book", variant: "destructive" });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const submitData = new FormData();
       submitData.append("bookName", formData.bookName);
+      submitData.append("authorName", formData.authorName);
       submitData.append("shortIntro", formData.shortIntro);
       submitData.append("description", formData.description);
       submitData.append("totalCopies", formData.totalCopies);
@@ -171,13 +216,14 @@ const Books: React.FC = () => {
       }
 
       const url = isEditing
-        ? `/api/admin/books/${selectedBook.id}`
-        : "/api/admin/books";
+        ? `/api/${collegeSlug}/admin/books/${selectedBook.id}`
+        : `/api/${collegeSlug}/admin/books`;
       const method = isEditing ? "PATCH" : "POST";
 
       const res = await fetch(url, {
         method,
         body: submitData,
+        credentials: "include",
       });
 
       if (res.ok) {
@@ -189,6 +235,7 @@ const Books: React.FC = () => {
         setSelectedBook(null);
         setFormData({
           bookName: "",
+          authorName: "",
           shortIntro: "",
           description: "",
           totalCopies: "1",
@@ -214,8 +261,9 @@ const Books: React.FC = () => {
 
   const handleReturn = async (borrowId: string) => {
     try {
-      const res = await fetch(`/api/book-borrows/${borrowId}/return`, {
+      const res = await fetch(`/api/${collegeSlug}/book-borrows/${borrowId}/return`, {
         method: "PATCH",
+        credentials: "include",
       });
       if (res.ok) {
         toast({ title: "Success", description: "Book marked as returned" });
@@ -238,7 +286,7 @@ const Books: React.FC = () => {
     }
   };
 
-  if (!isAdmin) return <Navigate to="/login" />;
+  if (!isAdmin) return <Navigate to={`/${collegeSlug}/login`} />;
 
   const filteredBooks = books.filter((book) =>
     book.bookName.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -264,6 +312,7 @@ const Books: React.FC = () => {
               setSelectedBook(null);
               setFormData({
                 bookName: "",
+                authorName: "",
                 shortIntro: "",
                 description: "",
                 totalCopies: "1",
@@ -293,6 +342,17 @@ const Books: React.FC = () => {
                     setFormData({ ...formData, bookName: e.target.value })
                   }
                   placeholder="Enter book title"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Author Name *</label>
+                <Input
+                  required
+                  value={formData.authorName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, authorName: e.target.value })
+                  }
+                  placeholder="Enter author name"
                 />
               </div>
               <div className="space-y-2">
@@ -388,117 +448,110 @@ const Books: React.FC = () => {
                 <p>No books found in the catalog.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredBooks.map((book) => (
-                  <div
-                    key={book.id}
-                    className="flex gap-4 p-5 rounded-xl border bg-gradient-to-br from-white to-slate-50/50 hover:shadow-xl transition-all duration-300 group border-slate-200/60"
-                  >
-                    <div className="w-24 h-32 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform duration-300 ring-4 ring-white">
+                  <div key={book.id} className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden flex flex-col group hover:shadow-md transition-shadow">
+                    {/* Cover image — fixed height */}
+                    <div className="h-48 bg-neutral-100 overflow-hidden relative">
                       {book.bookImage ? (
-                        <img
-                          src={book.bookImage}
+                        <img 
+                          src={book.bookImage} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                           alt={book.bookName}
-                          className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
-                          <ImageIcon size={32} />
-                          <span className="text-[10px] mt-1 font-bold uppercase tracking-tighter">
-                            No Image
-                          </span>
+                        <div className="w-full h-full flex items-center justify-center text-neutral-300">
+                          <ImageIcon size={48} />
                         </div>
                       )}
+                      <div className="absolute top-3 right-3">
+                        <div className={`text-[10px] px-2 py-1 rounded-full font-bold shadow-sm backdrop-blur-md ${parseInt(book.availableCopies || "0") > 0 ? "bg-emerald-500/90 text-white" : "bg-rose-500/90 text-white"}`}>
+                          {book.availableCopies || 0} / {book.totalCopies || 0}
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-black text-xl truncate text-slate-800 tracking-tight group-hover:text-primary transition-colors">
-                          {book.bookName}
-                        </h3>
-                        <div className="flex flex-col items-end gap-1.5">
-                          <div
-                            className={`text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest shadow-sm ${parseInt(book.availableCopies || "0") > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}
-                          >
-                            {book.availableCopies || 0} /{" "}
-                            {book.totalCopies || 0}
+                    {/* Info */}
+                    <div className="p-4 flex-1 flex flex-col gap-2">
+                      <h3 className="font-bold text-neutral-900 text-sm line-clamp-2 min-h-[40px]">{book.bookName}</h3>
+                      <p className="text-xs text-neutral-500 font-medium">{book.authorName}</p>
+                      <p className="text-xs text-neutral-400 line-clamp-2 h-8">{book.shortIntro}</p>
+                      
+                      {/* Active Borrowers Summary */}
+                      {borrows.filter(b => b.bookId === book.id && b.status === "borrowed").length > 0 && (
+                        <div className="mt-2 text-[10px] bg-primary/5 text-primary px-2 py-1 rounded flex items-center gap-1 font-bold">
+                          <RefreshCw size={10} className="animate-spin-slow" />
+                          {borrows.filter(b => b.bookId === book.id && b.status === "borrowed").length} Active Borrowed
+                        </div>
+                      )}
+
+                      {/* Actions — bottom aligned */}
+                      <div className="flex gap-2 mt-auto pt-3 border-t border-neutral-50">
+                        <button 
+                          title="Edit Book" 
+                          onClick={() => handleEdit(book)}
+                          className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button 
+                          title="Issue Book to Student" 
+                          onClick={() => setIssuingBookId(issuingBookId === book.id ? null : book.id)}
+                          className={`p-2 rounded-lg transition-colors ${issuingBookId === book.id ? "bg-primary text-white" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+                        >
+                          <BookOpen size={16} />
+                        </button>
+                        <button 
+                          title="Delete Book" 
+                          onClick={() => handleDelete(book.id)}
+                          className="p-2 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors ml-auto"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      {/* Modal-like Issue Input */}
+                      {issuingBookId === book.id && (
+                        <div className="mt-3 p-3 bg-neutral-50 rounded-xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-200">
+                          <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-2">Issue to Member</p>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Card ID..."
+                              value={cardNumber}
+                              onChange={(e) => setCardNumber(e.target.value)}
+                              className="h-8 text-xs bg-white"
+                            />
+                            <Button
+                              size="sm"
+                              className="h-8 px-3 text-[10px] font-bold"
+                              onClick={() => handleIssueBook(book.id)}
+                              disabled={parseInt(book.availableCopies || "0") <= 0}
+                            >
+                              Issue
+                            </Button>
                           </div>
-                          {parseInt(book.totalCopies || "0") -
-                            parseInt(book.availableCopies || "0") >
-                            0 && (
-                            <div className="text-[9px] text-blue-600 font-black uppercase tracking-tighter bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                              Borrowed:{" "}
-                              {parseInt(book.totalCopies || "0") -
-                                parseInt(book.availableCopies || "0")}
+                        </div>
+                      )}
+
+                      {/* Return Assets Area */}
+                      {borrows.filter(b => b.bookId === book.id && b.status === "borrowed").length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {borrows.filter(b => b.bookId === book.id && b.status === "borrowed").slice(0, 2).map(b => (
+                            <div key={b.id} className="flex items-center justify-between text-[10px] bg-neutral-50 p-1.5 rounded border border-neutral-100">
+                              <span className="truncate font-medium text-neutral-600">{b.borrowerName}</span>
+                              <button onClick={() => handleReturn(b.id)} className="text-primary hover:underline font-bold">Return</button>
                             </div>
+                          ))}
+                          {borrows.filter(b => b.bookId === book.id && b.status === "borrowed").length > 2 && (
+                            <p className="text-[9px] text-center text-neutral-400 mt-1">and {borrows.filter(b => b.bookId === book.id && b.status === "borrowed").length - 2} more...</p>
                           )}
                         </div>
-                      </div>
-                      <p className="text-sm text-slate-500 line-clamp-1 mb-4 italic">
-                        {book.shortIntro || "No introductory text provided"}
-                      </p>
-
-                      {/* Borrowers list */}
-                      {borrows.filter(
-                        (b) => b.bookId === book.id && b.status === "borrowed",
-                      ).length > 0 && (
-                        <div className="mb-4 space-y-2 p-3 bg-white/60 rounded-lg border border-slate-100 shadow-inner">
-                          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
-                            <RefreshCw
-                              size={10}
-                              className="animate-spin-slow"
-                            />{" "}
-                            Active Borrowers
-                          </p>
-                          {borrows
-                            .filter(
-                              (b) =>
-                                b.bookId === book.id && b.status === "borrowed",
-                            )
-                            .map((b) => (
-                              <div
-                                key={b.id}
-                                className="flex items-center justify-between text-[11px] bg-slate-50/80 p-2 rounded-md border border-slate-100/50 group/row"
-                              >
-                                <span className="truncate max-w-[120px] font-bold text-slate-700">
-                                  {b.userId}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2 text-[10px] font-bold text-primary hover:bg-primary/10 transition-colors"
-                                  onClick={() => handleReturn(b.id)}
-                                >
-                                  Return Asset
-                                </Button>
-                              </div>
-                            ))}
-                        </div>
                       )}
-
-                      <div className="flex gap-2.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(book)}
-                          className="h-8 text-[11px] font-bold uppercase tracking-wider rounded-lg border-slate-200 hover:bg-slate-50"
-                        >
-                          <Pencil size={12} className="mr-1.5 text-blue-600" />{" "}
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-[11px] font-bold uppercase tracking-wider rounded-lg border-rose-100 text-rose-600 hover:bg-rose-50"
-                          onClick={() => handleDelete(book.id)}
-                        >
-                          <Trash2 size={12} className="mr-1.5" /> Delete
-                        </Button>
-                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
+            )
+}
           </CardContent>
         </Card>
       </div>

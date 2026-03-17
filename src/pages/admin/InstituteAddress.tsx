@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { MapPin, Save, RefreshCcw, ExternalLink } from "lucide-react";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 
 const InstituteAddress: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const { toast } = useToast();
-  const { settings, updateSettings } = useBranding();
+  const { settings, updateSettings } = useCollege();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     contactAddress: "",

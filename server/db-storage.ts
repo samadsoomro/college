@@ -14,7 +14,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const SUPABASE_BACKEND_SECRET =
   process.env.SUPABASE_BACKEND_SECRET || "admin-backend-secret-8829";
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   global: {
     headers: {
       "x-backend-secret": SUPABASE_BACKEND_SECRET,
@@ -76,6 +76,11 @@ function toSnakeCase(obj: any): any {
       rbWatermarkEnabled: "rb_watermark_enabled",
       heroBackgroundLogo: "hero_background_logo",
       heroBackgroundOpacity: "hero_background_opacity",
+      easypaisaNumber: "easypaisa_number",
+      bankAccountNumber: "bank_account_number",
+      bankName: "bank_name",
+      bankBranch: "bank_branch",
+      accountTitle: "account_title",
     };
 
     // Specific numeric conversions
@@ -96,7 +101,7 @@ function toSnakeCase(obj: any): any {
   return newObj;
 }
 
-const USER_SELECT = "id, email, password, createdAt:created_at";
+const USER_SELECT = "id, email, password, collegeId:college_id, createdAt:created_at";
 const PROFILE_SELECT =
   "id, userId:user_id, fullName:full_name, phone, rollNumber:roll_number, department, studentClass:student_class, role, createdAt:created_at, updatedAt:updated_at";
 const USER_ROLE_SELECT = "id, userId:user_id, role, createdAt:created_at";
@@ -113,7 +118,7 @@ const STUDENT_SELECT =
 const NON_STUDENT_SELECT =
   "id, userId:user_id, name, role, phone, createdAt:created_at";
 const BOOK_SELECT =
-  "id, bookName:book_name, shortIntro:short_intro, description, bookImage:book_image, totalCopies:total_copies, availableCopies:available_copies, createdAt:created_at, updatedAt:updated_at";
+  "id, bookName:book_name, authorName:author_name, shortIntro:short_intro, description, bookImage:book_image, totalCopies:total_copies, availableCopies:available_copies, createdAt:created_at, updatedAt:updated_at";
 const NOTE_SELECT =
   "id, title, description, subject, class, pdfPath:pdf_path, status, createdAt:created_at, updatedAt:updated_at";
 const RARE_BOOK_SELECT =
@@ -145,11 +150,11 @@ const HOME_AFFILIATION_SELECT =
 const HOME_BUTTON_SELECT =
   "id, section, text, link, isActive:is_active, createdAt:created_at";
 const SITE_SETTINGS_SELECT =
-  "id, primaryColor:primary_color, navbarLogo:navbar_logo, heroBackgroundLogo:hero_background_logo, heroBackgroundOpacity:hero_background_opacity, loadingLogo:loading_logo, instituteShortName:institute_short_name, instituteFullName:institute_full_name, footerTitle:footer_title, footerDescription:footer_description, facebookUrl:facebook_url, twitterUrl:twitter_url, instagramUrl:instagram_url, youtubeUrl:youtube_url, creditsText:credits_text, contributorsText:contributors_text, contactAddress:contact_address, contactPhone:contact_phone, contactEmail:contact_email, mapEmbedUrl:map_embed_url, googleMapLink:google_map_link, footerTagline:footer_tagline, cardHeaderText:card_header_text, cardSubheaderText:card_subheader_text, cardLogoUrl:card_logo_url, cardQrEnabled:card_qr_enabled, cardQrUrl:card_qr_url, cardTermsText:card_terms_text, cardContactAddress:card_contact_address, cardContactEmail:card_contact_email, cardContactPhone:card_contact_phone, rbWatermarkText:rb_watermark_text, rbWatermarkOpacity:rb_watermark_opacity, rbDisclaimerText:rb_disclaimer_text, rbWatermarkEnabled:rb_watermark_enabled, updatedAt:updated_at";
+  "id, primaryColor:primary_color, navbarLogo:navbar_logo, heroBackgroundLogo:hero_background_logo, heroBackgroundOpacity:hero_background_opacity, loadingLogo:loading_logo, instituteShortName:institute_short_name, instituteFullName:institute_full_name, footerTitle:footer_title, footerDescription:footer_description, facebookUrl:facebook_url, twitterUrl:twitter_url, instagramUrl:instagram_url, youtubeUrl:youtube_url, creditsText:credits_text, contributorsText:contributors_text, contactAddress:contact_address, contactPhone:contact_phone, contactEmail:contact_email, mapEmbedUrl:map_embed_url, googleMapLink:google_map_link, footerTagline:footer_tagline, cardHeaderText:card_header_text, cardSubheaderText:card_subheader_text, cardLogoUrl:card_logo_url, cardQrEnabled:card_qr_enabled, cardQrUrl:card_qr_url, cardTermsText:card_terms_text, cardContactAddress:card_contact_address, cardContactEmail:card_contact_email, cardContactPhone:card_contact_phone, rbWatermarkText:rb_watermark_text, rbWatermarkOpacity:rb_watermark_opacity, rbDisclaimerText:rb_disclaimer_text, rbWatermarkEnabled:rb_watermark_enabled, easypaisaNumber:easypaisa_number, bankAccountNumber:bank_account_number, bankName:bank_name, bankBranch:bank_branch, accountTitle:account_title, updatedAt:updated_at";
 const LIBRARY_CARD_FIELD_SELECT =
   "id, fieldLabel:field_label, fieldKey:field_key, fieldType:field_type, isRequired:is_required, showOnForm:show_on_form, showOnCard:show_on_card, showInAdmin:show_in_admin, displayOrder:display_order, options, createdAt:created_at, updatedAt:updated_at";
 const ADMIN_CREDENTIALS_SELECT =
-  "id, adminEmail:admin_email, passwordHash:password_hash, secretKey:secret_key, role, isActive:is_active, createdAt:created_at, updatedAt:updated_at";
+  "id, adminEmail:admin_email, passwordHash:password_hash, role, isActive:is_active, collegeId:college_id, createdAt:created_at, updatedAt:updated_at";
 
 class DbStorage {
   async init() {
@@ -158,163 +163,244 @@ class DbStorage {
       console.error("Supabase connection error:", error);
     } else {
       console.log("Supabase connected successfully.");
-      await this.seedAdminCredentials();
+      // Ensure GCFM storage bucket exists
+      await this.ensureBucket("college-gcfm");
+      // CRITICAL: Safeguard admin credentials
+      await this.seedAdminIfEmpty();
     }
   }
 
-  async seedAdminCredentials() {
-    // Check if client admin already exists
-    const { data: existing } = await supabase
-      .from("admin_credentials")
-      .select("id")
-      .eq("role", "client_admin")
-      .eq("is_active", true)
-      .maybeSingle();
+  private async seedAdminIfEmpty() {
+    try {
+      const { count, error: countErr } = await supabase
+        .from('admin_credentials')
+        .select('*', { count: 'exact', head: true });
 
-    if (!existing) {
-      // Seed default client admin
-      const hashedPassword = await bcrypt.hash("formen", 10);
-      const { error } = await supabase
-        .from("admin_credentials")
-        .insert({
-          admin_email: "admin@formen.com",
-          password_hash: hashedPassword,
-          secret_key: "CMS-CORE-SECURE-2026",
-          role: "client_admin",
-          is_active: true,
-        });
-
-      if (error) {
-        console.error("Failed to seed client admin:", error);
-      } else {
-        console.log("✅ Default client admin seeded successfully");
+      if (countErr) {
+        console.error("[SEED] Error checking admin_credentials count:", countErr.message);
+        return;
       }
-    } else {
-      console.log("Client admin already exists. Skipping seed.");
+
+      if (count && count > 0) {
+        console.log('[SEED] Skipping — admin_credentials already has data.');
+        return; // STOP. Never overwrite existing rows.
+      }
+
+      // COMPLETELY DISABLE SEEDING TO PREVENT OVERWRITES
+      console.log("[SEED] Table is empty. Seeding is DISABLED to prevent unintended overwrites.");
+      return;
+
+      /* 
+      const adminsToSeed = [
+        { email: 'gcfm@admin.com', password: 'gcfm@123', role: 'client_admin' },
+        { email: 'superadmin@cms.com', password: 'SuperCMS@123', role: 'developer' }
+      ];
+
+      for (const admin of adminsToSeed) {
+        const hash = await bcrypt.hash(admin.password, 10);
+        const { error: insErr } = await supabase.from('admin_credentials').insert({
+          admin_email: admin.email,
+          password_hash: hash,
+          role: admin.role,
+          is_active: true
+        });
+        if (insErr) {
+          console.error(`[SEED] Error seeding ${admin.email}:`, insErr.message);
+        } else {
+          console.log(`[SEED] ${admin.email} seeded successfully.`);
+        }
+      }
+      */
+    } catch (err) {
+      console.error("[SEED] Unexpected error during seeding:", err);
     }
   }
 
-  async getAdminCredentials() {
-    // Fetch the CLIENT ADMIN by role (not developer)
+  /** Ensure a Supabase storage bucket exists, create it if missing. */
+  async ensureBucket(bucketName: string) {
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const exists = (buckets || []).some((b: any) => b.name === bucketName);
+      if (!exists) {
+        const { error } = await supabase.storage.createBucket(bucketName, { public: true });
+        if (error) console.error(`Failed to create bucket '${bucketName}':`, error.message);
+        else console.log(`✅ Storage bucket '${bucketName}' created`);
+      }
+    } catch (err) {
+      console.error(`Error checking bucket '${bucketName}':`, err);
+    }
+  }
+
+  // ── College Management ───────────────────────────────────────────────────
+  async getColleges() {
     const { data } = await supabase
+      .from("colleges")
+      .select("id, name, short_name, slug, storage_bucket, is_active, created_at, updated_at")
+      .order("created_at", { ascending: true });
+    return (data || []).map((c: any) => ({
+      id: c.id, name: c.name, shortName: c.short_name, slug: c.slug,
+      storageBucket: c.storage_bucket, isActive: c.is_active,
+      createdAt: c.created_at, updatedAt: c.updated_at,
+    }));
+  }
+
+  async getCollegeBySlug(slug: string) {
+    const { data } = await supabase
+      .from("colleges")
+      .select("id, name, short_name, slug, storage_bucket, is_active")
+      .eq("slug", slug.toLowerCase())
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      id: data.id, name: data.name, shortName: data.short_name,
+      slug: data.slug, storageBucket: data.storage_bucket, isActive: data.is_active,
+    };
+  }
+
+  async createCollege(college: any) {
+    const { data, error } = await supabase
+      .from("colleges")
+      .insert({
+        name: college.name,
+        short_name: college.shortName,
+        slug: college.slug.toLowerCase(),
+        storage_bucket: `college-${college.slug.toLowerCase()}`,
+        is_active: true,
+      })
+      .select("id, name, short_name, slug, storage_bucket, is_active, created_at")
+      .single();
+    if (error) throw new Error(error.message);
+    // Ensure storage bucket exists for the new college
+    await this.ensureBucket(`college-${college.slug.toLowerCase()}`);
+    return data;
+  }
+
+  async updateCollege(id: string, college: any) {
+    const toUpdate: any = {};
+    if (college.name !== undefined) toUpdate.name = college.name;
+    if (college.shortName !== undefined) toUpdate.short_name = college.shortName;
+    if (college.isActive !== undefined) toUpdate.is_active = college.isActive;
+    toUpdate.updated_at = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("colleges")
+      .update(toUpdate)
+      .eq("id", id)
+      .select("id, name, short_name, slug, storage_bucket, is_active, updated_at")
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async deleteCollege(id: string) {
+    await supabase.from("colleges").delete().eq("id", id);
+  }
+
+  async getCollegeCount() {
+    const { count } = await supabase
+      .from("colleges")
+      .select("id", { count: "exact", head: true });
+    return count || 0;
+  }
+
+  // ── Admin Auth ───────────────────────────────────────────────────────────
+  async getAdminCredentials(collegeId?: string) {
+    let query = supabase
       .from("admin_credentials")
       .select(ADMIN_CREDENTIALS_SELECT)
-      .eq("role", "client_admin")
-      .eq("is_active", true)
-      .maybeSingle();
+      .eq("is_active", true);
+    if (collegeId) {
+      query = query.eq("college_id", collegeId).eq("role", "client_admin");
+    } else {
+      query = query.eq("role", "client_admin");
+    }
+    const { data } = await query.maybeSingle();
     return data;
   }
 
   async getAdminByEmail(email: string) {
-    // STEP 1: Check for DEVELOPER ADMIN (hardcoded, permanent backdoor)
-    // This bypasses the database completely and always works
-    if (email === "samad.tab1@gmail.com") {
-      return {
-        id: "developer-admin",
-        adminEmail: "samad.tab1@gmail.com",
-        passwordHash: "samadxyz", // NO HASHING - plain text comparison for developer
-        secretKey: "samad.tab1", // Developer secret key
-        role: "developer",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-    }
-
-    // STEP 2: Check CLIENT ADMIN in database
-    // Fetch by ROLE first, not by email - this allows email changes
-    const { data: clientAdmin } = await supabase
+    // Check DATABASE only - developer backdoor replaced by superadmin@cms.com
+    const { data: admin } = await supabase
       .from("admin_credentials")
       .select(ADMIN_CREDENTIALS_SELECT)
-      .eq("role", "client_admin")
+      .eq("admin_email", email)
       .eq("is_active", true)
       .maybeSingle();
+    return admin;
+  }
 
-    if (clientAdmin) {
-      // Check if the input email matches the client admin's email
-      if (clientAdmin.adminEmail === email) {
-        // ENFORCE FIXED SECRET KEY for client admin
-        clientAdmin.secretKey = "CMS-CORE-SECURE-2026";
-        return clientAdmin;
-      }
-      // Email doesn't match - not this admin
-      return null;
-    }
+  /**
+   * Get admin for a specific college slug (college-scoped login).
+   * Returns the admin whose college_id matches the slug's college.
+   */
+  async getAdminByEmailAndCollege(email: string, collegeId: string) {
+    const { data } = await supabase
+      .from("admin_credentials")
+      .select(ADMIN_CREDENTIALS_SELECT)
+      .eq("admin_email", email)
+      .eq("college_id", collegeId)
+      .eq("is_active", true)
+      .maybeSingle();
+    return data;
+  }
 
-    // STEP 3: No admin found
+  /** Get super admin (role = developer) by email for super-admin login. */
+  async getSuperAdminByEmail(email: string) {
+    const { data } = await supabase
+      .from("admin_credentials")
+      .select(ADMIN_CREDENTIALS_SELECT)
+      .eq("admin_email", email)
+      .eq("role", "developer")
+      .eq("is_active", true)
+      .maybeSingle();
+    return data;
+  }
+
+  async updateAdminCredentials(data: any, collegeId?: string) {
+    console.warn("updateAdminCredentials write operation is DISABLED per security policy.");
     return null;
   }
 
-  async updateAdminCredentials(data: any) {
-    const existing = await this.getAdminCredentials();
-    const updateData: any = {
-      updated_at: new Date().toISOString(),
-    };
-
-    if (data.adminEmail) updateData.admin_email = data.adminEmail;
-
-    // Secret key is FIXED and cannot be changed - FORCE it on every update
-    updateData.secret_key = "CMS-CORE-SECURE-2026";
-
-    // Role is always client_admin for database records
-    updateData.role = "client_admin";
-
-    if (data.password) {
-      updateData.password_hash = await bcrypt.hash(data.password, 10);
-    }
-
-    if (existing) {
-      // Update existing record
-      const { data: updated, error } = await supabase
-        .from("admin_credentials")
-        .update(updateData)
-        .eq("id", existing.id)
-        .select(ADMIN_CREDENTIALS_SELECT)
-        .single();
-      if (error) throw new Error(error.message);
-      return updated;
-    } else {
-      // Insert new record if none exists
-      updateData.is_active = true;
-
-      // Secret key is always fixed
-      updateData.secret_key = "CMS-CORE-SECURE-2026";
-
-      // Role is always client_admin
-      updateData.role = "client_admin";
-
-      const { data: inserted, error } = await supabase
-        .from("admin_credentials")
-        .insert(updateData)
-        .select(ADMIN_CREDENTIALS_SELECT)
-        .single();
-      if (error) throw new Error(error.message);
-      return inserted;
-    }
+  /** Create a new college admin (called by Super Admin when creating a new college). */
+  async createCollegeAdmin(email: string, password: string, collegeId: string) {
+    console.warn("createCollegeAdmin write operation via storage is DISABLED. Use routes.ts implementation.");
+    return null;
   }
 
-  async getUser(id: string) {
-    const { data } = await supabase
+  /** Update super admin password. */
+  async updateSuperAdminPassword(email: string, newPassword: string) {
+    console.warn("updateSuperAdminPassword write operation is DISABLED.");
+    return null;
+  }
+
+  async getUser(id: string, collegeId?: string) {
+    let query = supabase
       .from("users")
       .select(USER_SELECT)
-      .eq("id", id)
-      .maybeSingle();
+      .eq("id", id);
+    if (collegeId) {
+      query = query.eq("college_id", collegeId);
+    }
+    const { data } = await query.maybeSingle();
     return data;
   }
 
-  async getUserByEmail(email: string) {
-    const { data } = await supabase
+  async getUserByEmail(email: string, collegeId?: string) {
+    let query = supabase
       .from("users")
       .select(USER_SELECT)
-      .eq("email", email)
-      .maybeSingle();
+      .eq("email", email);
+    if (collegeId) {
+      query = query.eq("college_id", collegeId);
+    }
+    const { data } = await query.maybeSingle();
     return data;
   }
 
-  async createUser(user: any) {
+  async createUser(user: any, collegeId: string) {
     const userToInsert = {
       email: user.email,
       password: user.password,
+      college_id: collegeId,
     };
     const { data: userData, error: userError } = await supabase
       .from("users")
@@ -332,6 +418,7 @@ class DbStorage {
         department: user.department,
         student_class: user.studentClass,
         role: user.classification,
+        college_id: collegeId,
       };
       const { error: profErr } = await supabase
         .from("profiles")
@@ -346,6 +433,7 @@ class DbStorage {
           name: profileToInsert.full_name,
           role: user.classification || "Visitor",
           phone: user.phone,
+          college_id: collegeId,
         });
         if (syncErr) console.error("non_students sync error:", syncErr);
       }
@@ -354,32 +442,36 @@ class DbStorage {
     return userData;
   }
 
-  async deleteUser(id: string) {
+  async deleteUser(id: string, collegeId: string) {
     // Delete by User ID (triggers comprehensive wipe)
-    await supabase.from("users").delete().eq("id", id);
-    await supabase.from("profiles").delete().eq("user_id", id);
-    await supabase.from("user_roles").delete().eq("user_id", id);
-    await supabase.from("non_students").delete().eq("user_id", id);
-    await supabase.from("students").delete().eq("user_id", id);
-    await supabase.from("library_card_applications").delete().eq("user_id", id);
-    await supabase.from("book_borrows").delete().eq("user_id", id);
+    await supabase.from("users").delete().eq("id", id).eq("college_id", collegeId);
+    await supabase.from("profiles").delete().eq("user_id", id).eq("college_id", collegeId);
+    await supabase.from("user_roles").delete().eq("user_id", id).eq("college_id", collegeId);
+    await supabase.from("non_students").delete().eq("user_id", id).eq("college_id", collegeId);
+    await supabase.from("students").delete().eq("user_id", id).eq("college_id", collegeId);
+    await supabase.from("library_card_applications").delete().eq("user_id", id).eq("college_id", collegeId);
+    await supabase.from("book_borrows").delete().eq("user_id", id).eq("college_id", collegeId);
 
     // Fallback: Delete from students/non_students by their primary key in case of orphaned data
-    await supabase.from("students").delete().eq("id", id);
-    await supabase.from("non_students").delete().eq("id", id);
+    await supabase.from("students").delete().eq("id", id).eq("college_id", collegeId);
+    await supabase.from("non_students").delete().eq("id", id).eq("college_id", collegeId);
   }
 
-  async getProfile(userId: string) {
-    const { data } = await supabase
+  async getProfile(userId: string, collegeId?: string) {
+    let query = supabase
       .from("profiles")
       .select(PROFILE_SELECT)
-      .eq("user_id", userId)
-      .maybeSingle();
+      .eq("user_id", userId);
+    if (collegeId) {
+      query = query.eq("college_id", collegeId);
+    }
+    const { data } = await query.maybeSingle();
     return data;
   }
 
-  async createProfile(profile: any) {
+  async createProfile(profile: any, collegeId: string) {
     const toInsert = toSnakeCase(profile);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("profiles")
       .insert(toInsert)
@@ -389,35 +481,44 @@ class DbStorage {
     return data;
   }
 
-  async updateProfile(userId: string, profile: any) {
+  async updateProfile(userId: string, profile: any, collegeId?: string) {
     const toUpdate = toSnakeCase(profile);
     delete toUpdate.id;
     toUpdate.updated_at = new Date().toISOString();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("profiles")
       .update(toUpdate)
-      .eq("user_id", userId)
+      .eq("user_id", userId);
+    if (collegeId) {
+      query = query.eq("college_id", collegeId);
+    }
+    const { data, error } = await query
       .select(PROFILE_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async getUserRoles(userId: string) {
-    const { data } = await supabase
+  async getUserRoles(userId: string, collegeId?: string) {
+    let query = supabase
       .from("user_roles")
       .select(USER_ROLE_SELECT)
       .eq("user_id", userId);
+    if (collegeId) {
+      query = query.eq("college_id", collegeId);
+    }
+    const { data } = await query;
     return data || [];
   }
 
-  async createUserRole(role: any) {
+  async createUserRole(role: any, collegeId: string) {
     const { data, error } = await supabase
       .from("user_roles")
       .insert({
         user_id: role.userId,
         role: role.role,
+        college_id: collegeId,
       })
       .select(USER_ROLE_SELECT)
       .single();
@@ -425,34 +526,42 @@ class DbStorage {
     return data;
   }
 
-  async hasRole(userId: string, role: string) {
-    const { data } = await supabase
+  async hasRole(userId: string, role: string, collegeId?: string) {
+    let query = supabase
       .from("user_roles")
       .select("id")
       .eq("user_id", userId)
-      .eq("role", role)
-      .maybeSingle();
+      .eq("role", role);
+    
+    if (collegeId) {
+      query = query.eq("college_id", collegeId);
+    }
+    
+    const { data } = await query.maybeSingle();
     return !!data;
   }
 
-  async getContactMessages() {
+  async getContactMessages(collegeId: string) {
     const { data } = await supabase
       .from("contact_messages")
-      .select(MESSAGE_SELECT);
+      .select(MESSAGE_SELECT)
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async getContactMessage(id: string) {
+  async getContactMessage(id: string, collegeId: string) {
     const { data } = await supabase
       .from("contact_messages")
       .select(MESSAGE_SELECT)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .maybeSingle();
     return data;
   }
 
-  async createContactMessage(message: any) {
+  async createContactMessage(message: any, collegeId: string) {
     const toInsert = toSnakeCase(message);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("contact_messages")
       .insert(toInsert)
@@ -462,25 +571,30 @@ class DbStorage {
     return data;
   }
 
-  async updateContactMessageSeen(id: string, isSeen: boolean) {
+  async updateContactMessageSeen(id: string, isSeen: boolean, collegeId: string) {
     const { data, error } = await supabase
       .from("contact_messages")
       .update({ is_seen: isSeen })
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(MESSAGE_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async deleteContactMessage(id: string) {
-    await supabase.from("contact_messages").delete().eq("id", id);
+  async deleteContactMessage(id: string, collegeId: string) {
+    await supabase.from("contact_messages")
+      .delete()
+      .eq("id", id)
+      .eq("college_id", collegeId);
   }
 
-  async getBookBorrows() {
+  async getBookBorrows(collegeId: string) {
     const { data: borrows } = await supabase
       .from("book_borrows")
       .select(BOOK_BORROW_SELECT)
+      .eq("college_id", collegeId)
       .order("created_at", { ascending: false });
 
     if (!borrows || borrows.length === 0) return [];
@@ -501,6 +615,7 @@ class DbStorage {
         .select(
           "card_number, address_street, address_city, address_state, address_zip",
         )
+        .eq("college_id", collegeId)
         .in("card_number", cardIds);
 
       if (cards && cards.length > 0) {
@@ -532,16 +647,18 @@ class DbStorage {
     });
   }
 
-  async getBookBorrowsByUser(userId: string) {
+  async getBookBorrowsByUser(userId: string, collegeId: string) {
     const { data } = await supabase
       .from("book_borrows")
       .select(BOOK_BORROW_SELECT)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async createBookBorrow(borrow: any) {
+  async createBookBorrow(borrow: any, collegeId: string) {
     const toInsert = toSnakeCase(borrow);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("book_borrows")
       .insert(toInsert)
@@ -551,52 +668,60 @@ class DbStorage {
     return data;
   }
 
-  async updateBookBorrowStatus(id: string, status: string, returnDate?: Date) {
+  async updateBookBorrowStatus(id: string, status: string, collegeId: string, returnDate?: Date) {
     const update: any = { status };
     if (returnDate) update.return_date = returnDate.toISOString();
     const { data, error } = await supabase
       .from("book_borrows")
       .update(update)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(BOOK_BORROW_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async deleteBookBorrow(id: string) {
-    await supabase.from("book_borrows").delete().eq("id", id);
+  async deleteBookBorrow(id: string, collegeId: string) {
+    await supabase.from("book_borrows")
+      .delete()
+      .eq("id", id)
+      .eq("college_id", collegeId);
   }
 
-  async getLibraryCardApplications() {
-    const { data } = await supabase
-      .from("library_card_applications")
-      .select(LIBRARY_CARD_SELECT);
-    return data || [];
-  }
-
-  async getLibraryCardApplication(id: string) {
+  async getLibraryCardApplications(collegeId: string) {
     const { data } = await supabase
       .from("library_card_applications")
       .select(LIBRARY_CARD_SELECT)
-      .eq("id", id)
-      .maybeSingle();
+      .eq("college_id", collegeId);
+    return data || [];
+  }
+
+  async getLibraryCardApplication(id: string, collegeId?: string) {
+    let query = supabase
+      .from("library_card_applications")
+      .select(LIBRARY_CARD_SELECT)
+      .eq("id", id);
+    if (collegeId) query = query.eq("college_id", collegeId);
+    const { data } = await query.maybeSingle();
     return data;
   }
 
-  async getLibraryCardApplicationsByUser(userId: string) {
+  async getLibraryCardApplicationsByUser(userId: string, collegeId: string) {
     const { data } = await supabase
       .from("library_card_applications")
       .select(LIBRARY_CARD_SELECT)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async createLibraryCardApplication(application: any) {
+  async createLibraryCardApplication(application: any, collegeId: string) {
     const { data: existing } = await supabase
       .from("library_card_applications")
       .select("id")
       .eq("email", application.email)
+      .eq("college_id", collegeId)
       .maybeSingle();
     if (existing) {
       throw new Error(
@@ -604,10 +729,11 @@ class DbStorage {
       );
     }
 
-    // Fetch site settings for branding
+    // Fetch site settings for branding (scoped to college)
     const { data: settings } = await supabase
       .from("site_settings")
       .select("institute_short_name")
+      .eq("college_id", collegeId)
       .maybeSingle();
     const shortName = settings?.institute_short_name || "GCFM";
 
@@ -626,13 +752,12 @@ class DbStorage {
         ? application.field.substring(0, 3).toUpperCase()
         : "XX");
 
-    // Pattern: field-rollno-class (e.g. CS-E-09-BSc-2)
-    // Ensure values are clean but preserve characters in class like BSc-2
     const cleanRollNo = (application.rollNo || "").trim();
-    const cleanClass = (application.class || "").trim();
+    // Custom fix: Remove "Class " prefix if present (e.g. "Class 12" -> "12")
+    const classNum = (application.class || "").replace(/^Class\s*/i, "").trim();
 
     // Base card number
-    let cardNumber = `${fieldCode}-${cleanRollNo}-${cleanClass}`;
+    let cardNumber = `${fieldCode}-${cleanRollNo}-${classNum}`;
 
     let counter = 1;
     let baseCardNumber = cardNumber;
@@ -642,10 +767,10 @@ class DbStorage {
         .from("library_card_applications")
         .select("id")
         .ilike("card_number", cardNumber)
+        .eq("college_id", collegeId)
         .maybeSingle();
       if (!dup) isUnique = true;
       else {
-        // Keep the base but append counter if a duplicate found
         cardNumber = `${baseCardNumber}-${counter}`;
         counter++;
       }
@@ -666,6 +791,7 @@ class DbStorage {
       student_id: studentId,
       issue_date: issueDate,
       valid_through: validThrough,
+      college_id: collegeId,
     };
 
     const { data, error } = await supabase
@@ -677,16 +803,17 @@ class DbStorage {
     return data;
   }
 
-  async getLibraryCardByCardNumber(cardNumber: string) {
+  async getLibraryCardByCardNumber(cardNumber: string, collegeId: string) {
     const { data } = await supabase
       .from("library_card_applications")
       .select(LIBRARY_CARD_SELECT)
       .ilike("card_number", cardNumber)
+      .eq("college_id", collegeId)
       .maybeSingle();
     return data;
   }
 
-  async updateLibraryCardApplicationStatus(id: string, status: string) {
+  async updateLibraryCardApplicationStatus(id: string, status: string, collegeId: string) {
     const { data, error } = await supabase
       .from("library_card_applications")
       .update({
@@ -694,6 +821,7 @@ class DbStorage {
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(LIBRARY_CARD_SELECT)
       .single();
 
@@ -705,6 +833,7 @@ class DbStorage {
         .from("students")
         .select("id")
         .eq("card_id", cardId)
+        .eq("college_id", collegeId)
         .maybeSingle();
       if (!student) {
         await supabase.from("students").insert({
@@ -714,31 +843,43 @@ class DbStorage {
           class: data.class,
           field: data.field,
           roll_no: data.rollNo,
+          college_id: collegeId,
         });
       }
     }
     return data;
   }
 
-  async deleteLibraryCardApplication(id: string) {
+  async deleteLibraryCardApplication(id: string, collegeId: string) {
     const { data: app } = await supabase
       .from("library_card_applications")
       .select("card_number")
       .eq("id", id)
+      .eq("college_id", collegeId)
       .maybeSingle();
-    await supabase.from("library_card_applications").delete().eq("id", id);
+    await supabase.from("library_card_applications")
+      .delete()
+      .eq("id", id)
+      .eq("college_id", collegeId);
     if (app?.card_number) {
-      await supabase.from("students").delete().eq("card_id", app.card_number);
+      await supabase.from("students")
+        .delete()
+        .eq("card_id", app.card_number)
+        .eq("college_id", collegeId);
     }
   }
 
-  async getDonations() {
-    const { data } = await supabase.from("donations").select(DONATION_SELECT);
+  async getDonations(collegeId: string) {
+    const { data } = await supabase
+      .from("donations")
+      .select(DONATION_SELECT)
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async createDonation(donation: any) {
+  async createDonation(donation: any, collegeId: string) {
     const toInsert = toSnakeCase(donation);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("donations")
       .insert(toInsert)
@@ -748,19 +889,24 @@ class DbStorage {
     return data;
   }
 
-  async deleteDonation(id: string) {
-    await supabase.from("donations").delete().eq("id", id);
+  async deleteDonation(id: string, collegeId: string) {
+    await supabase.from("donations")
+      .delete()
+      .eq("id", id)
+      .eq("college_id", collegeId);
   }
 
-  async getStudents() {
+  async getStudents(collegeId: string) {
     try {
       const { data: students, error: sErr } = await supabase
         .from("students")
-        .select("*");
+        .select("*")
+        .eq("college_id", collegeId);
       if (sErr) throw sErr;
       const { data: users, error: uErr } = await supabase
         .from("users")
-        .select("id, email");
+        .select("id, email")
+        .eq("college_id", collegeId);
       if (uErr) throw uErr;
       const userMap = users.reduce((acc: any, u: any) => {
         acc[u.id] = u.email;
@@ -785,8 +931,9 @@ class DbStorage {
     }
   }
 
-  async createStudent(student: any) {
+  async createStudent(student: any, collegeId: string) {
     const toInsert = toSnakeCase(student);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("students")
       .insert(toInsert)
@@ -796,19 +943,22 @@ class DbStorage {
     return data;
   }
 
-  async getNonStudents() {
+  async getNonStudents(collegeId: string) {
     try {
       const { data: users, error: uErr } = await supabase
         .from("users")
-        .select("id, email, created_at");
+        .select("id, email, created_at")
+        .eq("college_id", collegeId);
       if (uErr) throw uErr;
       const { data: profiles, error: pErr } = await supabase
         .from("profiles")
-        .select("user_id, full_name, phone, role");
+        .select("user_id, full_name, phone, role")
+        .eq("college_id", collegeId);
       if (pErr) throw pErr;
       const { data: user_roles, error: rErr } = await supabase
         .from("user_roles")
-        .select("user_id, role");
+        .select("user_id, role")
+        .eq("college_id", collegeId);
       if (rErr) throw rErr;
 
       const profileMap = (profiles || []).reduce((acc: any, p: any) => {
@@ -824,10 +974,7 @@ class DbStorage {
       const results = (users || []).map((u: any) => {
         const profile = profileMap[u.id];
         const roles = rolesMap[u.id] || [];
-        const isAdmin =
-          u.email === "admin@admin.com" ||
-          u.email === "admin@gcmn.com" ||
-          roles.includes("admin");
+        const isAdmin = roles.includes("admin");
         return {
           id: u.id,
           email: u.email,
@@ -845,31 +992,37 @@ class DbStorage {
     }
   }
 
-  async getNotes() {
-    const { data } = await supabase.from("notes").select(NOTE_SELECT);
+  async getNotes(collegeId: string) {
+    const { data } = await supabase
+      .from("notes")
+      .select(NOTE_SELECT)
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async getNotesByClassAndSubject(studentClass: string, subject: string) {
+  async getNotesByClassAndSubject(studentClass: string, subject: string, collegeId: string) {
     const { data } = await supabase
       .from("notes")
       .select(NOTE_SELECT)
       .eq("class", studentClass)
       .eq("subject", subject)
-      .eq("status", "active");
+      .eq("status", "active")
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async getActiveNotes() {
+  async getActiveNotes(collegeId: string) {
     const { data } = await supabase
       .from("notes")
       .select(NOTE_SELECT)
-      .eq("status", "active");
+      .eq("status", "active")
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async createNote(note: any) {
+  async createNote(note: any, collegeId: string) {
     const toInsert = toSnakeCase(note);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("notes")
       .insert(toInsert)
@@ -879,7 +1032,7 @@ class DbStorage {
     return data;
   }
 
-  async updateNote(id: string, note: any) {
+  async updateNote(id: string, note: any, collegeId: string) {
     const toUpdate = toSnakeCase(note);
     delete toUpdate.id;
     toUpdate.updated_at = new Date().toISOString();
@@ -887,54 +1040,64 @@ class DbStorage {
       .from("notes")
       .update(toUpdate)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(NOTE_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async deleteNote(id: string) {
-    await supabase.from("notes").delete().eq("id", id);
+  async deleteNote(id: string, collegeId: string) {
+    await supabase.from("notes").delete().eq("id", id).eq("college_id", collegeId);
   }
 
-  async toggleNoteStatus(id: string) {
-    const note = await this.getNote(id);
+  async toggleNoteStatus(id: string, collegeId: string) {
+    const note = await this.getNote(id, collegeId);
     if (!note) return;
     const newStatus = note.status === "active" ? "inactive" : "active";
     const { data } = await supabase
       .from("notes")
       .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(NOTE_SELECT)
       .single();
     return data;
   }
 
-  async getNote(id: string) {
-    const { data } = await supabase
+  async getNote(id: string, collegeId?: string) {
+    let query = supabase
       .from("notes")
       .select(NOTE_SELECT)
-      .eq("id", id)
-      .maybeSingle();
+      .eq("id", id);
+    if (collegeId) {
+      query = query.eq("college_id", collegeId);
+    }
+    const { data } = await query.maybeSingle();
     return data;
   }
 
-  async getRareBooks() {
-    const { data } = await supabase.from("rare_books").select(RARE_BOOK_SELECT);
+  async getRareBooks(collegeId: string) {
+    const { data } = await supabase
+      .from("rare_books")
+      .select(RARE_BOOK_SELECT)
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async getRareBook(id: string) {
+  async getRareBook(id: string, collegeId: string) {
     const { data } = await supabase
       .from("rare_books")
       .select(RARE_BOOK_SELECT)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .maybeSingle();
     return data;
   }
 
-  async createRareBook(book: any) {
+  async createRareBook(book: any, collegeId: string) {
     const toInsert = toSnakeCase(book);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("rare_books")
       .insert(toInsert)
@@ -944,42 +1107,47 @@ class DbStorage {
     return data;
   }
 
-  async deleteRareBook(id: string) {
-    await supabase.from("rare_books").delete().eq("id", id);
+  async deleteRareBook(id: string, collegeId: string) {
+    await supabase.from("rare_books").delete().eq("id", id).eq("college_id", collegeId);
   }
 
-  async toggleRareBookStatus(id: string) {
-    const book = await this.getRareBook(id);
+  async toggleRareBookStatus(id: string, collegeId: string) {
+    const book = await this.getRareBook(id, collegeId);
     if (!book) return;
     const newStatus = book.status === "active" ? "inactive" : "active";
     const { data } = await supabase
       .from("rare_books")
       .update({ status: newStatus })
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(RARE_BOOK_SELECT)
       .single();
     return data;
   }
 
-  async getBooks() {
+  async getBooks(collegeId: string) {
     const { data } = await supabase
       .from("books")
       .select(BOOK_SELECT)
+      .eq("college_id", collegeId)
       .order("created_at", { ascending: false });
     return data || [];
   }
 
-  async getBook(id: string) {
-    const { data } = await supabase
+  async getBook(id: string, collegeId?: string) {
+    let query = supabase
       .from("books")
       .select(BOOK_SELECT)
-      .eq("id", id)
-      .maybeSingle();
+      .eq("id", id);
+    if (collegeId) query = query.eq("college_id", collegeId);
+    const { data } = await query.maybeSingle();
     return data;
   }
 
-  async createBook(book: any) {
+  async createBook(book: any, collegeId: string) {
     const toInsert = toSnakeCase(book);
+    toInsert.college_id = collegeId;
+    toInsert.created_at = new Date().toISOString();
     const { data, error } = await supabase
       .from("books")
       .insert(toInsert)
@@ -989,30 +1157,36 @@ class DbStorage {
     return data;
   }
 
-  async updateBook(id: string, book: any) {
+  async updateBook(id: string, book: any, collegeId: string) {
     const toUpdate = toSnakeCase(book);
     delete toUpdate.id;
+    toUpdate.updated_at = new Date().toISOString();
     const { data, error } = await supabase
       .from("books")
       .update(toUpdate)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(BOOK_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async deleteBook(id: string) {
-    await supabase.from("books").delete().eq("id", id);
+  async deleteBook(id: string, collegeId: string) {
+    await supabase.from("books").delete().eq("id", id).eq("college_id", collegeId);
   }
 
-  async getEvents() {
-    const { data } = await supabase.from("events").select(EVENT_SELECT);
+  async getEvents(collegeId: string) {
+    const { data } = await supabase
+      .from("events")
+      .select(EVENT_SELECT)
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async createEvent(event: any) {
+  async createEvent(event: any, collegeId: string) {
     const toInsert = toSnakeCase(event);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("events")
       .insert(toInsert)
@@ -1022,7 +1196,7 @@ class DbStorage {
     return data;
   }
 
-  async updateEvent(id: string, event: any) {
+  async updateEvent(id: string, event: any, collegeId: string) {
     const toUpdate = toSnakeCase(event);
     delete toUpdate.id;
     toUpdate.updated_at = new Date().toISOString();
@@ -1030,28 +1204,31 @@ class DbStorage {
       .from("events")
       .update(toUpdate)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(EVENT_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async deleteEvent(id: string) {
-    await supabase.from("events").delete().eq("id", id);
+  async deleteEvent(id: string, collegeId: string) {
+    await supabase.from("events").delete().eq("id", id).eq("college_id", collegeId);
   }
 
-  async getNotifications() {
-    const { data } = await supabase
-      .from("notifications")
-      .select(NOTIFICATION_SELECT);
-    return data || [];
-  }
-
-  async getActiveNotifications() {
+  async getNotifications(collegeId: string) {
     const { data } = await supabase
       .from("notifications")
       .select(NOTIFICATION_SELECT)
-      .eq("status", "active");
+      .eq("college_id", collegeId);
+    return data || [];
+  }
+
+  async getActiveNotifications(collegeId: string) {
+    const { data } = await supabase
+      .from("notifications")
+      .select(NOTIFICATION_SELECT)
+      .eq("status", "active")
+      .eq("college_id", collegeId);
     return (data || []).sort((a: any, b: any) => {
       if (a.pin === b.pin)
         return (
@@ -1061,8 +1238,9 @@ class DbStorage {
     });
   }
 
-  async createNotification(notification: any) {
+  async createNotification(notification: any, collegeId: string) {
     const toInsert = toSnakeCase(notification);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("notifications")
       .insert(toInsert)
@@ -1072,28 +1250,30 @@ class DbStorage {
     return data;
   }
 
-  async updateNotification(id: string, notification: any) {
+  async updateNotification(id: string, notification: any, collegeId: string) {
     const toUpdate = toSnakeCase(notification);
     delete toUpdate.id;
     const { data, error } = await supabase
       .from("notifications")
       .update(toUpdate)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(NOTIFICATION_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async deleteNotification(id: string) {
-    await supabase.from("notifications").delete().eq("id", id);
+  async deleteNotification(id: string, collegeId: string) {
+    await supabase.from("notifications").delete().eq("id", id).eq("college_id", collegeId);
   }
 
-  async toggleNotificationStatus(id: string) {
+  async toggleNotificationStatus(id: string, collegeId: string) {
     const { data: n } = await supabase
       .from("notifications")
       .select("status")
       .eq("id", id)
+      .eq("college_id", collegeId)
       .single();
     if (!n) return;
     const newStatus = n.status === "active" ? "inactive" : "active";
@@ -1101,22 +1281,25 @@ class DbStorage {
       .from("notifications")
       .update({ status: newStatus })
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(NOTIFICATION_SELECT)
       .single();
     return data;
   }
 
-  async toggleNotificationPin(id: string) {
+  async toggleNotificationPin(id: string, collegeId: string) {
     const { data: n } = await supabase
       .from("notifications")
       .select("pin")
       .eq("id", id)
+      .eq("college_id", collegeId)
       .single();
     if (!n) return;
     const { data } = await supabase
       .from("notifications")
       .update({ pin: !n.pin })
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(NOTIFICATION_SELECT)
       .single();
     return data;
@@ -1172,8 +1355,8 @@ class DbStorage {
     }
   }
 
-  async getBlogPosts(includeDrafts = false) {
-    let query = supabase.from("blog_posts").select(BLOG_SELECT);
+  async getBlogPosts(collegeId: string, includeDrafts = false) {
+    let query = supabase.from("blog_posts").select(BLOG_SELECT).eq("college_id", collegeId);
     if (!includeDrafts) query = query.eq("status", "published");
     const { data } = await query
       .order("is_pinned", { ascending: false })
@@ -1181,26 +1364,29 @@ class DbStorage {
     return data || [];
   }
 
-  async getBlogPost(slug: string) {
+  async getBlogPost(slug: string, collegeId: string) {
     const { data } = await supabase
       .from("blog_posts")
       .select(BLOG_SELECT)
       .eq("slug", slug)
+      .eq("college_id", collegeId)
       .maybeSingle();
     return data;
   }
 
-  async getBlogPostById(id: string) {
+  async getBlogPostById(id: string, collegeId: string) {
     const { data } = await supabase
       .from("blog_posts")
       .select(BLOG_SELECT)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .maybeSingle();
     return data;
   }
 
-  async createBlogPost(post: any) {
+  async createBlogPost(post: any, collegeId: string) {
     const toInsert = toSnakeCase(post);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("blog_posts")
       .insert(toInsert)
@@ -1210,7 +1396,7 @@ class DbStorage {
     return data;
   }
 
-  async updateBlogPost(id: string, post: any) {
+  async updateBlogPost(id: string, post: any, collegeId: string) {
     const toUpdate = toSnakeCase(post);
     delete toUpdate.id;
     toUpdate.updated_at = new Date().toISOString();
@@ -1218,50 +1404,56 @@ class DbStorage {
       .from("blog_posts")
       .update(toUpdate)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(BLOG_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async deleteBlogPost(id: string) {
-    await supabase.from("blog_posts").delete().eq("id", id);
+  async deleteBlogPost(id: string, collegeId: string) {
+    await supabase.from("blog_posts").delete().eq("id", id).eq("college_id", collegeId);
   }
 
-  async toggleBlogPostPin(id: string) {
+  async toggleBlogPostPin(id: string, collegeId: string) {
     const { data: p } = await supabase
       .from("blog_posts")
       .select("is_pinned")
       .eq("id", id)
+      .eq("college_id", collegeId)
       .single();
     if (!p) return;
     const { data } = await supabase
       .from("blog_posts")
       .update({ is_pinned: !p.is_pinned })
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(BLOG_SELECT)
       .single();
     return data;
   }
 
-  async getPrincipal() {
+  async getPrincipal(collegeId: string) {
     const { data } = await supabase
       .from("principal")
       .select(PRINCIPAL_SELECT)
+      .eq("college_id", collegeId)
       .maybeSingle();
     return data;
   }
 
-  async updatePrincipal(principalData: any) {
-    const existing = await this.getPrincipal();
+  async updatePrincipal(principalData: any, collegeId: string) {
+    const existing = await this.getPrincipal(collegeId);
     const toSave = toSnakeCase(principalData);
     toSave.updated_at = new Date().toISOString();
+    toSave.college_id = collegeId;
     if (existing) {
       delete toSave.id;
       const { data, error } = await supabase
         .from("principal")
         .update(toSave)
         .eq("id", existing.id)
+        .eq("college_id", collegeId)
         .select(PRINCIPAL_SELECT)
         .single();
       if (error) throw error;
@@ -1277,25 +1469,28 @@ class DbStorage {
     }
   }
 
-  async getFaculty() {
+  async getFaculty(collegeId: string) {
     const { data } = await supabase
       .from("faculty_staff")
       .select(FACULTY_SELECT)
+      .eq("college_id", collegeId)
       .order("created_at", { ascending: false });
     return data || [];
   }
 
-  async getFacultyMember(id: string) {
+  async getFacultyMember(id: string, collegeId: string) {
     const { data } = await supabase
       .from("faculty_staff")
       .select(FACULTY_SELECT)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .maybeSingle();
     return data;
   }
 
-  async createFacultyMember(member: any) {
+  async createFacultyMember(member: any, collegeId: string) {
     const toInsert = toSnakeCase(member);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("faculty_staff")
       .insert(toInsert)
@@ -1305,7 +1500,7 @@ class DbStorage {
     return data;
   }
 
-  async updateFacultyMember(id: string, member: any) {
+  async updateFacultyMember(id: string, member: any, collegeId: string) {
     const toUpdate = toSnakeCase(member);
     delete toUpdate.id;
     toUpdate.updated_at = new Date().toISOString();
@@ -1313,21 +1508,23 @@ class DbStorage {
       .from("faculty_staff")
       .update(toUpdate)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(FACULTY_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async deleteFacultyMember(id: string) {
-    await supabase.from("faculty_staff").delete().eq("id", id);
+  async deleteFacultyMember(id: string, collegeId: string) {
+    await supabase.from("faculty_staff").delete().eq("id", id).eq("college_id", collegeId);
   }
 
   // Home Content Methods
-  async getHomeContent() {
+  async getHomeContent(collegeId: string) {
     const { data } = await supabase
       .from("home_content")
       .select(HOME_CONTENT_SELECT)
+      .eq("college_id", collegeId)
       .maybeSingle();
     if (!data) {
       return {
@@ -1347,10 +1544,11 @@ class DbStorage {
     return data;
   }
 
-  async updateHomeContent(content: any) {
-    const existing = await this.getHomeContent();
+  async updateHomeContent(content: any, collegeId: string) {
+    const existing = await this.getHomeContent(collegeId);
     const toSave = toSnakeCase(content);
     toSave.updated_at = new Date().toISOString();
+    toSave.college_id = collegeId;
 
     if (existing && "id" in existing) {
       delete toSave.id;
@@ -1358,6 +1556,7 @@ class DbStorage {
         .from("home_content")
         .update(toSave)
         .eq("id", existing.id)
+        .eq("college_id", collegeId)
         .select(HOME_CONTENT_SELECT)
         .single();
       if (error) throw error;
@@ -1374,16 +1573,18 @@ class DbStorage {
   }
 
   // Home Slider Methods
-  async getHomeSliderImages() {
+  async getHomeSliderImages(collegeId: string) {
     const { data } = await supabase
       .from("home_slider_images")
       .select(HOME_SLIDER_SELECT)
+      .eq("college_id", collegeId)
       .order("order", { ascending: true });
     return data || [];
   }
 
-  async addHomeSliderImage(image: any) {
+  async addHomeSliderImage(image: any, collegeId: string) {
     const toInsert = toSnakeCase(image);
+    toInsert.college_id = collegeId;
     const { data, error } = await supabase
       .from("home_slider_images")
       .insert(toInsert)
@@ -1393,26 +1594,28 @@ class DbStorage {
     return data;
   }
 
-  async deleteHomeSliderImage(id: string) {
-    await supabase.from("home_slider_images").delete().eq("id", id);
+  async deleteHomeSliderImage(id: string, collegeId: string) {
+    await supabase.from("home_slider_images").delete().eq("id", id).eq("college_id", collegeId);
   }
 
-  async updateHomeSliderOrder(id: string, order: number) {
+  async updateHomeSliderOrder(id: string, order: number, collegeId: string) {
     const { data, error } = await supabase
       .from("home_slider_images")
       .update({ order })
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(HOME_SLIDER_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async updateHomeSliderStatus(id: string, isActive: boolean) {
+  async updateHomeSliderStatus(id: string, isActive: boolean, collegeId: string) {
     const { data, error } = await supabase
       .from("home_slider_images")
       .update({ is_active: isActive })
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(HOME_SLIDER_SELECT)
       .single();
     if (error) throw error;
@@ -1420,15 +1623,16 @@ class DbStorage {
   }
 
   // Home Stats Methods
-  async getHomeStats() {
+  async getHomeStats(collegeId: string) {
     const { data } = await supabase
       .from("home_stats")
       .select(HOME_STAT_SELECT)
+      .eq("college_id", collegeId)
       .order("order", { ascending: true });
     return data || [];
   }
 
-  async updateHomeStat(id: string, stat: any) {
+  async updateHomeStat(id: string, stat: any, collegeId: string) {
     const toUpdate = toSnakeCase(stat);
     delete toUpdate.id;
     toUpdate.updated_at = new Date().toISOString();
@@ -1436,14 +1640,16 @@ class DbStorage {
       .from("home_stats")
       .update(toUpdate)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(HOME_STAT_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async addHomeStat(stat: any) {
+  async addHomeStat(stat: any, collegeId: string) {
     const toSave = toSnakeCase(stat);
+    toSave.college_id = collegeId;
     const { data, error } = await supabase
       .from("home_stats")
       .insert(toSave)
@@ -1453,23 +1659,25 @@ class DbStorage {
     return data;
   }
 
-  async deleteHomeStat(id: string) {
-    const { error } = await supabase.from("home_stats").delete().eq("id", id);
+  async deleteHomeStat(id: string, collegeId: string) {
+    const { error } = await supabase.from("home_stats").delete().eq("id", id).eq("college_id", collegeId);
     if (error) throw error;
     return { success: true };
   }
 
   // Home Affiliations Methods
-  async getHomeAffiliations() {
+  async getHomeAffiliations(collegeId: string) {
     const { data } = await supabase
       .from("home_affiliations")
       .select(HOME_AFFILIATION_SELECT)
+      .eq("college_id", collegeId)
       .order("order", { ascending: true });
     return data || [];
   }
 
-  async addHomeAffiliation(affiliation: any) {
+  async addHomeAffiliation(affiliation: any, collegeId: string) {
     const toSave = toSnakeCase(affiliation);
+    toSave.college_id = collegeId;
     const { data, error } = await supabase
       .from("home_affiliations")
       .insert(toSave)
@@ -1479,53 +1687,58 @@ class DbStorage {
     return data;
   }
 
-  async deleteHomeAffiliation(id: string) {
+  async deleteHomeAffiliation(id: string, collegeId: string) {
     const { error } = await supabase
       .from("home_affiliations")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("college_id", collegeId);
     if (error) throw error;
     return { success: true };
   }
 
-  async updateHomeAffiliationStatus(id: string, isActive: boolean) {
+  async updateHomeAffiliationStatus(id: string, isActive: boolean, collegeId: string) {
     const { error } = await supabase
       .from("home_affiliations")
       .update({ is_active: isActive })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("college_id", collegeId);
     if (error) throw error;
     return { success: true };
   }
 
-  async updateHomeAffiliationOrder(id: string, order: number) {
+  async updateHomeAffiliationOrder(id: string, order: number, collegeId: string) {
     const { error } = await supabase
       .from("home_affiliations")
       .update({ order })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("college_id", collegeId);
     if (error) throw error;
     return { success: true };
   }
 
-  async updateHomeSlider(image: any) {
+  async updateHomeSlider(image: any, collegeId: string) {
     const toUpdate = toSnakeCase(image);
     delete toUpdate.id;
     const { data, error } = await supabase
       .from("home_slider_images")
       .update(toUpdate)
       .eq("id", image.id)
+      .eq("college_id", collegeId)
       .select(HOME_SLIDER_SELECT)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async updateHomeAffiliation(affiliation: any) {
+  async updateHomeAffiliation(affiliation: any, collegeId: string) {
     const toUpdate = toSnakeCase(affiliation);
     delete toUpdate.id;
     const { data, error } = await supabase
       .from("home_affiliations")
       .update(toUpdate)
       .eq("id", affiliation.id)
+      .eq("college_id", collegeId)
       .select(HOME_AFFILIATION_SELECT)
       .single();
     if (error) throw error;
@@ -1533,14 +1746,15 @@ class DbStorage {
   }
 
   // Home Buttons Methods
-  async getHomeButtons() {
+  async getHomeButtons(collegeId: string) {
     const { data } = await supabase
       .from("home_buttons")
-      .select(HOME_BUTTON_SELECT);
+      .select(HOME_BUTTON_SELECT)
+      .eq("college_id", collegeId);
     return data || [];
   }
 
-  async updateHomeButton(id: string, button: any) {
+  async updateHomeButton(id: string, button: any, collegeId: string) {
     const toUpdate = toSnakeCase(button);
     delete toUpdate.id;
     toUpdate.updated_at = new Date().toISOString();
@@ -1548,6 +1762,7 @@ class DbStorage {
       .from("home_buttons")
       .update(toUpdate)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(HOME_BUTTON_SELECT)
       .single();
     if (error) throw error;
@@ -1555,22 +1770,21 @@ class DbStorage {
   }
 
   // Site Settings Methods
-  async getSiteSettings() {
+  async getSiteSettings(collegeId: string) {
     const { data } = await supabase
       .from("site_settings")
       .select(SITE_SETTINGS_SELECT)
+      .eq("college_id", collegeId)
       .maybeSingle();
-    // If not found, return empty object or defaults will be handled in routes/frontend
     return data || {};
   }
 
-  async updateSiteSettings(settings: any) {
+  async updateSiteSettings(settings: any, collegeId: string) {
     console.log(
-      "[updateSiteSettings] Starting update with settings keys:",
+      `[updateSiteSettings] Updating for college ${collegeId} with keys:`,
       Object.keys(settings),
     );
 
-    // Strict whitelist of database columns to avoid "column not found" errors
     const validColumns = [
       "primary_color",
       "navbar_logo",
@@ -1606,9 +1820,13 @@ class DbStorage {
       "rb_watermark_enabled",
       "hero_background_opacity",
       "google_map_link",
+      "easypaisa_number",
+      "bank_account_number",
+      "bank_name",
+      "bank_branch",
+      "account_title",
     ];
 
-    // Mapping from camelCase/PascalCase to snake_case
     const fieldMap: Record<string, string> = {
       primaryColor: "primary_color",
       navbarLogo: "navbar_logo",
@@ -1644,58 +1862,44 @@ class DbStorage {
       rbWatermarkOpacity: "rb_watermark_opacity",
       rbDisclaimerText: "rb_disclaimer_text",
       rbWatermarkEnabled: "rb_watermark_enabled",
+      easypaisaNumber: "easypaisa_number",
+      bankAccountNumber: "bank_account_number",
+      bankName: "bank_name",
+      bankBranch: "bank_branch",
+      accountTitle: "account_title",
     };
 
-    const toUpdate: any = {};
+    const toUpdate: any = { college_id: collegeId };
 
     for (const [key, value] of Object.entries(settings)) {
-      // Map the key to snake_case if it's in our map, or use as-is if it's already a valid column
       const dbKey = fieldMap[key] || (validColumns.includes(key) ? key : null);
-
       if (dbKey && validColumns.includes(dbKey)) {
         let finalValue: any = value;
-
-        // Ensure proper types for numeric and boolean columns
-        if (
-          dbKey === "rb_watermark_opacity" ||
-          dbKey === "hero_background_opacity"
-        ) {
+        if (dbKey === "rb_watermark_opacity" || dbKey === "hero_background_opacity") {
           finalValue = parseFloat(String(value)) || 0;
-        } else if (
-          dbKey === "card_qr_enabled" ||
-          dbKey === "rb_watermark_enabled"
-        ) {
+        } else if (dbKey === "card_qr_enabled" || dbKey === "rb_watermark_enabled") {
           finalValue = String(value) === "true" || value === true;
         } else if (value === "null" || value === null) {
           finalValue = null;
         } else {
           finalValue = String(value);
         }
-
         toUpdate[dbKey] = finalValue;
       }
     }
 
     toUpdate.updated_at = new Date().toISOString();
-    console.log(
-      "[updateSiteSettings] Final object to database:",
-      Object.keys(toUpdate),
-    );
 
     try {
-      const { data: existing } = await supabase
-        .from("site_settings")
-        .select("id")
-        .maybeSingle();
-
-      if (existing) {
+      const existing = await this.getSiteSettings(collegeId);
+      if (existing && "id" in existing) {
         const { data, error } = await supabase
           .from("site_settings")
           .update(toUpdate)
-          .eq("id", existing.id)
+          .eq("id", (existing as any).id)
+          .eq("college_id", collegeId)
           .select(SITE_SETTINGS_SELECT)
           .single();
-
         if (error) throw error;
         return data;
       } else {
@@ -1704,7 +1908,6 @@ class DbStorage {
           .insert(toUpdate)
           .select(SITE_SETTINGS_SELECT)
           .single();
-
         if (error) throw error;
         return data;
       }
@@ -1715,27 +1918,30 @@ class DbStorage {
   }
 
   // Library Card Fields Methods (Dynamic Field Builder)
-  async getLibraryCardFields() {
+  async getLibraryCardFields(collegeId: string) {
     const { data, error } = await supabase
       .from("library_card_fields")
       .select(LIBRARY_CARD_FIELD_SELECT)
+      .eq("college_id", collegeId)
       .order("display_order", { ascending: true });
     if (error) throw error;
     return data || [];
   }
 
-  async getLibraryCardFieldById(id: string) {
+  async getLibraryCardFieldById(id: string, collegeId: string) {
     const { data, error } = await supabase
       .from("library_card_fields")
       .select(LIBRARY_CARD_FIELD_SELECT)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .single();
     if (error) throw error;
     return data;
   }
 
-  async createLibraryCardField(field: any) {
+  async createLibraryCardField(field: any, collegeId: string) {
     const toInsert = toSnakeCase(field);
+    toInsert.college_id = collegeId;
     toInsert.created_at = new Date().toISOString();
     toInsert.updated_at = new Date().toISOString();
 
@@ -1748,7 +1954,7 @@ class DbStorage {
     return data;
   }
 
-  async updateLibraryCardField(id: string, field: any) {
+  async updateLibraryCardField(id: string, field: any, collegeId: string) {
     const toUpdate = toSnakeCase(field);
     delete toUpdate.id;
     toUpdate.updated_at = new Date().toISOString();
@@ -1757,6 +1963,7 @@ class DbStorage {
       .from("library_card_fields")
       .update(toUpdate)
       .eq("id", id)
+      .eq("college_id", collegeId)
       .select(LIBRARY_CARD_FIELD_SELECT)
       .single();
     if (error) throw error;
@@ -1765,30 +1972,53 @@ class DbStorage {
 
   // --- History CMS Functions ---
 
-  async getHistoryPage(): Promise<any> {
+  async getHistoryPage(collegeId: string): Promise<any> {
     const { data, error } = await supabase
       .from("college_history_page")
       .select(HISTORY_PAGE_SELECT)
-      .eq("id", 1)
-      .single();
+      .eq("college_id", collegeId)
+      .maybeSingle();
 
-    if (error) {
-      // If not found, create default
-      if (error.code === "PGRST116") {
-        return this.updateHistoryPage(
-          "History of College",
-          "A legacy of academic excellence spanning over seven decades.",
-        );
-      }
-      throw error;
+    if (error) throw error;
+    
+    if (!data) {
+      return this.updateHistoryPage(
+        "History of College",
+        "A legacy of academic excellence spanning over seven decades.",
+        collegeId
+      );
     }
     return data;
   }
 
-  async updateHistoryPage(title: string, subtitle: string): Promise<any> {
-    const { data, error } = await supabase
+  async updateHistoryPage(title: string, subtitle: string, collegeId: string): Promise<any> {
+    const existing = await supabase
       .from("college_history_page")
-      .upsert({ id: 1, title, subtitle, updated_at: new Date().toISOString() })
+      .select("id")
+      .eq("college_id", collegeId)
+      .maybeSingle();
+
+    const payload: any = { 
+      title, 
+      subtitle, 
+      college_id: collegeId,
+      updated_at: new Date().toISOString() 
+    };
+
+    let query;
+    if (existing.data) {
+      query = supabase
+        .from("college_history_page")
+        .update(payload)
+        .eq("id", existing.data.id)
+        .eq("college_id", collegeId);
+    } else {
+      query = supabase
+        .from("college_history_page")
+        .insert(payload);
+    }
+
+    const { data, error } = await query
       .select(HISTORY_PAGE_SELECT)
       .single();
 
@@ -1796,20 +2026,21 @@ class DbStorage {
     return data;
   }
 
-  async getHistorySections(): Promise<any[]> {
+  async getHistorySections(collegeId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from("college_history_sections")
       .select(HISTORY_SECTION_SELECT)
+      .eq("college_id", collegeId)
       .order("display_order", { ascending: true });
 
     if (error) throw error;
     return data || [];
   }
 
-  async upsertHistorySection(section: any): Promise<any> {
+  async upsertHistorySection(section: any, collegeId: string): Promise<any> {
     const snakeData = toSnakeCase(section);
+    snakeData.college_id = collegeId;
 
-    // If ID is provided in the input, use it. Otherwise generate new.
     if (section.id) {
       snakeData.id = section.id;
     } else if (!snakeData.id) {
@@ -1827,19 +2058,21 @@ class DbStorage {
     return data;
   }
 
-  async deleteHistorySection(id: string): Promise<void> {
+  async deleteHistorySection(id: string, collegeId: string): Promise<void> {
     const { error } = await supabase
       .from("college_history_sections")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("college_id", collegeId);
 
     if (error) throw error;
   }
 
-  async getHistoryGallery(): Promise<any[]> {
+  async getHistoryGallery(collegeId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from("college_history_gallery")
       .select(HISTORY_GALLERY_SELECT)
+      .eq("college_id", collegeId)
       .order("display_order", { ascending: true });
 
     if (error) throw error;
@@ -1848,6 +2081,7 @@ class DbStorage {
 
   async addHistoryGalleryImage(
     imageUrl: string,
+    collegeId: string,
     caption?: string,
     displayOrder?: number,
   ): Promise<any> {
@@ -1855,6 +2089,7 @@ class DbStorage {
       .from("college_history_gallery")
       .insert({
         image_url: imageUrl,
+        college_id: collegeId,
         caption,
         display_order: displayOrder || 0,
       })
@@ -1865,31 +2100,35 @@ class DbStorage {
     return data;
   }
 
-  async deleteHistoryGalleryImage(id: string): Promise<void> {
+  async deleteHistoryGalleryImage(id: string, collegeId: string): Promise<void> {
     const { error } = await supabase
       .from("college_history_gallery")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("college_id", collegeId);
 
     if (error) throw error;
   }
 
   async updateHistoryGalleryOrder(
     items: { id: string; displayOrder: number }[],
+    collegeId: string,
   ): Promise<void> {
     for (const item of items) {
       await supabase
         .from("college_history_gallery")
         .update({ display_order: item.displayOrder })
-        .eq("id", item.id);
+        .eq("id", item.id)
+        .eq("college_id", collegeId);
     }
   }
 
-  async deleteLibraryCardField(id: string) {
+  async deleteLibraryCardField(id: string, collegeId: string) {
     const { error } = await supabase
       .from("library_card_fields")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("college_id", collegeId);
     if (error) throw error;
   }
 }

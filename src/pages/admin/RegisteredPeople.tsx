@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Table,
@@ -25,6 +26,7 @@ interface RegisteredPerson {
 }
 
 const RegisteredPeople = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [people, setPeople] = useState<RegisteredPerson[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,7 +35,7 @@ const RegisteredPeople = () => {
   const fetchPeople = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users", { credentials: "include" });
+      const res = await fetch(`/api/${collegeSlug}/admin/users`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch data");
       const data = await res.json();
       // 'nonStudents' contains the staff/visitor people
@@ -62,7 +64,7 @@ const RegisteredPeople = () => {
     )
       return;
     try {
-      const res = await fetch(`/api/admin/users/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/users/${id}`, {
         method: "DELETE",
         credentials: "include",
       });

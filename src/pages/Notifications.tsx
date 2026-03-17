@@ -1,8 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Bell, Pin, Clock, AlertCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useParams } from "react-router-dom";
+import { 
+  Bell, 
+  Calendar, 
+  Clock, 
+  AlertCircle, 
+  Info, 
+  CheckCircle2, 
+  ChevronRight, 
+  Pin,
+  Volume2,
+  Megaphone,
+  ScrollText
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Notification {
   id: string;
@@ -70,23 +86,23 @@ const renderMessageWithLinks = (text: string) => {
 };
 
 const NotificationsPage: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    if (collegeSlug) fetchNotifications();
+  }, [collegeSlug]);
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch("/api/notifications");
+      const res = await fetch(`/api/${collegeSlug}/notifications`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
       toast({
         title: "Error",
         description: "Failed to load notifications",
@@ -127,9 +143,17 @@ const NotificationsPage: React.FC = () => {
 
       <div className="container py-12 max-w-5xl">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Bell className="w-12 h-12 text-primary/20 animate-bounce mb-4" />
-            <p className="text-neutral-400 font-medium">Loading updates...</p>
+          <div className="space-y-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex flex-col md:flex-row gap-6 border rounded-2xl p-6 bg-white/50">
+                <Skeleton className="md:w-1/3 h-48 rounded-xl" />
+                <div className="flex-1 space-y-4 py-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-8 w-3/4" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : notifications.length > 0 ? (
           <div className="space-y-6">

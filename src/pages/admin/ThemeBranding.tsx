@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 import {
   Palette,
   Layout,
@@ -31,6 +32,11 @@ import {
   XCircle,
   GripVertical,
   FileCheck,
+  Smartphone,
+  Banknote,
+  Building,
+  Hash,
+  User,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -44,7 +50,8 @@ import {
 } from "@/components/ui/select";
 
 const ThemeBranding: React.FC = () => {
-  const { settings, refreshSettings } = useBranding();
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { settings, refreshSettings } = useCollege();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ ...settings });
@@ -69,7 +76,9 @@ const ThemeBranding: React.FC = () => {
   const fetchCustomFields = async () => {
     try {
       setIsFieldsLoading(true);
-      const res = await fetch("/api/library-card-fields");
+      const res = await fetch(`/api/${collegeSlug}/library-card-fields`, {
+        credentials: "include",
+      });
       if (res.ok) {
         const data = await res.json();
         setCustomFields(data);
@@ -101,7 +110,7 @@ const ThemeBranding: React.FC = () => {
     setLoading(true);
 
     try {
-      console.log("[ThemeBranding] Submitting form data:", formData);
+
       const data = new FormData();
 
       // Append all fields, handle special types
@@ -129,9 +138,10 @@ const ThemeBranding: React.FC = () => {
       if (loadingLogo) data.append("loadingLogo", loadingLogo);
       if (cardLogo) data.append("cardLogo", cardLogo);
 
-      const res = await fetch("/api/admin/settings", {
+      const res = await fetch(`/api/${collegeSlug}/admin/settings`, {
         method: "PATCH",
         body: data,
+        credentials: "include",
       });
 
       if (res.ok) {
@@ -171,10 +181,11 @@ const ThemeBranding: React.FC = () => {
         displayOrder: customFields.length + 1,
       };
 
-      const res = await fetch("/api/admin/library-card-fields", {
+      const res = await fetch(`/api/${collegeSlug}/admin/library-card-fields`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newField),
+        credentials: "include",
       });
 
       if (res.ok) {
@@ -192,10 +203,11 @@ const ThemeBranding: React.FC = () => {
 
   const handleUpdateField = async (id: string, updates: any) => {
     try {
-      const res = await fetch(`/api/admin/library-card-fields/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/library-card-fields/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
+        credentials: "include",
       });
 
       if (res.ok) {
@@ -215,8 +227,9 @@ const ThemeBranding: React.FC = () => {
   const handleDeleteField = async (id: string) => {
     if (!confirm("Are you sure you want to delete this field?")) return;
     try {
-      const res = await fetch(`/api/admin/library-card-fields/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/library-card-fields/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (res.ok) {
@@ -598,6 +611,108 @@ const ThemeBranding: React.FC = () => {
               </div>
             </Card>
 
+            {/* Section 4: Donation Details */}
+            <Card className="p-8 rounded-3xl border-none bg-white shadow-xl shadow-neutral-200/40 ring-1 ring-neutral-200/60 lg:col-span-2">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-rose-50 rounded-2xl text-rose-600">
+                  <Smartphone className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-neutral-900 tracking-tight">
+                    💰 Donation & Payment Settings
+                  </h3>
+                  <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-0.5">
+                    Configure Easypaisa & Bank Details
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                      EasyPaisa Number
+                    </Label>
+                    <div className="relative">
+                      <Smartphone className="absolute left-3 top-3 w-4 h-4 text-neutral-400" />
+                      <Input
+                        name="easypaisaNumber"
+                        value={formData.easypaisaNumber}
+                        onChange={handleInputChange}
+                        placeholder="0300-0000000"
+                        className="pl-10 font-bold rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                      Account Title
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 w-4 h-4 text-neutral-400" />
+                      <Input
+                        name="accountTitle"
+                        value={formData.accountTitle}
+                        onChange={handleInputChange}
+                        placeholder="GCFMN Library"
+                        className="pl-10 font-bold rounded-xl"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                      Bank Name
+                    </Label>
+                    <div className="relative">
+                      <Building className="absolute left-3 top-3 w-4 h-4 text-neutral-400" />
+                      <Input
+                        name="bankName"
+                        value={formData.bankName}
+                        onChange={handleInputChange}
+                        placeholder="Habib Bank Limited (HBL)"
+                        className="pl-10 font-bold rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                        Account Number
+                      </Label>
+                      <div className="relative">
+                        <Hash className="absolute left-3 top-3 w-4 h-4 text-neutral-400" />
+                        <Input
+                          name="bankAccountNumber"
+                          value={formData.bankAccountNumber}
+                          onChange={handleInputChange}
+                          placeholder="XXXXXXXXXXXXXX"
+                          className="pl-10 font-bold rounded-xl"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                        Branch Name
+                      </Label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-3 w-4 h-4 text-neutral-400" />
+                        <Input
+                          name="bankBranch"
+                          value={formData.bankBranch}
+                          onChange={handleInputChange}
+                          placeholder="Main Branch"
+                          className="pl-10 font-bold rounded-xl"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
             {/* Credits & Contributors */}
             <Card className="p-8 rounded-3xl border-none bg-white shadow-xl shadow-neutral-200/40 ring-1 ring-neutral-200/60 lg:col-span-2">
               <div className="flex items-center gap-3 mb-6">
@@ -648,7 +763,7 @@ const ThemeBranding: React.FC = () => {
           className="mt-0 space-y-8 animate-in fade-in duration-500"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Library Card PDF controls */}
+            {/* College Card PDF controls */}
             <Card className="p-8 rounded-3xl border-none bg-white shadow-xl shadow-neutral-200/40 ring-1 ring-neutral-200/60">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
@@ -657,7 +772,7 @@ const ThemeBranding: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-xl font-black text-neutral-900 tracking-tight">
-                      Library Card PDF
+                      College Card PDF
                     </h3>
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-0.5">
                       Front & Back Layout
@@ -924,7 +1039,7 @@ const ThemeBranding: React.FC = () => {
                       Pro Tip: PDF Updates
                     </h4>
                     <p className="text-[11px] text-primary/80 font-medium leading-relaxed mt-1">
-                      Changes to library card layouts will apply to all NEW
+                      Changes to college card layouts will apply to all NEW
                       downloads. Existing students will also see the updated
                       layout when they download their card again from the
                       profile section.
@@ -952,7 +1067,7 @@ const ThemeBranding: React.FC = () => {
                     Application Field Builder
                   </h3>
                   <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-0.5">
-                    Manage custom fields for library card applications
+                    Manage custom fields for college card applications
                   </p>
                 </div>
               </div>

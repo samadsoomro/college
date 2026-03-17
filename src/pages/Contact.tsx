@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useParams } from "react-router-dom";
 import {
   MapPin,
   Phone,
@@ -15,11 +16,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Contact = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const { toast } = useToast();
-  const { settings } = useBranding();
+  const { settings, loading } = useCollege();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-20">
+        <div className="h-64 bg-neutral-900 flex items-center justify-center">
+            <div className="text-center space-y-4 w-full max-w-lg px-4">
+                <Skeleton className="h-12 w-48 mx-auto bg-white/10" />
+                <Skeleton className="h-6 w-full bg-white/10" />
+            </div>
+        </div>
+        <div className="container py-16">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+                {[1,2,3,4].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
+            </div>
+            <div className="grid lg:grid-cols-2 gap-8">
+                <Skeleton className="h-[500px] rounded-xl" />
+                <Skeleton className="h-[500px] rounded-xl" />
+            </div>
+        </div>
+      </div>
+    );
+  }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({
@@ -49,12 +74,20 @@ const Contact = () => {
     setIsSubmitting(true);
 
     try {
-      await apiRequest("POST", "/api/contact-messages", formData);
+      await apiRequest(
+        "POST",
+        `/api/${collegeSlug}/contact-messages`,
+        formData,
+      );
 
       try {
-        await apiRequest("POST", "/api/send-contact-confirmation", formData);
+        await apiRequest(
+          "POST",
+          `/api/${collegeSlug}/send-contact-confirmation`,
+          formData,
+        );
       } catch (emailError) {
-        console.error("Email error:", emailError);
+        // console.error("Email error:", emailError); // Removed console.error
       }
 
       setShowSuccess(true);
@@ -66,7 +99,7 @@ const Contact = () => {
           "Thank you for contacting us. Your query has been received.",
       });
     } catch (error) {
-      console.error("Submit error:", error);
+      // console.error("Submit error:", error); // Removed console.error
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",

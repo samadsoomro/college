@@ -24,7 +24,7 @@ interface SiteSettings {
   // Hero Background
   heroBackgroundLogo: string | null;
   heroBackgroundOpacity: number;
-  // Library Card Layout
+  // College Card Layout
   cardHeaderText: string;
   cardSubheaderText: string;
   cardLogoUrl: string | null;
@@ -77,7 +77,7 @@ const defaultSettings: SiteSettings = {
   footerTagline: "Empowering Education Since 1953",
   heroBackgroundLogo: null,
   heroBackgroundOpacity: 0.35,
-  // Library Card Layout Defaults
+  // College Card Layout Defaults
   cardHeaderText: "DJ GOV. SCIENCE COLLEGE",
   cardSubheaderText: "COLLEGE CARD",
   cardLogoUrl:
@@ -85,7 +85,7 @@ const defaultSettings: SiteSettings = {
   cardQrEnabled: true,
   cardQrUrl: "http://localhost:5001/",
   cardTermsText:
-    "• Login using your Library Card ID\n• Use the password created at the time of application.\n• Your library card will work only after approval by the library administration.",
+    "• Login using your College Card ID\n• Use the password created at the time of application.\n• Your college card will work only after approval by the library administration.",
   cardContactAddress: "Karachi, Pakistan",
   cardContactEmail: "library@gcfm.edu.pk",
   cardContactPhone: "+92 21 X2111XXX XXXX",

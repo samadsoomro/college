@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/select";
 
 const AdminHistory: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("header");
@@ -67,9 +69,9 @@ const AdminHistory: React.FC = () => {
   const fetchData = async () => {
     try {
       const [pageRes, sectionsRes, galleryRes] = await Promise.all([
-        fetch("/api/history/page"),
-        fetch("/api/history/sections"),
-        fetch("/api/history/gallery"),
+        fetch(`/api/${collegeSlug}/history/page`),
+        fetch(`/api/${collegeSlug}/history/sections`),
+        fetch(`/api/${collegeSlug}/history/gallery`),
       ]);
 
       if (pageRes.ok) setHeader(await pageRes.json());
@@ -88,7 +90,7 @@ const AdminHistory: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/history/page", {
+      const res = await fetch(`/api/${collegeSlug}/admin/history/page`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(header),
@@ -129,7 +131,7 @@ const AdminHistory: React.FC = () => {
     }
 
     try {
-      const res = await fetch("/api/admin/history/sections", {
+      const res = await fetch(`/api/${collegeSlug}/admin/history/sections`, {
         method: "POST",
         body: formData,
       });
@@ -154,7 +156,7 @@ const AdminHistory: React.FC = () => {
   const handleDeleteSection = async (id: string) => {
     if (!confirm("Are you sure you want to delete this section?")) return;
     try {
-      const res = await fetch(`/api/admin/history/sections/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/history/sections/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -184,7 +186,7 @@ const AdminHistory: React.FC = () => {
     formData.append("displayOrder", gallery.length.toString());
 
     try {
-      const res = await fetch("/api/admin/history/gallery", {
+      const res = await fetch(`/api/${collegeSlug}/admin/history/gallery`, {
         method: "POST",
         body: formData,
       });
@@ -214,7 +216,7 @@ const AdminHistory: React.FC = () => {
   const handleDeleteGallery = async (id: string) => {
     if (!confirm("Are you sure you want to delete this image?")) return;
     try {
-      const res = await fetch(`/api/admin/history/gallery/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/history/gallery/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {

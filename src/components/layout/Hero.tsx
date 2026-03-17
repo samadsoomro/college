@@ -1,10 +1,10 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, FileText, Archive, ArrowRight } from "lucide-react";
 import PakistanMap from "@/components/icons/PakistanMap";
 import { Button } from "@/components/ui/button";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 
 interface HeroProps {
   heading?: string;
@@ -13,7 +13,8 @@ interface HeroProps {
 }
 
 const Hero: React.FC<HeroProps> = ({ heading, subheading, overlayText }) => {
-  const { settings } = useBranding();
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { settings } = useCollege();
   const defaultHeading =
     settings.instituteFullName || "DJ GOV. SCIENCE COLLEGE";
   const defaultSubheading =
@@ -24,19 +25,19 @@ const Hero: React.FC<HeroProps> = ({ heading, subheading, overlayText }) => {
       icon: <BookOpen size={32} />,
       title: "Book Borrowing",
       description: "Access thousands of books with easy borrowing system",
-      link: "/books",
+      link: `/${collegeSlug}/books`,
     },
     {
       icon: <FileText size={32} />,
       title: "Notes & Syllabus",
       description: "Download study materials and course notes",
-      link: "/notes",
+      link: `/${collegeSlug}/notes`,
     },
     {
       icon: <Archive size={32} />,
       title: "Rare Books",
       description: "Explore our digital archive of rare collections",
-      link: "/rare-books",
+      link: `/${collegeSlug}/rare-books`,
     },
   ];
 
@@ -235,7 +236,7 @@ const Hero: React.FC<HeroProps> = ({ heading, subheading, overlayText }) => {
             </p>
 
             <div className="flex flex-wrap gap-4 pt-4">
-              <Link to="/books">
+              <Link to={`/${collegeSlug}/books`}>
                 <Button
                   size="lg"
                   className="gap-2 transform hover:scale-110 hover:-translate-y-1 transition-all duration-300"
@@ -244,7 +245,7 @@ const Hero: React.FC<HeroProps> = ({ heading, subheading, overlayText }) => {
                   <ArrowRight size={18} />
                 </Button>
               </Link>
-              <Link to="/events">
+              <Link to={`/${collegeSlug}/events`}>
                 <Button
                   size="lg"
                   variant="secondary"
@@ -253,7 +254,7 @@ const Hero: React.FC<HeroProps> = ({ heading, subheading, overlayText }) => {
                   Events
                 </Button>
               </Link>
-              <Link to="/register">
+              <Link to={`/${collegeSlug}/register`}>
                 <Button
                   size="lg"
                   variant="outline"

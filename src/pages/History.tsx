@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useParams } from "react-router-dom";
 import * as LucideIcons from "lucide-react";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import historyImage from "@/assets/images/history-college.jpg";
 
 interface HistoryHeader {
@@ -27,7 +29,8 @@ interface GalleryItem {
 }
 
 const History: React.FC = () => {
-  const { settings } = useBranding();
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { settings } = useCollege();
   const [header, setHeader] = useState<HistoryHeader | null>(null);
   const [sections, setSections] = useState<HistorySection[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
@@ -37,9 +40,9 @@ const History: React.FC = () => {
     const fetchHistoryData = async () => {
       try {
         const [pageRes, sectionsRes, galleryRes] = await Promise.all([
-          fetch("/api/history/page"),
-          fetch("/api/history/sections"),
-          fetch("/api/history/gallery"),
+          fetch(`/api/${collegeSlug}/history/page`),
+          fetch(`/api/${collegeSlug}/history/sections`),
+          fetch(`/api/${collegeSlug}/history/gallery`),
         ]);
 
         if (pageRes.ok) setHeader(await pageRes.json());
@@ -53,7 +56,7 @@ const History: React.FC = () => {
     };
 
     fetchHistoryData();
-  }, []);
+  }, [collegeSlug]);
 
   const IconComponent = ({
     name,
@@ -68,8 +71,24 @@ const History: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-24 pb-12 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div>
+      <div className="min-h-screen pt-24 pb-12 pakistan-bg">
+        <div className="container px-4 md:px-6">
+          <div className="max-w-4xl mx-auto space-y-12">
+            <div className="text-center space-y-4">
+              <Skeleton className="h-12 w-3/4 mx-auto bg-primary/5" />
+              <Skeleton className="h-6 w-full mx-auto bg-primary/5" />
+            </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="p-6 border rounded-xl bg-card space-y-4">
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                  <Skeleton className="h-8 w-3/4" />
+                  <Skeleton className="h-24 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

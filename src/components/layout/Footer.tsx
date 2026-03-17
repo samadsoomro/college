@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import {
   Mail,
   Phone,
@@ -11,11 +11,12 @@ import {
   Clock,
   ExternalLink,
 } from "lucide-react";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 
 const Footer: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const currentYear = new Date().getFullYear();
-  const { settings } = useBranding();
+  const { settings } = useCollege();
 
   return (
     <footer className="bg-gradient-to-b from-slate-800 to-slate-900 text-white mt-auto">
@@ -75,11 +76,11 @@ const Footer: React.FC = () => {
               <h3 className="text-xl font-semibold">Quick Links</h3>
               <ul className="space-y-2">
                 {[
-                  { to: "/", label: "Home" },
-                  { to: "/books", label: "Browse Books" },
-                  { to: "/notes", label: "Study Materials" },
-                  { to: "/rare-books", label: "Rare Books" },
-                  { to: "/about", label: "About Us" },
+                  { to: `/${collegeSlug}`, label: "Home" },
+                  { to: `/${collegeSlug}/books`, label: "Browse Books" },
+                  { to: `/${collegeSlug}/notes`, label: "Study Materials" },
+                  { to: `/${collegeSlug}/rare-books`, label: "Rare Books" },
+                  { to: `/${collegeSlug}/about`, label: "About Us" },
                 ].map((link) => (
                   <li key={link.to}>
                     <Link
@@ -114,9 +115,9 @@ const Footer: React.FC = () => {
               <h4 className="text-lg font-semibold pt-4">Resources</h4>
               <ul className="space-y-2">
                 {[
-                  { to: "/login", label: "Student Login" },
-                  { to: "/register", label: "Register" },
-                  { to: "/contact", label: "Contact Us" },
+                  { to: `/${collegeSlug}/login`, label: "Student Login" },
+                  { to: `/${collegeSlug}/register`, label: "Register" },
+                  { to: `/${collegeSlug}/contact`, label: "Contact Us" },
                 ].map((link) => (
                   <li key={link.to}>
                     <Link
@@ -149,7 +150,7 @@ const Footer: React.FC = () => {
               </ul>
 
               <Link
-                to="/contact"
+                to={`/${collegeSlug}/contact`}
                 className="inline-flex items-center gap-2 text-primary hover:text-white text-sm mt-2 transition-colors"
               >
                 <ExternalLink size={14} />

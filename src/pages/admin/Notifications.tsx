@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 
 const Notifications: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -29,7 +31,7 @@ const Notifications: React.FC = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/notifications", {
+      const res = await fetch(`/api/${collegeSlug}/admin/notifications`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -61,9 +63,10 @@ const Notifications: React.FC = () => {
         data.append("image", selectedImage);
       }
 
-      const res = await fetch("/api/admin/notifications", {
+      const res = await fetch(`/api/${collegeSlug}/admin/notifications`, {
         method: "POST",
         body: data,
+        credentials: "include",
       });
 
       if (res.ok) {
@@ -102,7 +105,7 @@ const Notifications: React.FC = () => {
   const deleteNotification = async (id: string) => {
     if (!confirm("Delete this notification?")) return;
     try {
-      const res = await fetch(`/api/admin/notifications/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/notifications/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -124,7 +127,7 @@ const Notifications: React.FC = () => {
 
   const toggleStatus = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/notifications/${id}/status`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/notifications/${id}/status`, {
         method: "PATCH",
         credentials: "include",
       });
@@ -143,7 +146,7 @@ const Notifications: React.FC = () => {
 
   const togglePin = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/notifications/${id}/pin`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/notifications/${id}/pin`, {
         method: "PATCH",
         credentials: "include",
       });

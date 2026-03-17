@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useParams } from "react-router-dom";
 import {
   Archive,
-  Eye,
-  Shield,
   Search,
+  BookOpen,
+  ExternalLink,
+  Clock,
+  Shield,
+  Lock,
+  Image as ImageIcon,
   X,
   ChevronLeft,
   ChevronRight,
+  Download,
+  Eye,
   ZoomIn,
   ZoomOut,
   RotateCw,
@@ -15,7 +22,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Document, Page, pdfjs } from "react-pdf";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
@@ -26,7 +36,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const RareBooks: React.FC = () => {
-  const { settings } = useBranding();
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { settings } = useCollege();
   const [selectedBook, setSelectedBook] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [books, setBooks] = useState<any[]>([]);
@@ -60,7 +71,7 @@ const RareBooks: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetch("/api/rare-books")
+    fetch(`/api/${collegeSlug}/rare-books`)
       .then((res) => res.json())
       .then((data) => {
         setBooks(data);
@@ -70,7 +81,7 @@ const RareBooks: React.FC = () => {
         console.error("Error fetching rare books:", err);
         setLoading(false);
       });
-  }, []);
+  }, [collegeSlug]);
 
   const filteredBooks = (books || []).filter(
     (book) =>
@@ -104,9 +115,9 @@ const RareBooks: React.FC = () => {
     >
       {/* Header */}
       <div
-        className="py-12 lg:py-16 gradient-dark text-white text-center"
+        className="py-12 lg:py-16 text-white text-center"
         style={{
-          background: `linear-gradient(to right, ${settings.primaryColor}, #111)`,
+          background: `linear-gradient(to right, ${settings?.primaryColor || "#1b2838"}, #111)`,
         }}
       >
         <div className="container">
@@ -162,53 +173,76 @@ const RareBooks: React.FC = () => {
 
           {/* Books Grid */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredBooks.map((book, index) => (
-              <motion.div
-                key={book.id}
-                className="bg-card rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all cursor-pointer group"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                onClick={() => {
-                  setSelectedBook(book);
-                  setPageNumber(1);
-                  setScale(1.0);
-                }}
-              >
-                <div className="relative h-64 overflow-hidden bg-muted flex items-center justify-center">
-                  {book.coverImage ? (
-                    <img
-                      src={book.coverImage}
-                      alt={book.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Archive size={48} className="text-muted-foreground/30" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <span className="inline-block px-2 py-1 bg-white/20 backdrop-blur-sm rounded text-xs text-white font-medium">
-                      Archive Item
-                    </span>
-                  </div>
+            {loading ? (
+              [1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="space-y-4">
+                  <Skeleton className="h-64 rounded-xl" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
                 </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-foreground line-clamp-2 mb-1">
-                    {book.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {book.category}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Digital Copy</span>
-                    <span className="flex items-center gap-1">
-                      <Eye size={12} />
-                      View Only
-                    </span>
-                  </div>
+              ))
+            ) : filteredBooks.length === 0 ? (
+              <div className="col-span-full py-20 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Archive size={48} className="text-primary/30" />
                 </div>
-              </motion.div>
-            ))}
+                <h3 className="text-2xl font-bold text-foreground mb-2">
+                  No Archive Items Found
+                </h3>
+                <p className="text-muted-foreground max-w-sm mx-auto">
+                  We currently don't have any rare books or digital archives
+                  listed for this institution.
+                </p>
+              </div>
+            ) : (
+              filteredBooks.map((book, index) => (
+                <motion.div
+                  key={book.id}
+                  className="bg-card rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all cursor-pointer group"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  onClick={() => {
+                    setSelectedBook(book);
+                    setPageNumber(1);
+                    setScale(1.0);
+                  }}
+                >
+                  <div className="relative h-64 overflow-hidden bg-muted flex items-center justify-center">
+                    {book.coverImage ? (
+                      <img
+                        src={book.coverImage}
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Archive size={48} className="text-muted-foreground/30" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <span className="inline-block px-2 py-1 bg-white/20 backdrop-blur-sm rounded text-xs text-white font-medium">
+                        Archive Item
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-foreground line-clamp-2 mb-1">
+                      {book.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {book.category}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Digital Copy</span>
+                      <span className="flex items-center gap-1">
+                        <Eye size={12} />
+                        View Only
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -318,7 +352,7 @@ const RareBooks: React.FC = () => {
                 onContextMenu={(e) => e.preventDefault()}
               >
                 <Document
-                  file={`/api/rare-books/stream/${selectedBook.id}`}
+                  file={`/api/${collegeSlug}/rare-books/stream/${selectedBook.id}`}
                   onLoadSuccess={onDocumentLoadSuccess}
                   loading={
                     <div className="flex flex-col items-center justify-center p-12 text-white">
@@ -345,7 +379,7 @@ const RareBooks: React.FC = () => {
                     />
 
                     {/* Watermark Overlay (Dynamic) */}
-                    {settings.rbWatermarkEnabled && (
+                    {settings?.rbWatermarkEnabled && (
                       <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden">
                         <div
                           className="rotate-45 transform select-none"
@@ -354,10 +388,10 @@ const RareBooks: React.FC = () => {
                           <p className="text-[8vw] font-black text-black leading-none text-center">
                             {(
                               settings.rbWatermarkText ||
-                              `${settings.instituteShortName} LIBRARY ARCHIVE`
+                              `${settings.instituteShortName || "COLLEGE"} LIBRARY ARCHIVE`
                             )
                               .split("\n")
-                              .map((line, idx) => (
+                              .map((line: string, idx: number) => (
                                 <React.Fragment key={idx}>
                                   {line}
                                   <br />
@@ -368,7 +402,7 @@ const RareBooks: React.FC = () => {
                         {/* Multiple small watermarks grid */}
                         <div
                           className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-8 p-8 rotate-12"
-                          style={{ opacity: settings.rbWatermarkOpacity / 2 }}
+                          style={{ opacity: (settings.rbWatermarkOpacity || 0) / 2 }}
                         >
                           {Array.from({ length: 9 }).map((_, i) => (
                             <div
@@ -377,7 +411,7 @@ const RareBooks: React.FC = () => {
                             >
                               <span className="font-bold text-2xl text-black">
                                 {settings.rbWatermarkText?.split("\n")[0] ||
-                                  `${settings.instituteShortName} ARCHIVE`}
+                                  `${settings.instituteShortName || "COLLEGE"} ARCHIVE`}
                               </span>
                             </div>
                           ))}
@@ -389,8 +423,8 @@ const RareBooks: React.FC = () => {
               </div>
 
               <div className="bg-primary text-primary-foreground text-center text-xs py-1">
-                {settings.rbDisclaimerText ||
-                  `Confidential • Do Not Distribute • ${settings.instituteShortName} Library Archive`}
+                {settings?.rbDisclaimerText ||
+                  `Confidential • Do Not Distribute • ${settings?.instituteShortName || "COLLEGE"} Library Archive`}
               </div>
             </motion.div>
           </motion.div>

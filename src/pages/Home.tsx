@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useParams } from "react-router-dom";
 import Hero from "@/components/layout/Hero";
 import HomeSlider from "@/components/home/HomeSlider";
 import {
@@ -12,7 +13,9 @@ import {
   Heart,
   Clock,
 } from "lucide-react";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface HomeContent {
   heroHeading?: string;
@@ -37,6 +40,9 @@ interface HomeStat {
   number: string;
   label: string;
   iconUrl?: string;
+  icon?: string;
+  color?: string;
+  order?: number;
 }
 
 interface Affiliation {
@@ -45,6 +51,7 @@ interface Affiliation {
   logoUrl: string;
   link: string;
   order: number;
+  isActive?: boolean;
 }
 
 interface AffiliationBlock {
@@ -160,32 +167,23 @@ const AffiliationsLayout: React.FC<{ affiliations: Affiliation[] }> = ({
 };
 
 const Home: React.FC = () => {
-  const [content, setContent] = useState<HomeContent>({});
-  const [slider, setSlider] = useState<SliderImage[]>([]);
-  const [dbStats, setDbStats] = useState<HomeStat[]>([]);
-  const [affiliations, setAffiliations] = useState<Affiliation[]>([]);
-  const { settings } = useBranding();
-  const [loading, setLoading] = useState(true);
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { settings } = useCollege();
+  
+  const { data: homeData, isLoading: homeLoading } = useQuery({
+    queryKey: [`/api/${collegeSlug}/home`],
+    queryFn: async () => {
+      const res = await fetch(`/api/${collegeSlug}/home`);
+      if (!res.ok) throw new Error("Failed to fetch home data");
+      return res.json();
+    }
+  });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch("/api/home");
-        if (res.ok) {
-          const data = await res.json();
-          setContent(data.content || {});
-          setSlider(data.slider || []);
-          setDbStats(data.stats || []);
-          setAffiliations(data.affiliations || []);
-        }
-      } catch (error) {
-        console.error("Failed to home data", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const content = homeData?.content || {};
+  const slider = homeData?.slider || [];
+  const dbStats = homeData?.stats || [];
+  const affiliations = homeData?.affiliations || [];
+  const loading = homeLoading;
 
   // Default Stats configuration to map with DB data or use as fallback
   const defaultStats = [
@@ -238,7 +236,7 @@ const Home: React.FC = () => {
           (idx % 2 === 0
             ? "text-pakistan-green"
             : "text-pakistan-green-light"),
-        icon: ICON_MAP[(ds as any).icon] || <BookOpen size={40} />,
+        icon: ICON_MAP[(ds as any).icon || "BookOpen"] || <BookOpen size={40} />,
       }))
       : defaultStats.map((s) => ({
         number: s.defaultNumber,
@@ -273,6 +271,55 @@ const Home: React.FC = () => {
       emoji: "⚙️",
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-20">
+        {/* Skeleton Hero */}
+        <section className="relative h-[80vh] flex items-center bg-neutral-100 overflow-hidden">
+          <div className="container relative z-10">
+            <div className="max-w-xl space-y-6">
+              <Skeleton className="h-10 w-48 rounded-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-6 w-3/4" />
+              <div className="flex gap-4">
+                <Skeleton className="h-12 w-36" />
+                <Skeleton className="h-12 w-36" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Skeleton Stats */}
+        <div className="container py-24">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="flex flex-col items-center gap-4">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton Features */}
+        <div className="bg-neutral-50 py-24">
+          <div className="container">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="p-8 bg-white rounded-2xl border border-neutral-100 space-y-4">
+                  <Skeleton className="h-12 w-12" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -314,7 +361,7 @@ const Home: React.FC = () => {
                   {stat.iconUrl ? (
                     <img
                       src={stat.iconUrl}
-                      alt={stat.label}
+                      alt={stat.label || "stat icon"}
                       className="w-full h-full object-contain"
                     />
                   ) : (
@@ -425,13 +472,13 @@ const Home: React.FC = () => {
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <a
-                href="/register"
+                href={`/${collegeSlug}/register`}
                 className="px-8 py-3 bg-white text-primary font-semibold rounded-lg hover:bg-white/90 transition-colors"
               >
                 Create Free Account
               </a>
               <a
-                href="/books"
+                href={`/${collegeSlug}/books`}
                 className="px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors"
               >
                 Browse Library

@@ -5,6 +5,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
+import { useParams } from "react-router-dom";
 
 interface UserProfile {
   id: string;
@@ -23,17 +24,18 @@ interface AuthContextType {
     email: string;
     name?: string;
     cardNumber?: string;
+    isLibraryCard?: boolean;
   } | null;
   profile: UserProfile | null;
   loading: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isLibraryCard: boolean;
   login: (
     email?: string,
     password?: string,
-    secretKey?: string,
     libraryCardId?: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; redirect?: string; role?: string }>;
   register: (
     userData: RegisterData,
   ) => Promise<{ success: boolean; error?: string }>;
@@ -66,46 +68,66 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [user, setUser] = useState<{
     id: string;
     email: string;
     name?: string;
     cardNumber?: string;
+    isLibraryCard?: boolean;
   } | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLibraryCard, setIsLibraryCard] = useState(false);
 
   const fetchCurrentUser = async () => {
     try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
-        setIsAdmin(data.isAdmin || data.roles?.includes("admin") || false);
-        setIsLibraryCard(data.isLibraryCard || false);
-        if (data.profile) {
-          setProfile({
-            id: data.user.id,
-            email: data.user.email,
-            full_name: data.profile.fullName,
-            role:
-              data.isAdmin || data.roles?.includes("admin")
-                ? "admin"
-                : data.roles?.includes("moderator")
-                  ? "moderator"
-                  : "user",
-            department: data.profile.department,
-            phone: data.profile.phone,
-            roll_number: data.profile.rollNumber,
-            student_class: data.profile.studentClass,
-          });
+      // If we have a collegeSlug, check college-scoped endpoint
+      if (collegeSlug) {
+        const res = await fetch(`/api/${collegeSlug}/auth/me`, { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setUser({ ...data.user, isLibraryCard: data.isLibraryCard });
+          setIsAdmin(data.isAdmin || data.roles?.includes("admin") || false);
+          setIsSuperAdmin(data.isSuperAdmin || false);
+          setIsLibraryCard(data.isLibraryCard || false);
+          if (data.profile) {
+            setProfile({
+              id: data.user.id,
+              email: data.user.email,
+              full_name: data.profile.fullName,
+              role:
+                data.isAdmin || data.roles?.includes("admin")
+                  ? "admin"
+                  : data.roles?.includes("moderator")
+                    ? "moderator"
+                    : "user",
+              department: data.profile.department,
+              phone: data.profile.phone,
+              roll_number: data.profile.rollNumber,
+              student_class: data.profile.studentClass,
+            });
+          }
+          return;
         }
+      }
+
+      // If not authenticated in college or no collegeSlug, check global super-admin info
+      const saRes = await fetch(`/api/super-admin/me`, { credentials: "include" });
+      if (saRes.ok) {
+        const saData = await saRes.json();
+        setUser({ id: "super-admin", email: saData.user.email, name: "Super Admin" });
+        setIsAdmin(true);
+        setIsSuperAdmin(true);
+        setIsLibraryCard(false);
+        setProfile(null);
       } else {
         setUser(null);
         setProfile(null);
         setIsAdmin(false);
+        setIsSuperAdmin(false);
         setIsLibraryCard(false);
       }
     } catch (error) {
@@ -113,6 +135,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(null);
       setProfile(null);
       setIsAdmin(false);
+      setIsSuperAdmin(false);
       setIsLibraryCard(false);
     } finally {
       setLoading(false);
@@ -121,22 +144,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     fetchCurrentUser();
-  }, []);
+  }, [collegeSlug]);
 
   const login = async (
     email?: string,
     password?: string,
-    secretKey?: string,
     libraryCardId?: string,
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; redirect?: string; role?: string }> => {
     try {
       const body: any = {};
       if (email) body.email = email;
       if (password) body.password = password;
-      if (secretKey) body.secretKey = secretKey;
       if (libraryCardId) body.libraryCardId = libraryCardId;
 
-      const res = await fetch("/api/auth/login", {
+      // Use the new college-scoped login route
+      const res = await fetch(`/api/${collegeSlug}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -149,12 +171,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return { success: false, error: data.error || "Login failed" };
       }
 
-      if (data.redirect) {
-        window.location.href = data.redirect;
-      }
-
       await fetchCurrentUser();
-      return { success: true };
+      return { 
+        success: true, 
+        redirect: data.redirect,
+        role: data.role
+      };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
@@ -164,7 +186,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     userData: RegisterData,
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch(`/api/${collegeSlug}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -195,7 +217,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", {
+      if (collegeSlug) {
+        await fetch(`/api/${collegeSlug}/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+        });
+      }
+      // Always try global logout just in case
+      await fetch(`/api/super-admin/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -205,9 +234,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(null);
     setProfile(null);
     setIsAdmin(false);
+    setIsSuperAdmin(false);
     setIsLibraryCard(false);
   };
-
   return (
     <AuthContext.Provider
       value={{
@@ -215,6 +244,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         profile,
         loading,
         isAdmin,
+        isSuperAdmin,
         isLibraryCard,
         login,
         register,

@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { Calendar, ArrowRight, Pin, BookOpen } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { Calendar, User, ArrowRight, Clock, Pin, BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useCollege } from "@/contexts/CollegeContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Blog: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { settings } = useCollege();
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const res = await fetch("/api/blog");
+        const res = await fetch(`/api/${collegeSlug}/blog`);
         if (res.ok) {
           const data = await res.json();
           // Sort: Pinned first, then date desc
@@ -35,7 +39,7 @@ const Blog: React.FC = () => {
     };
 
     fetchPosts();
-  }, []);
+  }, [collegeSlug]); // Added collegeSlug to dependency array
 
   // Animation variants
   const container = {
@@ -88,21 +92,25 @@ const Blog: React.FC = () => {
         <div className="container">
           {loading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[1, 2, 3].map((n) => (
-                <Card
-                  key={n}
-                  className="h-[400px] animate-pulse bg-slate-200/50 border-none rounded-2xl"
-                ></Card>
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="space-y-4">
+                  <Skeleton className="h-56 rounded-3xl" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
               ))}
             </div>
           ) : posts.length === 0 ? (
-            <div className="text-center py-20">
-              <BookOpen className="mx-auto h-20 w-20 text-slate-300 mb-6" />
-              <h3 className="text-2xl font-bold text-slate-800">
-                No posts yet
+            <div className="py-20 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                <BookOpen size={48} className="text-primary/30" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-800 mb-2">
+                No News or Updates
               </h3>
-              <p className="text-slate-500 mt-2">
-                Check back soon for new updates!
+              <p className="text-slate-500 max-w-sm mx-auto">
+                Check back soon for latest announcements and educational insights from the college community.
               </p>
             </div>
           ) : (
@@ -115,7 +123,7 @@ const Blog: React.FC = () => {
               {posts.map((post) => (
                 <motion.div key={post.id} variants={item}>
                   <Link
-                    to={`/blog/${post.slug}`}
+                    to={`/${collegeSlug}/blog/${post.slug}`}
                     className="group block h-full"
                   >
                     <Card className="h-full border-none shadow-sm hover:shadow-2xl transition-all duration-300 rounded-3xl overflow-hidden flex flex-col hover:-translate-y-2 bg-white ring-1 ring-slate-200/50">

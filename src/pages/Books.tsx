@@ -1,16 +1,30 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Search, Filter, BookOpen } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search,
+  Filter,
+  BookOpen,
+  Calendar,
+  User,
+  Tag,
+  Clock,
+  ArrowRight,
+  Heart,
+  Shield,
+} from "lucide-react";
 import BookCard from "@/components/books/BookCard";
 import { BOOK_CATEGORIES } from "@/utils/constants";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCollege } from "@/contexts/CollegeContext";
 import { apiRequest } from "@/lib/queryClient";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Books = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -18,22 +32,24 @@ const Books = () => {
   const [borrowingId, setBorrowingId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { settings } = useCollege();
   const navigate = useNavigate();
+  const [showInfoPopup, setShowInfoPopup] = useState(false);
+  const [infoPopupBook, setInfoPopupBook] = useState<any>(null);
 
   useEffect(() => {
-    fetchBooks();
-  }, []);
+    if (collegeSlug) fetchBooks();
+  }, [collegeSlug]);
 
   const fetchBooks = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/books");
+      const res = await fetch(`/api/${collegeSlug}/books`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setBooks(data);
       }
     } catch (error) {
-      console.error("Error fetching books:", error);
     } finally {
       setLoading(false);
     }
@@ -47,6 +63,7 @@ const Books = () => {
       result = result.filter(
         (book) =>
           (book.bookName && book.bookName.toLowerCase().includes(term)) ||
+          (book.authorName && book.authorName.toLowerCase().includes(term)) ||
           (book.shortIntro && book.shortIntro.toLowerCase().includes(term)),
       );
     }
@@ -54,21 +71,10 @@ const Books = () => {
     setFilteredBooks(result);
   }, [books, searchTerm]);
 
-  const handleBorrow = async (book: any) => {
-    if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please login or register to borrow books.",
-        variant: "destructive",
-      });
-      navigate("/login", { state: { from: { pathname: "/books" } } });
-      return;
-    }
-
+  const proceedWithBorrow = async (book: any) => {
     setBorrowingId(book.id);
-
     try {
-      const res = await apiRequest("POST", "/api/book-borrows", {
+      const res = await apiRequest("POST", `/api/${collegeSlug}/book-borrows`, {
         bookId: String(book.id),
         bookTitle: book.bookName,
         isbn: book.isbn || "",
@@ -82,16 +88,27 @@ const Books = () => {
         fetchBooks();
       }
     } catch (error: any) {
-      console.error("Error borrowing book:", error);
       toast({
         title: "Error",
-        description:
-          error.message || "Failed to borrow book. Please try again.",
+        description: error.message || "Failed to borrow book. Please try again.",
         variant: "destructive",
       });
     } finally {
       setBorrowingId(null);
     }
+  };
+
+  const handleBorrow = (book: any) => {
+    // Check if user is logged in via Card ID session
+    if (user?.isLibraryCard) {
+      // Card holder — proceed with borrow normally
+      proceedWithBorrow(book);
+      return;
+    }
+
+    // Everyone else (email login or not logged in) — show info popup
+    setInfoPopupBook(book);
+    setShowInfoPopup(true);
   };
 
   const handleViewDetails = (book: any) => {
@@ -158,8 +175,14 @@ const Books = () => {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="loading-spinner" />
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="space-y-4">
+                  <Skeleton className="h-64 rounded-xl" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
             </div>
           ) : filteredBooks.length > 0 ? (
             <>
@@ -178,19 +201,18 @@ const Books = () => {
                       book={{
                         book_id: book.id,
                         title: book.bookName,
-                        author: "",
+                        author: book.authorName || "Library Collection",
                         category: "",
                         description: book.description,
                         cover_image: book.bookImage,
-                        image: book.bookImage,
                         isbn: "",
-                        available: parseInt(book.availableCopies || "0") > 0,
                         status:
                           parseInt(book.availableCopies || "0") > 0
                             ? "available"
                             : "unavailable",
                         total_copies: parseInt(book.totalCopies || "0"),
                         available_copies: parseInt(book.availableCopies || "0"),
+                        publication_year: 0,
                       }}
                       onBorrow={() => handleBorrow(book)}
                       onViewDetails={() => handleViewDetails(book)}
@@ -219,6 +241,61 @@ const Books = () => {
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {showInfoPopup && infoPopupBook && (
+          <motion.div 
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+            >
+              <div className="text-5xl mb-4 text-center">📚</div>
+              <h3 className="text-2xl font-black text-neutral-900 text-center mb-2">
+                Want to Borrow This Book?
+              </h3>
+              <p className="text-neutral-600 text-sm text-center mb-6">
+                Book borrowing is available for students with a College Card ID.
+              </p>
+              <div className="bg-neutral-50 rounded-xl p-5 mb-6 space-y-3 text-sm border border-neutral-100">
+                <p className="font-bold text-neutral-800">You have two options:</p>
+                <div className="flex gap-2">
+                   <span>✅</span>
+                   <p><strong>Have a Card ID?</strong> Logout and login via the <strong>Card ID tab</strong> on the login page</p>
+                </div>
+                <div className="flex gap-2">
+                   <span>📋</span>
+                   <p><strong>No Card ID?</strong> Apply for a College Card first, then login with your Card ID</p>
+                </div>
+                <div className="flex gap-2">
+                   <span>🏛️</span>
+                   <p><strong>Visitor/Staff?</strong> Visit the library physically to borrow books</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <a
+                  href={`/${collegeSlug}/library-card`}
+                  className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold text-center hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+                >
+                  Apply for College Card
+                </a>
+                <button
+                  onClick={() => setShowInfoPopup(false)}
+                  className="w-full py-3 border border-neutral-200 rounded-xl text-sm font-bold text-neutral-600 hover:bg-neutral-50 transition-all font-mono"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

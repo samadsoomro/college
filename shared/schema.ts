@@ -3,14 +3,31 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const appRoleEnum = pgEnum("app_role", ["admin", "moderator", "user"]);
+// adminRoleEnum kept for backward compatibility; actual role values in DB are text ('developer', 'client_admin')
 export const adminRoleEnum = pgEnum("admin_role", ["system", "custom"]);
+
+// ─── Multi-Tenant: Colleges Table ──────────────────────────────────────────
+export const colleges = pgTable("colleges", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  shortName: text("short_name").notNull(),
+  slug: text("slug").unique().notNull(),
+  storageBucket: text("storage_bucket").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const insertCollegeSchema = createInsertSchema(colleges).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCollege = z.infer<typeof insertCollegeSchema>;
+export type College = typeof colleges.$inferSelect;
 
 export const adminCredentials = pgTable("admin_credentials", {
   id: uuid("id").defaultRandom().primaryKey(),
   adminEmail: text("admin_email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: adminRoleEnum("role").default("custom").notNull(),
-  secretKey: text("secret_key"),
+  role: text("role").default("client_admin").notNull(), // 'developer' | 'client_admin'
+  collegeId: uuid("college_id").references(() => colleges.id),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -20,6 +37,7 @@ export const userRoles = pgTable("user_roles", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull(),
   role: appRoleEnum("role").notNull().default("user"),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -31,6 +49,7 @@ export const profiles = pgTable("profiles", {
   rollNumber: text("roll_number"),
   department: text("department"),
   studentClass: text("student_class"),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -42,6 +61,7 @@ export const contactMessages = pgTable("contact_messages", {
   subject: text("subject").notNull(),
   message: text("message").notNull(),
   isSeen: boolean("is_seen").default(false).notNull(),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -58,6 +78,7 @@ export const bookBorrows = pgTable("book_borrows", {
   dueDate: timestamp("due_date", { withTimezone: true }).notNull(),
   returnDate: timestamp("return_date", { withTimezone: true }),
   status: text("status").default("borrowed").notNull(),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -79,11 +100,12 @@ export const libraryCardApplications = pgTable("library_card_applications", {
   addressZip: text("address_zip").notNull(),
   status: text("status").default("pending").notNull(),
   password: text("password"),
-  cardNumber: text("card_number").unique(),
+  cardNumber: text("card_number"), // unique per-college (composite index in DB)
   studentId: text("student_id"),
   issueDate: date("issue_date"),
   validThrough: date("valid_through"),
   dynamicFields: z.any().transform(v => typeof v === 'string' ? JSON.parse(v) : v).default({}), // Helper for JSONB in Supabase
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -95,6 +117,7 @@ export const donations = pgTable("donations", {
   name: text("name"),
   email: text("email"),
   message: text("message"),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -106,6 +129,7 @@ export const students = pgTable("students", {
   class: text("class"),
   field: text("field"),
   rollNo: text("roll_no"),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -115,6 +139,7 @@ export const nonStudents = pgTable("non_students", {
   name: text("name").notNull(),
   role: text("role").notNull(),
   phone: text("phone"),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -126,6 +151,7 @@ export const books = pgTable("books", {
   bookImage: text("book_image"),
   totalCopies: decimal("total_copies", { precision: 10, scale: 0 }).default("1").notNull(),
   availableCopies: decimal("available_copies", { precision: 10, scale: 0 }).default("1").notNull(),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -138,6 +164,7 @@ export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -149,6 +176,7 @@ export const rareBooks = pgTable("rare_books", {
   pdfPath: text("pdf_path").notNull(),
   coverImage: text("cover_image").notNull(),
   status: text("status").default("active").notNull(),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -158,6 +186,7 @@ export const events = pgTable("events", {
   description: text("description").notNull(),
   images: text("images").array(),
   date: date("date"),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -169,6 +198,7 @@ export const notifications = pgTable("notifications", {
   image: text("image"),
   pin: boolean("pin").default(false).notNull(),
   status: text("status").default("active").notNull(),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -180,6 +210,7 @@ export const notes = pgTable("notes", {
   class: text("class").notNull(),
   pdfPath: text("pdf_path").notNull(),
   status: text("status").default("active").notNull(),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -187,12 +218,13 @@ export const notes = pgTable("notes", {
 export const blogPosts = pgTable("blog_posts", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: text("title").notNull(),
-  slug: text("slug").notNull().unique(),
+  slug: text("slug").notNull(), // unique per-college (composite index in DB)
   shortDescription: text("short_description").notNull(),
   content: text("content").notNull(),
   featuredImage: text("featured_image"),
   isPinned: boolean("is_pinned").default(false).notNull(),
   status: text("status").default("draft").notNull(), // 'published' | 'draft'
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -203,6 +235,7 @@ export const principal = pgTable("principal", {
   name: text("name").notNull(),
   imageUrl: text("image_url"),
   message: text("message").notNull(),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -213,6 +246,7 @@ export const facultyStaff = pgTable("faculty_staff", {
   designation: text("designation").notNull(),
   description: text("description"),
   imageUrl: text("image_url"),
+  collegeId: uuid("college_id").references(() => colleges.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -358,6 +392,11 @@ export const siteSettings = pgTable("site_settings", {
   rbWatermarkOpacity: decimal("rb_watermark_opacity", { precision: 3, scale: 2 }).default("0.1"),
   rbDisclaimerText: text("rb_disclaimer_text").default("Confidential • Do Not Distribute • GCFM Library Archive"),
   rbWatermarkEnabled: boolean("rb_watermark_enabled").default(true),
+  easypaisaNumber: text("easypaisa_number").default("0300-0000000"),
+  bankAccountNumber: text("bank_account_number").default(""),
+  bankName: text("bank_name").default("Habib Bank Limited (HBL)"),
+  bankBranch: text("bank_branch").default(""),
+  accountTitle: text("account_title").default("GCFMN Library"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -383,7 +422,7 @@ export const insertHomeStatSchema = createInsertSchema(homeStats).omit({ id: tru
 export const insertHomeButtonSchema = createInsertSchema(homeButtons).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertHomeContent = z.infer<typeof insertHomeContentSchema>;
-export type InsertHomeSliderImage = z.infer<typeof insertHomeSliderImageSchema>;
+export type InsertHomeSliderImage = typeof homeSliderImages.$inferInsert;
 export type InsertHomeStat = z.infer<typeof insertHomeStatSchema>;
 export type InsertHomeButton = z.infer<typeof insertHomeButtonSchema>;
 

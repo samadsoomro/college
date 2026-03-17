@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useParams } from "react-router-dom";
 import { Quote, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { api } from "@/lib/api";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface PrincipalData {
   name: string;
@@ -12,15 +13,19 @@ interface PrincipalData {
 }
 
 const PrincipalMessage: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [data, setData] = useState<PrincipalData | null>(null);
-  const { settings } = useBranding();
+  const { settings } = useCollege();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get("/api/principal");
-        setData(response.data);
+        const response = await fetch(`/api/${collegeSlug}/principal`);
+        if (response.ok) {
+          const result = await response.json();
+          setData(result);
+        }
       } catch (error) {
         console.error("Failed to fetch principal message", error);
       } finally {
@@ -28,12 +33,27 @@ const PrincipalMessage: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [collegeSlug]);
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-24 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen pt-24 pb-12 pakistan-bg">
+        <div className="container px-4 md:px-6 max-w-4xl mx-auto space-y-12">
+            <Skeleton className="h-12 w-3/4 mx-auto bg-primary/5" />
+            <div className="grid md:grid-cols-3 gap-8 border rounded-2xl p-8 bg-card">
+              <div className="flex flex-col items-center space-y-4">
+                <Skeleton className="h-48 w-48 rounded-full" />
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+              <div className="md:col-span-2 space-y-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            </div>
+        </div>
       </div>
     );
   }

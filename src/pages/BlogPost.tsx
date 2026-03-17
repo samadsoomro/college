@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 const BlogPost: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { collegeSlug, slug } = useParams<{
+    collegeSlug: string;
+    slug: string;
+  }>();
   const navigate = useNavigate();
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -24,28 +27,55 @@ const BlogPost: React.FC = () => {
     const fetchPost = async () => {
       if (!slug) return;
       try {
-        const res = await fetch(`/api/blog/${slug}`);
+        const res = await fetch(`/api/${collegeSlug}/blog/${slug}`);
         if (res.ok) {
           const data = await res.json();
           setPost(data);
         } else {
-          navigate("/blog");
+          navigate(`/${collegeSlug}/blog`);
         }
       } catch (err) {
         console.error("Failed to fetch post", err);
-        navigate("/blog");
+        navigate(`/${collegeSlug}/blog`);
       } finally {
         setLoading(false);
       }
     };
 
     fetchPost();
-  }, [slug, navigate]);
+  }, [slug, navigate, collegeSlug]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-white">
+        {/* Skeleton Hero */}
+        <div className="relative w-full h-[50vh] min-h-[400px] bg-slate-100">
+          <div className="container h-full flex flex-col justify-end pb-16">
+            <div className="h-6 w-32 bg-slate-200 rounded animate-pulse mb-6" />
+            <div className="h-12 w-3/4 bg-slate-200 rounded animate-pulse mb-6" />
+            <div className="flex gap-6">
+              <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
+              <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+        {/* Skeleton Body */}
+        <div className="container py-16 px-4 md:px-6 max-w-4xl mx-auto space-y-8">
+          <div className="flex justify-end gap-2 mb-8 border-b border-slate-100 pb-4">
+            <div className="h-8 w-8 bg-slate-100 rounded animate-pulse" />
+            <div className="h-8 w-8 bg-slate-100 rounded animate-pulse" />
+          </div>
+          <div className="space-y-4">
+            <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+            <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+            <div className="h-4 w-5/6 bg-slate-100 rounded animate-pulse" />
+          </div>
+          <div className="space-y-4 pt-8">
+            <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+            <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+            <div className="h-4 w-4/6 bg-slate-100 rounded animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -59,8 +89,6 @@ const BlogPost: React.FC = () => {
       exit={{ opacity: 0 }}
       className="min-h-screen bg-white"
     >
-      {/* Scroll Progress Bar (Optional, can be added later) */}
-
       {/* Hero / Header */}
       <div className="relative w-full h-[50vh] min-h-[400px] bg-slate-900 overflow-hidden">
         {post.featuredImage ? (
@@ -76,7 +104,7 @@ const BlogPost: React.FC = () => {
 
         <div className="absolute inset-0 container flex flex-col justify-end pb-16">
           <Link
-            to="/blog"
+            to={`/${collegeSlug}/blog`}
             className="inline-flex items-center text-white/80 hover:text-white mb-6 transition-colors w-fit group"
           >
             <ArrowLeft
@@ -146,7 +174,7 @@ const BlogPost: React.FC = () => {
 
         {/* Footer / Navigation */}
         <div className="mt-16 pt-10 border-t border-slate-200 flex justify-between items-center">
-          <Link to="/blog">
+          <Link to={`/${collegeSlug}/blog`}>
             <Button variant="outline" className="gap-2">
               <ArrowLeft size={16} /> All Posts
             </Button>

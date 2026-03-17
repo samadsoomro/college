@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useCollege } from "@/contexts/CollegeContext";
 import {
   Card,
   CardContent,
@@ -22,10 +24,12 @@ import {
   Copy,
   Loader2,
 } from "lucide-react";
+import { Skeleton as SkeletonUI } from "@/components/ui/skeleton";
 
 const donationAmounts = [500, 1000, 2000, 5000, 10000];
 
 const Donate = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState("");
   const [name, setName] = useState("");
@@ -36,11 +40,12 @@ const Donate = () => {
   const [adminDonationInfo, setAdminDonationInfo] = useState<any>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
   const { toast } = useToast();
+  const { settings } = useCollege();
 
   useEffect(() => {
     const fetchDonationInfo = async () => {
       try {
-        const res = await fetch("/api/admin/stats"); // Use existing stats endpoint or similar
+        const res = await fetch(`/api/${collegeSlug}/admin/stats`); // Use existing stats endpoint or similar
         if (res.ok) {
           const data = await res.json();
           setAdminDonationInfo(data);
@@ -52,7 +57,7 @@ const Donate = () => {
       }
     };
     fetchDonationInfo();
-  }, []);
+  }, [collegeSlug]);
 
   const getAmount = () => {
     if (customAmount) return parseFloat(customAmount);
@@ -82,7 +87,7 @@ const Donate = () => {
 
     setIsSubmitting(true);
     try {
-      await apiRequest("POST", "/api/donations", {
+      await apiRequest("POST", `/api/${collegeSlug}/donations`, {
         amount: amount.toString(),
         method,
         donorName: name,
@@ -108,6 +113,24 @@ const Donate = () => {
     }
   };
 
+  if (!settings || !settings.instituteFullName) {
+    return (
+      <div className="min-h-screen bg-background py-10 px-4">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="text-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-neutral-100 animate-pulse mx-auto" />
+            <div className="h-12 w-64 bg-neutral-100 animate-pulse rounded-xl mx-auto" />
+            <div className="h-6 w-full max-w-lg bg-neutral-100 animate-pulse rounded mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="h-96 bg-neutral-100 animate-pulse rounded-xl" />
+            <div className="h-96 bg-neutral-100 animate-pulse rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-background py-12 px-4">
@@ -129,7 +152,7 @@ const Donate = () => {
               services to our students.
             </p>
             <Button
-              onClick={() => (window.location.href = "/")}
+              onClick={() => (window.location.href = `/${collegeSlug}`)}
               data-testid="button-return-home"
             >
               Return to Home
@@ -279,7 +302,7 @@ const Donate = () => {
                     </TabsTrigger>
                     <TabsTrigger value="card" className="gap-2">
                       <CreditCard className="w-4 h-4" />
-                      Card
+                      Card(Account Number)
                     </TabsTrigger>
                   </TabsList>
 
@@ -298,14 +321,17 @@ const Donate = () => {
                       </p>
                       <div className="flex items-center justify-center gap-2 mt-2">
                         <p className="text-2xl font-mono font-bold text-primary">
-                          0300-1234567
+                          {settings.easypaisaNumber || "0300-0000000"}
                         </p>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => {
-                            navigator.clipboard.writeText("03001234567");
+                            navigator.clipboard.writeText(
+                              settings.easypaisaNumber?.replace(/-/g, "") ||
+                                "03000000000",
+                            );
                             toast({
                               title: "Copied!",
                               description:
@@ -317,7 +343,7 @@ const Donate = () => {
                         </Button>
                       </div>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Account Title: GC Men Nazimabad Library
+                        Account Title: {settings.accountTitle || "GCFMN Library"}
                       </p>
                     </div>
 
@@ -339,17 +365,25 @@ const Donate = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="text-sm text-muted-foreground">
+                            Account Title
+                          </p>
+                          <p className="font-bold mb-2">
+                            {settings.accountTitle || "GCFMN Library"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
                             Account Number
                           </p>
                           <p className="font-mono font-bold">
-                            1234567890123456
+                            {settings.bankAccountNumber || "Contact college for details"}
                           </p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            navigator.clipboard.writeText("1234567890123456");
+                            navigator.clipboard.writeText(
+                              settings.bankAccountNumber || "Contact college for details",
+                            );
                             toast({
                               title: "Copied!",
                               description: "Account number copied to clipboard",
@@ -359,15 +393,21 @@ const Donate = () => {
                           <Copy size={14} />
                         </Button>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Bank Name
-                        </p>
-                        <p className="font-bold">Habib Bank Limited (HBL)</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Branch</p>
-                        <p className="font-bold">Nazimabad Branch, Karachi</p>
+                      <div className="flex justify-between items-start mt-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Bank Name
+                          </p>
+                          <p className="font-bold">
+                            {settings.bankName || 'Contact college for bank details'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Branch</p>
+                          <p className="font-bold">
+                            {settings.bankBranch || ''}
+                          </p>
+                        </div>
                       </div>
                     </div>
 

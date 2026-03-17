@@ -1,41 +1,49 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, Download, ChevronDown, BookOpen } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { FileText, Download, Search, BookOpen, ChevronDown } from "lucide-react";
+import { useCollege } from "@/contexts/CollegeContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { CLASSES, SUBJECTS_BY_CLASS } from "@/utils/constants";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Note {
   id: string;
-  class: string;
-  subject: string;
   title: string;
   description: string;
-  pdfPath: string;
-  status: string;
-  createdAt: string;
+  file_url: string;
+  category: string;
+  subject: string;
+  class: string; // Restored class for filtering
 }
 
 const Notes: React.FC = () => {
-  const [selectedClass, setSelectedClass] = useState("");
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { settings } = useCollege();
+  const { toast } = useToast(); // Re-adding useToast as it's used in handleDownload and other places
+
+  // State variables from original code that are still needed or need to be adapted
+  const [selectedClass, setSelectedClass] = useState(""); // This might need to be 'category' now
   const [selectedSubject, setSelectedSubject] = useState("");
-  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
-  const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
-  const [allNotes, setAllNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]); // This will need to be populated differently
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>([]); // This will be derived from 'notes'
+  // allNotes is replaced by 'notes'
 
   useEffect(() => {
     fetchAllNotes();
-  }, []);
+  }, [collegeSlug]);
 
   const fetchAllNotes = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/notes");
+      const res = await fetch(`/api/${collegeSlug}/notes`);
       if (res.ok) {
         const data = await res.json();
-        setAllNotes(data);
+        setNotes(data);
         setFilteredNotes(data);
       }
     } catch (error) {
@@ -76,7 +84,7 @@ const Notes: React.FC = () => {
       return;
     }
 
-    const filtered = allNotes.filter(
+    const filtered = notes.filter(
       (note) =>
         note.class === selectedClass && note.subject === selectedSubject,
     );
@@ -91,9 +99,9 @@ const Notes: React.FC = () => {
     }
   };
 
-  const handleDownload = (pdfPath: string, title: string) => {
+  const handleDownload = (fileUrl: string, title: string) => {
     try {
-      window.open(pdfPath, "_blank");
+      window.open(fileUrl, "_blank");
       toast({
         title: "Download Started",
         description: `${title} is being downloaded`,
@@ -224,12 +232,20 @@ const Notes: React.FC = () => {
             </h3>
 
             {loading ? (
-              <div className="text-center py-16">
-                <BookOpen
-                  size={48}
-                  className="mx-auto text-muted-foreground mb-4"
-                />
-                <p className="text-muted-foreground">Loading notes...</p>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-4">
+                    <div className="flex gap-4">
+                      <Skeleton className="h-12 w-12 rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-10 w-full rounded-md" />
+                  </div>
+                ))}
               </div>
             ) : filteredNotes.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -264,7 +280,7 @@ const Notes: React.FC = () => {
                             variant="outline"
                             className="gap-1"
                             onClick={() =>
-                              handleDownload(note.pdfPath, note.title)
+                              handleDownload(note.file_url, note.title)
                             }
                           >
                             <Download size={14} />

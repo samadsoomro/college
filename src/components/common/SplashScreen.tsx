@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 import collegeLogo from "@/assets/images/college-logo.png";
 
 interface SplashScreenProps {
@@ -10,7 +10,7 @@ interface SplashScreenProps {
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
   const [isVisible, setIsVisible] = useState(true);
-  const { settings } = useBranding();
+  const { settings } = useCollege();
 
   useEffect(() => {
     const timer = setTimeout(() => {

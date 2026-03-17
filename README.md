@@ -14,10 +14,6 @@ This is the complete source code for the Gov. College Formen Nazimabad (GCFM) Li
 - `.data/`: Local JSON data persistence
 - `public/`: Static assets and PDF uploads
 
-## Admin Credentials
-- **Email**: admin@formen.com
-- **Password**: gcfm123
-- **Secret Key**: GCFM-ADMIN-ONLY
 
 ## Deployment
 The project is configured for deployment on Replit using the VM runtime. Ensure `SESSION_SECRET` is set in environment variables for production use.

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Table,
@@ -48,6 +49,7 @@ interface LibraryCardApplication {
 }
 
 const Addresses = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [addresses, setAddresses] = useState<LibraryCardApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,19 +61,12 @@ const Addresses = () => {
       // Reuse existing endpoint but filter for 'approved'
       // Note: We are mocking a specialized endpoint behavior by filtering client-side for now
       // per implementation plan to minimize backend churn unless massive data volume.
-      const res = await fetch("/api/admin/library-cards?_t=" + Date.now(), {
+      const res = await fetch(`/api/${collegeSlug}/admin/library-cards?_t=` + Date.now(), {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch addresses");
       const data: LibraryCardApplication[] = await res.json();
 
-      console.log("[DEBUG] Addresses Module - Raw Data length:", data.length);
-      if (data.length > 0) {
-        console.log(
-          "[DEBUG] Addresses Module - Sample statuses:",
-          data.map((d) => d.status).slice(0, 5),
-        );
-      }
 
       const approvedOnly = data
         .filter((app) => {

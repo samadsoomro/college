@@ -30,6 +30,7 @@ async function request(
     method,
     headers,
     body: bodyToSend,
+    credentials: "include",
   });
 
   if (!res.ok) {
@@ -50,7 +51,7 @@ async function request(
 
 export const api = {
   get: async (url: string) => {
-    const res = await fetch(url);
+    const res = await fetch(url, { credentials: "include" });
     if (!res.ok) {
       let errorData;
       try {
@@ -72,7 +73,7 @@ export const api = {
   patch: (url: string, body: any, config?: RequestConfig) =>
     request("PATCH", url, body, config),
   delete: async (url: string) => {
-    const res = await fetch(url, { method: "DELETE" });
+    const res = await fetch(url, { method: "DELETE", credentials: "include" });
     if (!res.ok) {
       let errorData;
       try {

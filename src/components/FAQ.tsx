@@ -10,9 +10,9 @@ import {
 
 const faqs = [
   {
-    question: "How do I get a library card?",
+    question: "How do I get a college card?",
     answer:
-      "Bring your student ID to the circulation desk or sign up online through your student portal. The library card will be issued within 24 hours of verification.",
+      "Bring your student ID to the circulation desk or sign up online through your student portal. The college card will be issued within 24 hours of verification.",
   },
   {
     question: "Can I access e-resources from home?",

@@ -1,45 +1,49 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Image as ImageIcon, Clock } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { Calendar, MapPin, Clock, ArrowRight, Bell, Image as ImageIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Event {
   id: string;
   title: string;
   description: string;
-  images: string[];
   date: string;
-  createdAt: string;
+  location: string;
+  image_url?: string;
+  images?: string[]; // Added back for compatibility with render logic
 }
 
-const EventsPage: React.FC = () => {
+const Events: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  const fetchEvents = async () => {
-    try {
-      const res = await fetch("/api/events");
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data);
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch(`/api/${collegeSlug}/events`);
+        if (res.ok) {
+          const data = await res.json();
+          setEvents(data);
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load events",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load events",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchEvents();
+  }, [collegeSlug]);
 
   return (
     <motion.div
@@ -64,16 +68,24 @@ const EventsPage: React.FC = () => {
             transition={{ delay: 0.1 }}
           >
             Stay updated with the latest happenings, seminars, and book fairs at
-            GCMN Library.
+            our library.
           </motion.p>
         </div>
       </div>
 
       <div className="container py-12">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Clock className="w-12 h-12 text-primary animate-pulse mb-4" />
-            <p className="text-muted-foreground">Loading events...</p>
+          <div className="space-y-12">
+            {[1, 2].map((i) => (
+              <div key={i} className="grid lg:grid-cols-2 gap-8 border rounded-2xl p-6">
+                <div className="space-y-4">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-10 w-3/4" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+                <Skeleton className="h-64 w-full rounded-xl" />
+              </div>
+            ))}
           </div>
         ) : events.length > 0 ? (
           <div className="grid grid-cols-1 gap-12">
@@ -161,4 +173,4 @@ const EventsPage: React.FC = () => {
   );
 };
 
-export default EventsPage;
+export default Events;

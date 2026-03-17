@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useParams } from "react-router-dom";
 import { User, Mail } from "lucide-react";
 import {
   Card,
@@ -8,8 +9,8 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { api } from "@/lib/api";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface FacultyMember {
   id: string;
@@ -20,15 +21,19 @@ interface FacultyMember {
 }
 
 const Faculty: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [faculty, setFaculty] = useState<FacultyMember[]>([]);
-  const { settings } = useBranding();
+  const { settings } = useCollege();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchFaculty = async () => {
       try {
-        const response = await api.get("/api/faculty");
-        setFaculty(response.data);
+        const response = await fetch(`/api/${collegeSlug}/faculty`);
+        if (response.ok) {
+          const data = await response.json();
+          setFaculty(data);
+        }
       } catch (error) {
         console.error("Failed to fetch faculty", error);
       } finally {
@@ -36,7 +41,7 @@ const Faculty: React.FC = () => {
       }
     };
     fetchFaculty();
-  }, []);
+  }, [collegeSlug]);
 
   return (
     <motion.div
@@ -56,12 +61,27 @@ const Faculty: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="space-y-4 p-6 border rounded-xl bg-card">
+                <Skeleton className="aspect-[4/3] rounded-xl" />
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ))}
           </div>
         ) : faculty.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            No faculty members listed yet.
+          <div className="py-20 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-6">
+              <User size={48} className="text-primary/30" />
+            </div>
+            <h3 className="text-2xl font-bold text-foreground mb-2">
+              No Faculty Listed
+            </h3>
+            <p className="text-muted-foreground max-w-sm mx-auto">
+              The faculty and staff directory is currently empty for this institution.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

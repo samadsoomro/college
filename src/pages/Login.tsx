@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Mail,
@@ -14,86 +14,91 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 import collegeLogo from "@/assets/images/college-logo.png";
 
 const Login: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    secretKey: "",
-    libraryCardId: "",
+    collegeCardId: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [useLibraryCard, setUseLibraryCard] = useState(false);
+  const [useCollegeCard, setUseCollegeCard] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { login, user, isAdmin } = useAuth();
-  const { settings } = useBranding();
+  const { login, user } = useAuth();
+  const { settings } = useCollege();
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    if (user) {
-      const from =
-        (location.state as any)?.from?.pathname ||
-        (isAdmin ? "/admin-dashboard" : "/");
-      navigate(from, { replace: true });
-    }
-  }, [user, isAdmin, navigate, location]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault(); // ← CRITICAL: must prevent default form submission
     setLoading(true);
+    setError("");
 
-    if (useLibraryCard) {
-      if (!formData.libraryCardId || !formData.password) {
-        setError("Please enter both Library Card ID and Password.");
-        setLoading(false);
+    try {
+      if (useCollegeCard) {
+        if (!formData.collegeCardId || !formData.password) {
+          setError("Please enter both College Card ID and Password.");
+          setLoading(false);
+          return;
+        }
+
+        const result = await login(
+          undefined,
+          formData.password,
+          formData.collegeCardId,
+        );
+
+        if (!result.success) {
+          setError(result.error || "Login failed");
+          setLoading(false);
+          return;
+        }
+
+        if (result.redirect) {
+          window.location.href = result.redirect;
+        }
         return;
       }
 
-      const result = await login(
-        undefined,
-        formData.password,
-        undefined,
-        formData.libraryCardId,
-      );
-
-      if (!result.success) {
-        const errorMessage = result.error || "Login failed";
-        if (errorMessage.toLowerCase().includes("write correct details")) {
-          setError("Write correct details");
-        } else if (
-          errorMessage.toLowerCase().includes("wait for approval by library")
-        ) {
-          setError("Wait for approval by library");
-        } else if (errorMessage.toLowerCase().includes("rejected")) {
-          setError("Your library card application was rejected.");
-        } else if (errorMessage.toLowerCase().includes("not active")) {
-          setError("Library card is not active. Please contact the library.");
-        } else {
-          setError(errorMessage);
-        }
-      }
-    } else {
+      // Default Email Login
       if (!formData.email || !formData.password) {
         setError("Please fill in email and password");
         setLoading(false);
         return;
       }
 
-      const result = await login(
-        formData.email,
-        formData.password,
-        formData.secretKey || undefined,
-      );
-      if (!result.success) {
-        setError(result.error || "Login failed");
+      const response = await fetch(`/api/${collegeSlug}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // ← CRITICAL: needed for session cookie
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Invalid email or password");
+        setLoading(false);
+        return;
       }
+
+      // Success - Use window.location.href to force a full reload and clear state
+      if (data.redirect) {
+        window.location.href = data.redirect;
+      }
+    } catch (err: any) {
+      setError(
+        err.message || "An unexpected error occurred. Please try again.",
+      );
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -129,13 +134,13 @@ const Login: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
           <div className="flex gap-2 mb-4">
             <button
               type="button"
-              onClick={() => setUseLibraryCard(false)}
+              onClick={() => setUseCollegeCard(false)}
               className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors ${
-                !useLibraryCard
+                !useCollegeCard
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
@@ -145,9 +150,9 @@ const Login: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setUseLibraryCard(true)}
+              onClick={() => setUseCollegeCard(true)}
               className={`flex-1 py-2 px-3 rounded-lg font-medium text-sm transition-colors ${
-                useLibraryCard
+                useCollegeCard
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
@@ -157,7 +162,7 @@ const Login: React.FC = () => {
             </button>
           </div>
 
-          {!useLibraryCard ? (
+          {!useCollegeCard ? (
             <>
               <p className="text-sm text-center text-muted-foreground mb-4 bg-muted/30 p-2 rounded-lg border border-border/50">
                 Staff/Visitor login through their Email & Password
@@ -180,18 +185,18 @@ const Login: React.FC = () => {
           ) : (
             <>
               <p className="text-sm text-center text-muted-foreground mb-4 bg-muted/30 p-2 rounded-lg border border-border/50">
-                Students login through their Card ID & Password
+                Students login through their College Card ID & Password
               </p>
               <div>
                 <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
                   <CreditCard size={16} />
-                  Library Card ID
+                  College Card ID
                 </label>
                 <Input
                   type="text"
-                  value={formData.libraryCardId}
+                  value={formData.collegeCardId}
                   onChange={(e) =>
-                    setFormData({ ...formData, libraryCardId: e.target.value })
+                    setFormData({ ...formData, collegeCardId: e.target.value })
                   }
                   placeholder="e.g., CS-E-09-12"
                 />
@@ -202,7 +207,7 @@ const Login: React.FC = () => {
           <div>
             <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
               <Lock size={16} />
-              {useLibraryCard ? "Card Login Password" : "Password"}
+              {useCollegeCard ? "Card Login Password" : "Password"}
             </label>
             <div className="relative">
               <Input
@@ -224,35 +229,18 @@ const Login: React.FC = () => {
             </div>
           </div>
 
-          {!useLibraryCard && (
-            <div>
-              <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
-                <Key size={16} />
-                Secret Key (Required for Admin)
-              </label>
-              <Input
-                type="password"
-                value={formData.secretKey}
-                onChange={(e) =>
-                  setFormData({ ...formData, secretKey: e.target.value })
-                }
-                placeholder="Required for Admin Access"
-              />
-            </div>
-          )}
-
           <Button type="submit" className="w-full gap-2" disabled={loading}>
             <LogIn size={18} />
             {loading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          {useLibraryCard ? (
+        <div className="text-center text-sm text-muted-foreground mt-6">
+          {useCollegeCard ? (
             <>
-              Don't have a library card?{" "}
+              Don't have a college card?{" "}
               <Link
-                to="/library-card"
+                to={`/${collegeSlug}/library-card`}
                 className="text-primary font-medium hover:underline"
               >
                 Apply for it
@@ -262,14 +250,14 @@ const Login: React.FC = () => {
             <>
               Don't have an account?{" "}
               <Link
-                to="/register"
+                to={`/${collegeSlug}/register`}
                 className="text-primary font-medium hover:underline"
               >
                 Register here
               </Link>
             </>
           )}
-        </p>
+        </div>
       </motion.div>
     </motion.div>
   );

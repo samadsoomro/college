@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ interface FacultyMember {
 }
 
 const AdminFaculty: React.FC = () => {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [faculty, setFaculty] = useState<FacultyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -44,7 +46,7 @@ const AdminFaculty: React.FC = () => {
 
   const fetchFaculty = async () => {
     try {
-      const res = await api.get("/api/faculty");
+      const res = await api.get(`/api/${collegeSlug}/faculty`);
       setFaculty(res.data);
     } catch (error) {
       console.error(error);
@@ -85,9 +87,9 @@ const AdminFaculty: React.FC = () => {
       }
 
       if (editingId) {
-        await api.put(`/api/admin/faculty/${editingId}`, data);
+        await api.put(`/api/${collegeSlug}/admin/faculty/${editingId}`, data);
       } else {
-        await api.post("/api/admin/faculty", data);
+        await api.post(`/api/${collegeSlug}/admin/faculty`, data);
       }
 
       toast({
@@ -110,7 +112,7 @@ const AdminFaculty: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this member?")) return;
     try {
-      await api.delete(`/api/admin/faculty/${id}`);
+      await api.delete(`/api/${collegeSlug}/admin/faculty/${id}`);
       toast({ title: "Deleted", description: "Faculty member removed." });
       fetchFaculty();
     } catch (error) {

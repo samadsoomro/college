@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -40,7 +40,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
-import { useBranding } from "@/contexts/BrandingContext";
+import { useCollege } from "@/contexts/CollegeContext";
 
 import Books from "./admin/BooksDetails";
 import Notifications from "./admin/Notifications";
@@ -52,11 +52,52 @@ import RegisteredPeople from "./admin/RegisteredPeople";
 import AdminHome from "./admin/AdminHome";
 import AdminHistory from "./admin/AdminHistory";
 import ThemeBranding from "./admin/ThemeBranding";
-import AdminCredentials from "./admin/AdminCredentials";
 import InstituteAddress from "./admin/InstituteAddress";
 
+const SidebarItem = ({ module, activeModule, onClick }: { module: any; activeModule: string; onClick: () => void }) => {
+  const Icon = module.icon;
+  const isActive = activeModule === module.id;
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 group ${
+        isActive
+          ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20"
+          : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <Icon
+          size={18}
+          className={
+            isActive
+              ? "text-primary"
+              : "text-neutral-400 group-hover:text-neutral-600"
+          }
+        />
+        <span className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}>
+          {module.label}
+        </span>
+      </div>
+      {module.count > 0 && (
+        <span
+          className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+            isActive
+              ? "bg-primary text-white"
+              : "bg-neutral-100 text-neutral-400"
+          }`}
+        >
+          {module.count}
+        </span>
+      )}
+    </button>
+  );
+};
+
 export default function AdminDashboard() {
+  const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [activeModule, setActiveModule] = useState("messages");
+  // ... other states ...
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [libraryCards, setLibraryCards] = useState([]);
@@ -99,7 +140,7 @@ export default function AdminDashboard() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const { logout, isAdmin } = useAuth();
-  const { settings } = useBranding();
+  const { settings } = useCollege();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -133,16 +174,16 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!isAdmin) {
-      navigate("/login");
+      navigate(`/${collegeSlug}/login`);
     } else {
       fetchMessages();
     }
-  }, [isAdmin, navigate]);
+  }, [isAdmin, navigate, collegeSlug]);
 
   const fetchMessages = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/contact-messages", {
+      const res = await fetch(`/api/${collegeSlug}/contact-messages`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -159,7 +200,7 @@ export default function AdminDashboard() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/users", { credentials: "include" });
+      const res = await fetch(`/api/${collegeSlug}/admin/users`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setUsers([...(data.students || []), ...(data.nonStudents || [])]);
@@ -176,7 +217,7 @@ export default function AdminDashboard() {
       setLoading(true);
 
       // Fetch cards
-      const res = await fetch("/api/admin/library-cards", {
+      const res = await fetch(`/api/${collegeSlug}/admin/library-cards`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -185,13 +226,13 @@ export default function AdminDashboard() {
       }
 
       // Fetch dynamic field definitions
-      const fieldRes = await fetch("/api/library-card-fields");
+      const fieldRes = await fetch(`/api/${collegeSlug}/library-card-fields`);
       if (fieldRes.ok) {
         const fields = await fieldRes.json();
         setCustomFields(fields.filter((f: any) => f.showInAdmin));
       }
     } catch (error) {
-      console.error("Error fetching library cards or fields:", error);
+      console.error("Error fetching college cards or fields:", error);
     } finally {
       setLoading(false);
     }
@@ -200,7 +241,7 @@ export default function AdminDashboard() {
   const fetchBorrowedBooks = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/borrowed-books", {
+      const res = await fetch(`/api/${collegeSlug}/admin/borrowed-books`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -217,7 +258,7 @@ export default function AdminDashboard() {
   const fetchDonations = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/donations", {
+      const res = await fetch(`/api/${collegeSlug}/admin/donations`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -234,7 +275,7 @@ export default function AdminDashboard() {
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/notes", { credentials: "include" });
+      const res = await fetch(`/api/${collegeSlug}/admin/notes`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setNotes(data);
@@ -254,7 +295,7 @@ export default function AdminDashboard() {
   const fetchRareBooks = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/rare-books", {
+      const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -273,7 +314,7 @@ export default function AdminDashboard() {
   const deleteRareBook = async (id: string) => {
     if (!confirm("Delete this rare book?")) return;
     try {
-      const res = await fetch(`/api/admin/rare-books/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/rare-books/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -313,7 +354,7 @@ export default function AdminDashboard() {
       if (rareBookFiles.image)
         formData.append("coverImage", rareBookFiles.image);
 
-      const res = await fetch("/api/admin/rare-books", {
+      const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
         method: "POST",
         body: formData,
       });
@@ -350,25 +391,12 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchBooksDetails = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/admin/books", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        setBooksDetails(data);
-      }
-    } catch (error) {
-      console.error("Error fetching books:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // fetchBooksDetails logic handled in component
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/events");
+      const res = await fetch(`/api/${collegeSlug}/events`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setEvents(data);
@@ -398,9 +426,10 @@ export default function AdminDashboard() {
         }
       }
 
-      const res = await fetch("/api/admin/events", {
+      const res = await fetch(`/api/${collegeSlug}/admin/events`, {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (res.ok) {
@@ -429,7 +458,7 @@ export default function AdminDashboard() {
   const deleteEvent = async (id: string) => {
     if (!confirm("Delete this event?")) return;
     try {
-      const res = await fetch(`/api/admin/events/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/events/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -453,76 +482,13 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleBookSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      const res = await fetch("/api/admin/books-details", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bookForm),
-      });
+  // Book management is handled in the Books component
 
-      if (res.ok) {
-        toast({ title: "Success", description: "Book added successfully" });
-        setBookForm({
-          title: "",
-          author: "",
-          isbn: "",
-          category: "",
-          totalCopies: 1,
-          availableCopies: 1,
-        });
-        fetchBooksDetails();
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to add book",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add book",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteBook = async (id: string) => {
-    if (!confirm("Delete this book?")) return;
-    try {
-      const res = await fetch(`/api/admin/books-details/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (res.ok) {
-        setBooksDetails(booksDetails.filter((b: any) => b.id !== id));
-        toast({ title: "Deleted", description: "Book deleted successfully." });
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to delete book",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete book.",
-        variant: "destructive",
-      });
-    }
-  };
+  // deleteBook logic handled in component
 
   const approveLibraryCardHandler = async (id: string) => {
     try {
-      const res = await fetch(`/api/library-card-applications/${id}/status`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${id}/status`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -536,7 +502,7 @@ export default function AdminDashboard() {
         );
         toast({
           title: "Approved",
-          description: "Library card approved successfully.",
+          description: "College card approved successfully.",
         });
       } else {
         const err = await res.json();
@@ -545,7 +511,7 @@ export default function AdminDashboard() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to approve library card.",
+        description: error.message || "Failed to approve college card.",
         variant: "destructive",
       });
     }
@@ -576,7 +542,7 @@ export default function AdminDashboard() {
         await fetchRareBooks();
         break;
       case "books-details":
-        await fetchBooksDetails();
+        // Books module handles its own fetching
         break;
       case "events":
         await fetchEvents();
@@ -584,16 +550,13 @@ export default function AdminDashboard() {
       case "addresses":
         // Address fetching is handled inside the component
         break;
-      case "institute-address":
-        // Handled inside component
-        break;
       // Blog self-fetches
     }
   };
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate(`/${collegeSlug}/login`);
   };
 
   const downloadExcel = (
@@ -1006,7 +969,7 @@ export default function AdminDashboard() {
   const deleteMessage = async (id: string) => {
     if (!confirm("Delete this message?")) return;
     try {
-      const res = await fetch(`/api/contact-messages/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/contact-messages/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -1034,9 +997,9 @@ export default function AdminDashboard() {
   };
 
   const deleteLibraryCard = async (id: string) => {
-    if (!confirm("Delete this library card?")) return;
+    if (!confirm("Delete this college card?")) return;
     try {
-      const res = await fetch(`/api/library-card-applications/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -1044,20 +1007,20 @@ export default function AdminDashboard() {
         setLibraryCards(libraryCards.filter((c) => c.id !== id));
         toast({
           title: "Deleted",
-          description: "Library card deleted successfully.",
+          description: "College card deleted successfully.",
         });
       } else {
         const err = await res.json();
         toast({
           title: "Error",
-          description: err.error || "Failed to delete library card",
+          description: err.error || "Failed to delete college card",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete library card.",
+        description: "Failed to delete college card.",
         variant: "destructive",
       });
     }
@@ -1066,7 +1029,7 @@ export default function AdminDashboard() {
   const deleteBorrowedBook = async (id: string) => {
     if (!confirm("Delete this record?")) return;
     try {
-      const res = await fetch(`/api/book-borrows/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/book-borrows/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -1095,7 +1058,7 @@ export default function AdminDashboard() {
 
   const approveLibraryCard = async (id: string) => {
     try {
-      await fetch(`/api/library-card-applications/${id}/status`, {
+      await fetch(`/api/${collegeSlug}/admin/library-card-applications/${id}/status`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -1106,7 +1069,7 @@ export default function AdminDashboard() {
           c.id === id ? { ...c, status: "approved" } : c,
         ),
       );
-      toast({ title: "Approved", description: "Library card approved." });
+      toast({ title: "Approved", description: "College card approved." });
     } catch (error) {
       toast({
         title: "Error",
@@ -1119,7 +1082,7 @@ export default function AdminDashboard() {
   const deleteDonation = async (id: string) => {
     if (!confirm("Delete this donation?")) return;
     try {
-      const res = await fetch(`/api/admin/donations/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/donations/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -1154,7 +1117,7 @@ export default function AdminDashboard() {
     )
       return;
     try {
-      const res = await fetch(`/api/admin/users/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/users/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -1181,7 +1144,7 @@ export default function AdminDashboard() {
   const deleteNote = async (id: string) => {
     if (!confirm("Delete this note?")) return;
     try {
-      const res = await fetch(`/api/admin/notes/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/notes/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -1207,7 +1170,7 @@ export default function AdminDashboard() {
 
   const toggleNoteStatus = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/notes/${id}/toggle`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/notes/${id}/toggle`, {
         method: "PATCH",
         credentials: "include",
       });
@@ -1232,7 +1195,7 @@ export default function AdminDashboard() {
 
   const toggleRareBookStatus = async (id: string) => {
     try {
-      const res = await fetch(`/api/admin/rare-books/${id}/toggle`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/rare-books/${id}/toggle`, {
         method: "PATCH",
         credentials: "include",
       });
@@ -1272,55 +1235,24 @@ export default function AdminDashboard() {
   ).length;
   const adminCount = users.filter((u) => u.type === "admin").length;
 
-  const modules = [
-    {
-      id: "books",
-      label: "Borrowed Books",
-      icon: BookOpen,
-      count: borrowedBooks.length,
-    },
-    { id: "users", label: "Users", icon: Users, count: users.length },
-    {
-      id: "registered-people",
-      label: "Registered People",
-      icon: UserPlus,
-      count: registeredCount,
-    },
-    {
-      id: "donations",
-      label: "Donations",
-      icon: Gift,
-      count: donations.length,
-    },
+  // Structured Modules
+  const libraryModules = [
+    { id: "books-details", label: "Books", icon: Book, count: booksDetails.length },
+    { id: "books", label: "Borrowed Books", icon: BookOpen, count: borrowedBooks.length },
     { id: "notes", label: "Notes", icon: FileText, count: notes.length },
-    {
-      id: "rare-books",
-      label: "Rare Books",
-      icon: Archive,
-      count: rareBooks?.length || 0,
-    },
+    { id: "rare-books", label: "Rare Books", icon: Archive, count: rareBooks?.length || 0 },
+  ];
+
+  const peopleModules = [
+    { id: "users", label: "Users", icon: Users, count: users.length },
+    { id: "registered-people", label: "Registered People", icon: UserPlus, count: registeredCount },
+    { id: "donations", label: "Donations", icon: Gift, count: donations.length },
+  ];
+
+  const contentModules = [
+    { id: "events", label: "Events", icon: Calendar, count: events?.length || 0 },
     { id: "blog", label: "Blog", icon: PenTool, count: 0 },
     { id: "notifications", label: "Notifications", icon: Bell, count: 0 },
-  ];
-
-  const cardsModules = [
-    {
-      id: "library-cards",
-      label: "Cards",
-      icon: CreditCard,
-      count: libraryCards.length,
-    },
-    { id: "addresses", label: "Addresses (Students)", icon: MapPin, count: 0 },
-  ];
-
-  const contactModules = [
-    { id: "messages", label: "Messages", icon: Mail, count: messages.length },
-    {
-      id: "institute-address",
-      label: "Institute Address",
-      icon: MapPin,
-      count: 0,
-    },
   ];
 
   const aboutModules = [
@@ -1328,6 +1260,19 @@ export default function AdminDashboard() {
     { id: "principal", label: "Principal", icon: User, count: 0 },
     { id: "faculty", label: "Faculty", icon: Users, count: 0 },
   ];
+
+  const cardsModules = [
+    { id: "library-cards", label: "College Cards", icon: CreditCard, count: libraryCards.length },
+    { id: "addresses", label: "Addresses (Students)", icon: MapPin, count: 0 },
+  ];
+
+  const contactModules = [
+    { id: "messages", label: "Messages", icon: Mail, count: messages.length },
+    { id: "institute-address", label: "Institute Address", icon: MapPin, count: 0 },
+  ];
+
+  // Combined modules for mobile navigation
+  const modules = [...libraryModules, ...peopleModules, ...contentModules, ...aboutModules, ...cardsModules, ...contactModules];
 
   return (
     <div className="min-h-screen bg-neutral-50/50 pt-16 flex">
@@ -1343,195 +1288,101 @@ export default function AdminDashboard() {
             </h2>
           </div>
 
-          <h2 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4 px-2">
-            Main Menu
+          {/* Library Section */}
+          <h2 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4 mt-6 px-2">
+            📚 Library
           </h2>
           <nav className="space-y-1">
-            {modules.map((module) => {
-              const Icon = module.icon;
-              const isActive = activeModule === module.id;
-              return (
-                <button
-                  key={module.id}
-                  onClick={() => handleModuleChange(module.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                    isActive
-                      ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20"
-                      : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      size={18}
-                      className={
-                        isActive
-                          ? "text-primary"
-                          : "text-neutral-400 group-hover:text-neutral-600"
-                      }
-                    />
-                    <span
-                      className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}
-                    >
-                      {module.label}
-                    </span>
-                  </div>
-                  {module.count > 0 && (
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        isActive
-                          ? "bg-primary text-white"
-                          : "bg-neutral-100 text-neutral-400"
-                      }`}
-                    >
-                      {module.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            {libraryModules.map((module) => (
+              <SidebarItem 
+                key={module.id} 
+                module={module} 
+                activeModule={activeModule} 
+                onClick={() => handleModuleChange(module.id)} 
+              />
+            ))}
+          </nav>
 
-            {/* About Section */}
-            <div className="pt-4 pb-2 px-3">
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                About Section
-              </p>
-            </div>
-            {aboutModules.map((module) => {
-              const Icon = module.icon;
-              const isActive = activeModule === module.id;
-              return (
-                <button
-                  key={module.id}
-                  onClick={() => handleModuleChange(module.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                    isActive
-                      ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20"
-                      : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      size={18}
-                      className={
-                        isActive
-                          ? "text-primary"
-                          : "text-neutral-400 group-hover:text-neutral-600"
-                      }
-                    />
-                    <span
-                      className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}
-                    >
-                      {module.label}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
+          {/* People Section */}
+          <h2 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4 mt-6 px-2">
+            👥 People
+          </h2>
+          <nav className="space-y-1">
+            {peopleModules.map((module) => (
+              <SidebarItem 
+                key={module.id} 
+                module={module} 
+                activeModule={activeModule} 
+                onClick={() => handleModuleChange(module.id)} 
+              />
+            ))}
+          </nav>
 
-            {/* Cards Management */}
-            <div className="pt-4 pb-2 px-3">
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                Cards Management
-              </p>
-            </div>
-            {cardsModules.map((module) => {
-              const Icon = module.icon;
-              const isActive = activeModule === module.id;
-              return (
-                <button
-                  key={module.id}
-                  onClick={() => handleModuleChange(module.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                    isActive
-                      ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20"
-                      : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      size={18}
-                      className={
-                        isActive
-                          ? "text-primary"
-                          : "text-neutral-400 group-hover:text-neutral-600"
-                      }
-                    />
-                    <span
-                      className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}
-                    >
-                      {module.label}
-                    </span>
-                  </div>
-                  {module.count > 0 && (
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        isActive
-                          ? "bg-primary text-white"
-                          : "bg-neutral-100 text-neutral-400"
-                      }`}
-                    >
-                      {module.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          {/* Content Section */}
+          <h2 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4 mt-6 px-2">
+            ✍️ Content
+          </h2>
+          <nav className="space-y-1">
+            {contentModules.map((module) => (
+              <SidebarItem 
+                key={module.id} 
+                module={module} 
+                activeModule={activeModule} 
+                onClick={() => handleModuleChange(module.id)} 
+              />
+            ))}
+          </nav>
 
-            {/* Contact Us */}
-            <div className="pt-4 pb-2 px-3">
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                Contact Us
-              </p>
-            </div>
-            {contactModules.map((module) => {
-              const Icon = module.icon;
-              const isActive = activeModule === module.id;
-              return (
-                <button
-                  key={module.id}
-                  onClick={() => handleModuleChange(module.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                    isActive
-                      ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20"
-                      : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon
-                      size={18}
-                      className={
-                        isActive
-                          ? "text-primary"
-                          : "text-neutral-400 group-hover:text-neutral-600"
-                      }
-                    />
-                    <span
-                      className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}
-                    >
-                      {module.label}
-                    </span>
-                  </div>
-                  {module.count > 0 && (
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        isActive
-                          ? "bg-primary text-white"
-                          : "bg-neutral-100 text-neutral-400"
-                      }`}
-                    >
-                      {module.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          {/* College Info Section */}
+          <h2 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4 mt-6 px-2">
+            🏛️ College Info
+          </h2>
+          <nav className="space-y-1">
+            {aboutModules.map((module) => (
+              <SidebarItem 
+                key={module.id} 
+                module={module} 
+                activeModule={activeModule} 
+                onClick={() => handleModuleChange(module.id)} 
+              />
+            ))}
+          </nav>
 
-            {/* System & Branding */}
-            <div className="pt-4 pb-2 px-3">
-              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                System & Branding
-              </p>
-            </div>
+          {/* Cards Management Section */}
+          <h2 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4 mt-6 px-2">
+            🪪 Cards Management
+          </h2>
+          <nav className="space-y-1">
+            {cardsModules.map((module) => (
+              <SidebarItem 
+                key={module.id} 
+                module={module} 
+                activeModule={activeModule} 
+                onClick={() => handleModuleChange(module.id)} 
+              />
+            ))}
+          </nav>
+
+          {/* Contact Us Section */}
+          <h2 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4 mt-6 px-2">
+            📬 Contact Us
+          </h2>
+          <nav className="space-y-1">
+            {contactModules.map((module) => (
+              <SidebarItem 
+                key={module.id} 
+                module={module} 
+                activeModule={activeModule} 
+                onClick={() => handleModuleChange(module.id)} 
+              />
+            ))}
+          </nav>
+
+          {/* System & Branding Section */}
+          <h2 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4 mt-6 px-2">
+            ⚙️ System & Branding
+          </h2>
+          <nav className="space-y-1">
             <button
               onClick={() => handleModuleChange("branding")}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${activeModule === "branding" ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20" : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"}`}
@@ -1544,9 +1395,7 @@ export default function AdminDashboard() {
                     : "text-neutral-400 group-hover:text-neutral-600"
                 }
               />
-              <span
-                className={`text-sm ${activeModule === "branding" ? "font-semibold" : "font-medium"}`}
-              >
+              <span className={`text-sm ${activeModule === "branding" ? "font-semibold" : "font-medium"}`}>
                 Theme & Branding
               </span>
             </button>
@@ -1563,29 +1412,8 @@ export default function AdminDashboard() {
                     : "text-neutral-400 group-hover:text-neutral-600"
                 }
               />
-              <span
-                className={`text-sm ${activeModule === "home-cms" ? "font-semibold" : "font-medium"}`}
-              >
+              <span className={`text-sm ${activeModule === "home-cms" ? "font-semibold" : "font-medium"}`}>
                 Home CMS
-              </span>
-            </button>
-
-            <button
-              onClick={() => handleModuleChange("admin-credentials")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${activeModule === "admin-credentials" ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20" : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"}`}
-            >
-              <Shield
-                size={18}
-                className={
-                  activeModule === "admin-credentials"
-                    ? "text-primary"
-                    : "text-neutral-400 group-hover:text-neutral-600"
-                }
-              />
-              <span
-                className={`text-sm ${activeModule === "admin-credentials" ? "font-semibold" : "font-medium"}`}
-              >
-                Admin Credentials
               </span>
             </button>
           </nav>
@@ -1669,20 +1497,13 @@ export default function AdminDashboard() {
             Home CMS
           </button>
 
-          <button
-            onClick={() => handleModuleChange("admin-credentials")}
-            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${activeModule === "admin-credentials" ? "bg-primary text-white shadow-md" : "bg-white text-neutral-500 border border-neutral-200"}`}
-          >
-            <Shield size={14} />
-            Admin Credentials
-          </button>
         </div>
 
         <motion.div
           key={activeModule}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 md:p-10 max-w-7xl mx-auto"
+          className="p-4 md:p-10 max-w-7xl mx-auto pt-24 md:pt-10"
         >
           {/* Messages Module */}
           {activeModule === "messages" && (
@@ -1828,7 +1649,7 @@ export default function AdminDashboard() {
                     Borrowed Books
                   </h2>
                   <p className="text-neutral-500 mt-2 font-medium">
-                    Monitor and manage book circulation across the library.
+                    Monitor and manage book circulation across the college system.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -1988,7 +1809,7 @@ export default function AdminDashboard() {
                                 SN #{idx + 1}
                               </div>
                               <span className="bg-neutral-100 px-2 py-1 rounded text-[10px] font-black text-neutral-600">
-                                {book.libraryCardId || "-"}
+                                {book.collegeCardId || "-"}
                               </span>
                             </td>
                             <td className="py-5 px-6">
@@ -1996,7 +1817,7 @@ export default function AdminDashboard() {
                                 {book.bookTitle}
                               </div>
                               <div className="text-[10px] font-bold text-neutral-400 mt-0.5">
-                                {book.bookAuthor || "Library Collection"}
+                                {book.bookAuthor || "College Collection"}
                               </div>
                             </td>
                             <td className="py-5 px-6">
@@ -2045,7 +1866,7 @@ export default function AdminDashboard() {
                                         confirm("Mark this book as returned?")
                                       ) {
                                         fetch(
-                                          `/api/book-borrows/${book.id}/return`,
+                                          `/api/${collegeSlug}/book-borrows/${book.id}/return`,
                                           {
                                             method: "PATCH",
                                             credentials: "include",
@@ -2087,7 +1908,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Library Cards Module */}
+          {/* College Cards Module */}
           {activeModule === "library-cards" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -2115,7 +1936,7 @@ export default function AdminDashboard() {
                     onClick={() =>
                       downloadExcel(
                         libraryCards,
-                        `${settings.instituteShortName}-Library-Cards-Report`,
+                        `${settings.instituteShortName}-College-Cards-Report`,
                         "library-cards",
                       )
                     }
@@ -2140,7 +1961,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Library Card Stats */}
+              {/* College Card Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
                   {
@@ -2199,7 +2020,7 @@ export default function AdminDashboard() {
                     No Applications
                   </h3>
                   <p className="text-neutral-500 mt-2">
-                    Library card applications will appear here once students
+                    College card applications will appear here once students
                     apply.
                   </p>
                 </Card>
@@ -2327,7 +2148,6 @@ export default function AdminDashboard() {
           )}
 
           {activeModule === "branding" && <ThemeBranding />}
-          {activeModule === "admin-credentials" && <AdminCredentials />}
           {activeModule === "home-cms" && <AdminHome />}
           {activeModule === "addresses" && <Addresses />}
           {activeModule === "institute-address" && <InstituteAddress />}
@@ -2501,7 +2321,7 @@ export default function AdminDashboard() {
                                       "-"}{" "}
                                     -{" "}
                                     {user.type === "admin"
-                                      ? "Library Admin"
+                                      ? "College Admin"
                                       : user.type === "student"
                                         ? "Student Member"
                                         : user.role || "Registered Person"}
@@ -2922,7 +2742,7 @@ export default function AdminDashboard() {
                             );
                             formData.append("status", noteForm.status);
 
-                            const res = await fetch("/api/admin/notes", {
+                            const res = await fetch(`/api/${collegeSlug}/admin/notes`, {
                               method: "POST",
                               credentials: "include",
                               body: formData,
@@ -3245,7 +3065,7 @@ export default function AdminDashboard() {
                             formData.append("category", rareBookForm.category);
                             formData.append("status", rareBookForm.status);
 
-                            const res = await fetch("/api/admin/rare-books", {
+                            const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
                               method: "POST",
                               credentials: "include",
                               body: formData,
@@ -3357,7 +3177,7 @@ export default function AdminDashboard() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      const url = `/api/rare-books/stream/${book.id}`;
+                                      const url = `/api/${collegeSlug}/rare-books/stream/${book.id}`;
                                       window.open(url, "_blank");
                                     }}
                                     title="Preview PDF"
