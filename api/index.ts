@@ -203,7 +203,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
   if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
 
-  // 1. Admin Home CMS
+  // 1. Admin Universal Upload (Base64)
+  if (parts[2] === 'admin' && parts[3] === 'upload') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    const { fileName, fileType, fileData } = req.body || {};
+    if (!fileData) return res.status(400).json({ error: 'No file data provided' });
+
+    const bucket = (url.searchParams.get('bucket')) || 'colleges';
+    
+    // Convert Base64 (data:image/png;base64,...) to Buffer
+    const base64String = fileData.split(',')[1] || fileData;
+    const buffer = Buffer.from(base64String, 'base64');
+    
+    const ext = fileName?.split('.').pop() || 'bin';
+    const finalFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+
+    // Ensure bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (!(buckets || []).some(b => b.name === bucket)) {
+      await supabase.storage.createBucket(bucket, { public: true });
+    }
+
+    const { data, error } = await supabase.storage.from(bucket).upload(finalFileName, buffer, {
+      contentType: fileType || 'application/octet-stream',
+      upsert: false
+    });
+
+    if (error) return res.status(500).json({ error: error.message });
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(finalFileName);
+    return res.json({ url: publicUrl });
+  }
+
+  // 1b. Admin Home CMS
   if (parts[2] === 'admin' && parts[3] === 'home') {
     const sub = parts[4]; // content, slider, stats, affiliations
     if (sub === 'content') {
@@ -411,11 +442,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (subResource === 'principal') {
       const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
-      return res.json(data || {});
+      return res.json(data ? { id: data.id, name: data.name, designation: data.designation, message: data.message, imageUrl: data.image_url } : {});
     }
     if (subResource === 'faculty') {
       const { data } = await supabase.from('faculty_staff').select('*').eq('college_id', col.id);
-      return res.json((data || []).map(f => ({ id: f.id, name: f.name, designation: f.designation, description: f.description, imageUrl: f.image_url })));
+      return res.json((data || []).map(f => ({ id: f.id, name: f.name, designation: f.designation, description: f.description, imageUrl: f.image_url, supervises: f.supervises })));
+    }
+    if (subResource === 'history') {
+      const sub = parts[4]; // sections, gallery
+      if (sub === 'sections') {
+        const { data } = await supabase.from('college_history_sections').select('*').eq('college_id', col.id).order('display_order');
+        return res.json((data || []).map(s => ({ id: s.id, title: s.title, description: s.description, imageUrl: s.image_url, layoutType: s.layout_type, displayOrder: s.display_order })));
+      }
+      if (sub === 'gallery') {
+        const { data } = await supabase.from('college_history_gallery').select('*').eq('college_id', col.id).order('display_order');
+        return res.json((data || []).map(g => ({ id: g.id, imageUrl: g.image_url, caption: g.caption, displayOrder: g.display_order })));
+      }
     }
     if (subResource === 'users') {
       const { data } = await supabase.from('profiles').select('*').eq('college_id', col.id);
@@ -437,11 +479,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const resrc = parts[3];
     const id = parts[4];
     
+    if (resrc === 'principal') {
+      if (req.method === 'POST' || req.method === 'PATCH') {
+        const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
+        delete payload.imageUrl;
+        const { data: existing } = await supabase.from('principal').select('id').eq('college_id', col.id).maybeSingle();
+        if (existing) await supabase.from('principal').update(payload).eq('id', existing.id);
+        else await supabase.from('principal').insert(payload);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'history') {
+      const sub = parts[4]; // sections, gallery
+      if (sub === 'sections') {
+        if (req.method === 'POST' || req.method === 'PATCH') {
+          const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl, layout_type: req.body.layoutType };
+          delete payload.imageUrl; delete payload.layoutType;
+          if (id && id !== 'sections') await supabase.from('college_history').update(payload).eq('id', id);
+          else await supabase.from('college_history').insert(payload);
+          return res.json({ success: true });
+        }
+        if (req.method === 'DELETE') {
+          await supabase.from('college_history').delete().eq('id', id);
+          return res.json({ success: true });
+        }
+      }
+      if (sub === 'gallery') {
+        if (req.method === 'POST') {
+          const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
+          delete payload.imageUrl;
+          await supabase.from('college_gallery').insert(payload);
+          return res.json({ success: true });
+        }
+        if (req.method === 'DELETE') {
+          await supabase.from('college_gallery').delete().eq('id', id);
+          return res.json({ success: true });
+        }
+      }
+    }
+
     if (resrc === 'faculty') {
       if (req.method === 'POST' || req.method === 'PATCH') {
         const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
         delete payload.imageUrl;
-        if (id) await supabase.from('faculty_staff').update(payload).eq('id', id);
+        if (id && id !== 'faculty') await supabase.from('faculty_staff').update(payload).eq('id', id);
         else await supabase.from('faculty_staff').insert(payload);
         return res.json({ success: true });
       }
@@ -557,13 +639,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    if (resrc === 'users' && req.method === 'DELETE') {
-      await supabase.from('profiles').delete().eq('id', id);
-      return res.json({ success: true });
+    if (resrc === 'blog') {
+      if (req.method === 'POST' || req.method === 'PATCH') {
+        const payload: any = {
+          college_id: col.id,
+          title: req.body.title,
+          content: req.body.content,
+          featured_image: req.body.featuredImage,
+          short_description: req.body.shortDescription,
+          slug: req.body.slug,
+          is_pinned: req.body.isPinned || false,
+          status: req.body.status || 'published',
+          updated_at: new Date().toISOString()
+        };
+        if (id && id !== 'blog') {
+          await supabase.from('blog_posts').update(payload).eq('id', id);
+        } else {
+          await supabase.from('blog_posts').insert(payload);
+        }
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from('blog_posts').delete().eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'library-cards') {
+      if (req.method === 'PATCH') {
+        await supabase.from('library_card_applications').update(req.body).eq('id', id);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from('library_card_applications').delete().eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'users') {
+      if (req.method === 'PATCH') {
+        await supabase.from('profiles').update(req.body).eq('id', id);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from('profiles').delete().eq('id', id);
+        return res.json({ success: true });
+      }
     }
   }
 
-  return res.status(404).json({ error: 'Route not found', path });
+  return res.status(404).json({ error: 'Endpoint not found', path });
 }
 
 

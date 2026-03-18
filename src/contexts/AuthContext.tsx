@@ -15,17 +15,30 @@ export const adminHeaders = () => ({
 
 // BACKEND UPLOAD PROXY — uses service-role key server-side to avoid anon RLS errors
 export const uploadToSupabase = async (file: File, bucket: string, collegeSlug?: string): Promise<string> => {
-  // Try to determine collegeSlug from URL if not provided
   const slug = collegeSlug || window.location.pathname.split('/')[1] || 'gcfm';
   
-  const formData = new FormData();
-  formData.append('file', file);
+  // Convert file to Base64 for easier serverless handling
+  const reader = new FileReader();
+  const base64Promise = new Promise<string>((resolve, reject) => {
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  
+  const base64Data = await base64Promise;
 
   const res = await fetch(`/api/${slug}/admin/upload?bucket=${encodeURIComponent(bucket)}`, {
     method: 'POST',
-    headers: { 'x-admin-token': 'gcfm-admin-token-2026' },
+    headers: { 
+      'x-admin-token': 'gcfm-admin-token-2026',
+      'Content-Type': 'application/json'
+    },
     credentials: 'include',
-    body: formData,
+    body: JSON.stringify({
+      fileName: file.name,
+      fileType: file.type,
+      fileData: base64Data
+    }),
   });
 
   if (!res.ok) {

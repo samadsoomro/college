@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
+import { adminHeaders } from "@/contexts/AuthContext";
 
 interface LibraryCardApplication {
   id: string;
@@ -62,6 +63,7 @@ const Addresses = () => {
       // Note: We are mocking a specialized endpoint behavior by filtering client-side for now
       // per implementation plan to minimize backend churn unless massive data volume.
       const res = await fetch(`/api/${collegeSlug}/admin/library-cards?_t=` + Date.now(), {
+        headers: { ...adminHeaders() },
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch addresses");
