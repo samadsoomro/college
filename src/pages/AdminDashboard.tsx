@@ -301,6 +301,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -321,6 +322,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/rare-books/${id}`, {
         method: "DELETE",
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -361,7 +363,9 @@ export default function AdminDashboard() {
 
       const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
         method: "POST",
+        headers: adminHeaders(),
         body: formData,
+        credentials: "include",
       });
 
       if (res.ok) {
@@ -401,7 +405,10 @@ export default function AdminDashboard() {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/${collegeSlug}/events`, { credentials: "include" });
+      const res = await fetch(`/api/${collegeSlug}/events`, { 
+        headers: adminHeaders(),
+        credentials: "include" 
+      });
       if (res.ok) {
         const data = await res.json();
         setEvents(data);
@@ -433,6 +440,7 @@ export default function AdminDashboard() {
 
       const res = await fetch(`/api/${collegeSlug}/admin/events`, {
         method: "POST",
+        headers: adminHeaders(),
         body: formData,
         credentials: "include",
       });
@@ -465,6 +473,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/events/${id}`, {
         method: "DELETE",
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -496,7 +505,7 @@ export default function AdminDashboard() {
       const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${id}/status`, {
         method: "PATCH",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ status: "approved" }),
       });
       if (res.ok) {

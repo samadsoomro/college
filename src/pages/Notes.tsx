@@ -77,14 +77,27 @@ const Notes: React.FC = () => {
     }
   };
 
-  const handleDownload = (pdfPath: string, title: string) => {
-    if (!pdfPath) return;
+  const handleDownload = async (pdfUrl: string, title: string) => {
+    if (!pdfUrl) return;
     try {
-      const url = pdfPath.startsWith('http') ? pdfPath : `${window.location.origin}${pdfPath}`;
-      window.open(url, "_blank");
-      toast({ title: "Opening Document", description: `${title} is opening in a new tab` });
+      toast({ title: "Connecting", description: "Preparing secure download..." });
+      const response = await fetch(pdfUrl);
+      if (!response.ok) throw new Error("Network response was not ok");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast({ title: "Success", description: `${title} has been downloaded.` });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to open PDF", variant: "destructive" });
+      console.error("Download failed", error);
+      // Fallback to opening in new tab if blob fetch fails
+      window.open(pdfUrl, "_blank");
+      toast({ title: "Opening Document", description: `${title} is opening in a new tab` });
     }
   };
 

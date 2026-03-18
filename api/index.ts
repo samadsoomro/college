@@ -114,7 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cardContactAddress: d.card_contact_address, cardContactEmail: d.card_contact_email, cardContactPhone: d.card_contact_phone,
         rbWatermarkText: d.rb_watermark_text, rbWatermarkOpacity: d.rb_watermark_opacity, rbDisclaimerText: d.rb_disclaimer_text,
         rbWatermarkEnabled: d.rb_watermark_enabled, easypaisaNumber: d.easypaisa_number, bankAccountNumber: d.bank_account_number,
-        bankName: d.bank_name, bankBranch: d.bank_branch, accountTitle: d.account_title
+        bankName: d.bank_name, bankBranch: d.bank_branch, accountTitle: d.account_title,
+        storageBucket: d.storage_bucket || 'colleges'
       });
     }
 
@@ -152,6 +153,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json((data || []).map(n => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status })));
     }
     if (resource === 'rare-books') {
+      if (subResource === 'stream') {
+        const id = parts[5];
+        const { data: book } = await supabase.from('rare_books').select('*').eq('id', id).single();
+        if (!book) return res.status(404).json({ error: 'Book not found' });
+        
+        // Proxy storage directly to avoid CORS/Auth issues for protected viewer
+        const bucket = book.storage_bucket || 'rare-books';
+        const fileName = book.pdf_path.split('/').pop() || '';
+        const { data, error } = await supabase.storage.from(bucket).download(fileName);
+        
+        if (error) return res.status(500).json({ error: 'Storage fetch failed' });
+        res.setHeader('Content-Type', 'application/pdf');
+        return res.send(Buffer.from(await data.arrayBuffer()));
+      }
       const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id).eq('status', 'active');
       return res.json((data || []).map(b => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image })));
     }
@@ -279,7 +294,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cardContactEmail: 'card_contact_email', cardContactPhone: 'card_contact_phone', rbWatermarkText: 'rb_watermark_text',
       rbWatermarkOpacity: 'rb_watermark_opacity', rbDisclaimerText: 'rb_disclaimer_text', rbWatermarkEnabled: 'rb_watermark_enabled',
       easypaisaNumber: 'easypaisa_number', bankAccountNumber: 'bank_account_number', bankName: 'bank_name',
-      bankBranch: 'bank_branch', accountTitle: 'account_title', creditsText: 'credits_text', contributorsText: 'contributors_text'
+      bankBranch: 'bank_branch', accountTitle: 'account_title', creditsText: 'credits_text',
+      contributorsText: 'contributors_text', storageBucket: 'storage_bucket'
     };
     for (const [k, v] of Object.entries(req.body || {})) {
       if (!fieldMap[k]) continue; // Only allow mapped fields to be updated
@@ -338,6 +354,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (subResource === 'principal') {
       const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
       return res.json(data || {});
+    }
+    if (subResource === 'faculty') {
+      const { data } = await supabase.from('faculty_staff').select('*').eq('college_id', col.id);
+      return res.json((data || []).map(f => ({ id: f.id, name: f.name, designation: f.designation, description: f.description, imageUrl: f.image_url })));
+    }
+    if (subResource === 'users') {
+      const { data } = await supabase.from('profiles').select('*').eq('college_id', col.id);
+      // Filter for non-admin profiles if needed, or return all
+      return res.json({ nonStudents: (data || []).map(u => ({ id: u.id, name: u.full_name, role: u.role, email: u.email, phone: u.phone_number, createdAt: u.created_at })) });
+    }
+    if (subResource === 'notes') {
+      const { data } = await supabase.from('notes').select('*').eq('college_id', col.id);
+      return res.json((data || []).map(n => ({ id: n.id, title: n.title, description: n.description, subject: n.subject, class: n.class, pdfPath: n.pdf_path })));
+    }
+    if (subResource === 'rare-books') {
+      const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id);
+      return res.json((data || []).map(b => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image, status: b.status })));
+    }
+  }
+
+  // 5. Admin POST/PATCH/DELETE Operations
+  if (req.method !== 'GET' && parts[2] === 'admin') {
+    const resrc = parts[3];
+    const id = parts[4];
+    
+    if (resrc === 'faculty') {
+      if (req.method === 'POST' || req.method === 'PATCH') {
+        const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
+        delete payload.imageUrl;
+        if (id) await supabase.from('faculty_staff').update(payload).eq('id', id);
+        else await supabase.from('faculty_staff').insert(payload);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from('faculty_staff').delete().eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'notes') {
+      if (req.method === 'POST') {
+        const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath };
+        delete payload.pdfPath;
+        await supabase.from('notes').insert(payload);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from('notes').delete().eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'rare-books') {
+      if (req.method === 'POST') {
+        const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath, cover_image: req.body.coverImage };
+        delete payload.pdfPath; delete payload.coverImage;
+        await supabase.from('rare_books').insert(payload);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from('rare_books').delete().eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'users' && req.method === 'DELETE') {
+      await supabase.from('profiles').delete().eq('id', id);
+      return res.json({ success: true });
     }
   }
 

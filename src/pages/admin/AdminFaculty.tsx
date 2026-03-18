@@ -48,7 +48,7 @@ const AdminFaculty: React.FC = () => {
       
       const res = await fetch(endpoint, {
         method: editingId ? "PATCH" : "POST",
-        headers: adminHeaders,
+        headers: adminHeaders(),
         body: JSON.stringify(body),
         credentials: "include"
       });
@@ -65,7 +65,7 @@ const AdminFaculty: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this member?")) return;
     try {
-      await fetch(`/api/${collegeSlug}/admin/faculty/${id}`, { method: "DELETE", headers: adminHeaders, credentials: "include" });
+      await fetch(`/api/${collegeSlug}/admin/faculty/${id}`, { method: "DELETE", headers: adminHeaders(), credentials: "include" });
       toast({ title: "Deleted", description: "Faculty member removed." });
       fetchFaculty();
     } catch (e) { toast({ title: "Error", description: "Failed to delete", variant: "destructive" }); }

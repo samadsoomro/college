@@ -14,6 +14,9 @@ import {
   FileSpreadsheet,
   BookOpen,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
+import { useCollege } from "@/contexts/CollegeContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -157,7 +160,8 @@ const Books: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/books/${id}`, {
         method: "DELETE",
-        headers: adminHeaders()
+        headers: adminHeaders(),
+        credentials: "include"
       });
       if (res.ok) {
         toast({ title: "Success", description: "Book deleted successfully" });
@@ -213,15 +217,16 @@ const Books: React.FC = () => {
         totalCopies: parseInt(formData.totalCopies)
       };
 
-      const url = isEditing
+      const endpoint = isEditing
         ? `/api/${collegeSlug}/admin/books/${selectedBook.id}`
         : `/api/${collegeSlug}/admin/books`;
       const method = isEditing ? "PATCH" : "POST";
 
-      const res = await fetch(url, {
+      const res = await fetch(endpoint, {
         method,
         headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        credentials: "include"
       });
 
       if (res.ok) {

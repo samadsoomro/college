@@ -175,8 +175,16 @@ class DbStorage {
       console.error("Supabase connection error:", error);
     } else {
       console.log("Supabase connected successfully.");
-      // Ensure GCFM storage bucket exists
-      await this.ensureBucket("college-gcfm");
+      // Ensure essential storage buckets exist
+      const essentialBuckets = [
+        "colleges", "slider-images", "partner-logos", "faculty-images", 
+        "principal-images", "notification-images", "blog-images", 
+        "event-images", "rare-books", "notes", "book-images", "college-gcfm"
+      ];
+      for (const bucket of essentialBuckets) {
+        await this.ensureBucket(bucket);
+      }
+      
       // CRITICAL: Safeguard admin credentials
       await this.seedAdminIfEmpty();
     }

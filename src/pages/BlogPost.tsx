@@ -131,7 +131,7 @@ const BlogPost: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <Clock size={16} className="text-primary" />
-              {Math.max(1, Math.ceil(post.content.length / 3000))} min read
+              {Math.max(1, Math.ceil((post.content || "").length / 3000))} min read
             </div>
           </div>
         </div>
