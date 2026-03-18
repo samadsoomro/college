@@ -198,14 +198,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (pdfPath.includes('/')) {
           fileName = pdfPath.split('/').pop() || '';
         }
-        // Ensure filename is decoded (e.g., %20 -> space) for storage download
-        fileName = decodeURIComponent(fileName);
+        // Ensure filename is decoded and handles potential '+' as space
+        fileName = decodeURIComponent(fileName.replace(/\+/g, ' '));
         
         let { data, error } = await supabase.storage.from(bucket).download(fileName);
         
         // Robust fallback: if initial attempt fails, try common alternative buckets
         if (error) {
-          const alternatives = ['rare-books', 'rare-books-pdfs'].filter(b => b !== bucket);
+          const alternatives = ['rare-books', 'rare-books-pdfs', 'rare-book-reader', 'rare-books-covers'].filter(b => b !== bucket);
           for (const altBucket of alternatives) {
             const { data: altData, error: altError } = await supabase.storage.from(altBucket).download(fileName);
             if (!altError && altData) {
