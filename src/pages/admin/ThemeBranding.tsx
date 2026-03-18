@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +18,9 @@ import {
 
 const ThemeBranding: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
-  const { settings, refreshSettings } = useCollege();
+   const { settings, refreshSettings } = useCollege();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<any>({ ...settings });
   
@@ -83,6 +85,11 @@ const ThemeBranding: React.FC = () => {
 
       toast({ title: "Success", description: "Settings saved!" });
       refreshSettings();
+      // Force refresh of queries and page to update branding immediately
+      queryClient.invalidateQueries({ queryKey: ['college', collegeSlug] });
+      queryClient.invalidateQueries({ queryKey: [`/api/colleges/${collegeSlug}`] });
+      
+      setTimeout(() => window.location.reload(), 1000);
       // Clear file inputs
       setFiles({ navbarLogo: null, loadingLogo: null, heroBackgroundLogo: null, cardLogo: null });
     } catch (error: any) {

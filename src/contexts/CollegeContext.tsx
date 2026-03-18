@@ -48,6 +48,7 @@ interface SiteSettings {
   bankBranch: string;
   accountTitle: string;
   updatedAt: string;
+  storageBucket?: string;
 }
 
 interface College {
@@ -111,6 +112,7 @@ const defaultSettings: SiteSettings = {
   bankBranch: "",
   accountTitle: "GCFMN Library",
   updatedAt: new Date().toISOString(),
+  storageBucket: "colleges",
 };
 
 const CollegeContext = createContext<CollegeContextType | undefined>(undefined);
@@ -159,7 +161,7 @@ function applyCacheBuster(settings: SiteSettings): SiteSettings {
   keys.forEach(key => {
     if (bustered[key] && typeof bustered[key] === "string") {
       const url = bustered[key] as string;
-      bustered[key] = (url.split("?")[0] + `?t=${ts}`) as any;
+      (bustered as any)[key] = (url.split("?")[0] + `?t=${ts}`);
     }
   });
   return bustered;
