@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
 
 const Notifications: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
@@ -27,12 +28,13 @@ const Notifications: React.FC = () => {
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
 
   const fetchNotifications = async () => {
     try {
       setLoading(true);
       const res = await fetch(`/api/${collegeSlug}/admin/notifications`, {
-        credentials: "include",
+        headers: adminHeaders()
       });
       if (res.ok) {
         const data = await res.json();
@@ -55,18 +57,18 @@ const Notifications: React.FC = () => {
 
     try {
       setLoading(true);
-      const data = new FormData();
-      data.append("title", formData.title);
-      data.append("message", formData.message);
-      data.append("pin", formData.pin.toString());
+      let imageUrl = "";
       if (selectedImage) {
-        data.append("image", selectedImage);
+        imageUrl = await uploadToSupabase(selectedImage, 'notifications') || "";
       }
 
       const res = await fetch(`/api/${collegeSlug}/admin/notifications`, {
         method: "POST",
-        body: data,
-        credentials: "include",
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          ...formData,
+          image: imageUrl
+        }),
       });
 
       if (res.ok) {
@@ -107,7 +109,7 @@ const Notifications: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/notifications/${id}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: adminHeaders()
       });
       if (res.ok) {
         setNotifications(notifications.filter((n: any) => n.id !== id));
@@ -129,7 +131,7 @@ const Notifications: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/notifications/${id}/status`, {
         method: "PATCH",
-        credentials: "include",
+        headers: adminHeaders()
       });
       if (res.ok) {
         fetchNotifications();
@@ -148,7 +150,7 @@ const Notifications: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/notifications/${id}/pin`, {
         method: "PATCH",
-        credentials: "include",
+        headers: adminHeaders()
       });
       if (res.ok) {
         fetchNotifications();
@@ -165,6 +167,8 @@ const Notifications: React.FC = () => {
       });
     }
   };
+
+  if (!isAdmin) return <div className="p-8 text-center text-rose-500 font-bold">Unauthorized</div>;
 
   return (
     <div className="space-y-6">

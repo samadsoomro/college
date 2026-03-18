@@ -8,10 +8,10 @@ import {
 import { useParams } from "react-router-dom";
 
 // SHARED ADMIN HEADERS
-export const adminHeaders = {
+export const adminHeaders = () => ({
   'Content-Type': 'application/json',
   'x-admin-token': 'gcfm-admin-token-2026'
-};
+});
 
 // DIRECT SUPABASE UPLOAD WORKAROUND
 export const uploadToSupabase = async (file: File, bucket: string) => {

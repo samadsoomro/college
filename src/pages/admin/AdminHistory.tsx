@@ -33,12 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
 
 const AdminHistory: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("header");
+  const { isAdmin } = useAuth();
 
   // Page Header State
   const [header, setHeader] = useState({ title: "", subtitle: "" });
@@ -69,9 +71,9 @@ const AdminHistory: React.FC = () => {
   const fetchData = async () => {
     try {
       const [pageRes, sectionsRes, galleryRes] = await Promise.all([
-        fetch(`/api/${collegeSlug}/history/page`),
-        fetch(`/api/${collegeSlug}/history/sections`),
-        fetch(`/api/${collegeSlug}/history/gallery`),
+        fetch(`/api/${collegeSlug}/history/page`, { headers: adminHeaders() }),
+        fetch(`/api/${collegeSlug}/history/sections`, { headers: adminHeaders() }),
+        fetch(`/api/${collegeSlug}/history/gallery`, { headers: adminHeaders() }),
       ]);
 
       if (pageRes.ok) setHeader(await pageRes.json());
@@ -92,7 +94,7 @@ const AdminHistory: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/history/page`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(header),
       });
       if (res.ok) {
@@ -114,26 +116,19 @@ const AdminHistory: React.FC = () => {
   const handleUpsertSection = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const formData = new FormData();
-    Object.keys(editingSection).forEach((key) => {
-      if (
-        key !== "image" &&
-        key !== "imageFile" &&
-        editingSection[key] !== null &&
-        editingSection[key] !== undefined
-      ) {
-        formData.append(key, editingSection[key]);
-      }
-    });
-
-    if (editingSection.imageFile) {
-      formData.append("image", editingSection.imageFile);
-    }
-
     try {
+      let imageUrl = editingSection.imageUrl;
+      if (editingSection.imageFile) {
+        imageUrl = await uploadToSupabase(editingSection.imageFile, 'history-sections');
+      }
+
+      const payload = { ...editingSection, imageUrl };
+      delete payload.imageFile;
+
       const res = await fetch(`/api/${collegeSlug}/admin/history/sections`, {
         method: "POST",
-        body: formData,
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         toast({ title: "Success", description: "Section saved successfully" });
@@ -158,6 +153,7 @@ const AdminHistory: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/history/sections/${id}`, {
         method: "DELETE",
+        headers: adminHeaders()
       });
       if (res.ok) {
         toast({
@@ -180,15 +176,18 @@ const AdminHistory: React.FC = () => {
     if (!galleryFile) return;
 
     setLoading(true);
-    const formData = new FormData();
-    formData.append("image", galleryFile);
-    formData.append("caption", galleryCaption);
-    formData.append("displayOrder", gallery.length.toString());
-
     try {
+      const imageUrl = await uploadToSupabase(galleryFile, 'history-gallery');
+      if (!imageUrl) throw new Error("Upload failed");
+
       const res = await fetch(`/api/${collegeSlug}/admin/history/gallery`, {
         method: "POST",
-        body: formData,
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          imageUrl, 
+          caption: galleryCaption,
+          displayOrder: gallery.length
+        }),
       });
       if (res.ok) {
         toast({ title: "Success", description: "Gallery image uploaded" });
@@ -218,6 +217,7 @@ const AdminHistory: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/history/gallery/${id}`, {
         method: "DELETE",
+        headers: adminHeaders()
       });
       if (res.ok) {
         toast({ title: "Deleted", description: "Image removed from gallery" });
@@ -242,6 +242,8 @@ const AdminHistory: React.FC = () => {
     const Icon = (LucideIcons as any)[name] || LucideIcons.HelpCircle;
     return <Icon size={size} />;
   };
+
+  if (!isAdmin) return <div className="p-8 text-center text-rose-500 font-bold">Unauthorized</div>;
 
   return (
     <div className="space-y-6">

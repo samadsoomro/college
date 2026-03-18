@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
+import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
 
 interface HomeContent {
   heroHeading: string;
@@ -68,12 +69,13 @@ const AdminHome: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  const { isAdmin } = useAuth();
 
   // Queries
   const { data: content, isLoading: contentLoading } = useQuery<HomeContent>({
     queryKey: [`/api/${collegeSlug}/admin/home/content`],
     queryFn: async () => {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/content`);
+      const res = await fetch(`/api/${collegeSlug}/admin/home/content`, { headers: adminHeaders() });
       if (!res.ok) throw new Error("Failed to fetch content");
       return res.json();
     }
@@ -82,7 +84,7 @@ const AdminHome: React.FC = () => {
   const { data: sliderImages = [], isLoading: sliderLoading } = useQuery<SliderImage[]>({
     queryKey: [`/api/${collegeSlug}/admin/home/slider`],
     queryFn: async () => {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/slider`);
+      const res = await fetch(`/api/${collegeSlug}/admin/home/slider`, { headers: adminHeaders() });
       if (!res.ok) throw new Error("Failed to fetch slider");
       return res.json();
     }
@@ -91,7 +93,7 @@ const AdminHome: React.FC = () => {
   const { data: stats = [], isLoading: statsLoading } = useQuery<HomeStat[]>({
     queryKey: [`/api/${collegeSlug}/admin/home/stats`],
     queryFn: async () => {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/stats`);
+      const res = await fetch(`/api/${collegeSlug}/admin/home/stats`, { headers: adminHeaders() });
       if (!res.ok) throw new Error("Failed to fetch stats");
       return res.json();
     }
@@ -100,7 +102,7 @@ const AdminHome: React.FC = () => {
   const { data: affiliations = [], isLoading: affiliationsLoading } = useQuery<Affiliation[]>({
     queryKey: [`/api/${collegeSlug}/admin/home/affiliations`],
     queryFn: async () => {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations`);
+      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations`, { headers: adminHeaders() });
       if (!res.ok) throw new Error("Failed to fetch affiliations");
       return res.json();
     }
@@ -149,7 +151,7 @@ const AdminHome: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/home/content`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(editedContent),
       });
       if (res.ok) {
@@ -168,10 +170,18 @@ const AdminHome: React.FC = () => {
     e.preventDefault();
     if (!sliderFile) return;
     setLoading(true);
-    const formData = new FormData();
-    formData.append("file", sliderFile);
     try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/slider`, { method: "POST", body: formData });
+      // 1. Upload to Supabase
+      const imageUrl = await uploadToSupabase(sliderFile, 'slider-images');
+      if (!imageUrl) throw new Error("Upload failed");
+
+      // 2. Save to DB via JSON
+      const res = await fetch(`/api/${collegeSlug}/admin/home/slider`, { 
+        method: "POST", 
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl })
+      });
+      
       if (res.ok) {
         toast({ title: "Success", description: "Image uploaded" });
         setSliderFile(null);
@@ -181,7 +191,7 @@ const AdminHome: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
       }
     } catch (error) {
-      toast({ title: "Error", description: "Upload failed", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Upload failed", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -190,7 +200,10 @@ const AdminHome: React.FC = () => {
   const handleDeleteSlider = async (id: string) => {
     if (!confirm("Are you sure?")) return;
     try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, { 
+        method: "DELETE",
+        headers: adminHeaders()
+      });
       if (res.ok) {
         toast({ title: "Deleted", description: "Image removed" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
@@ -205,7 +218,7 @@ const AdminHome: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !currentStatus }),
       });
       if (res.ok) {
@@ -219,7 +232,7 @@ const AdminHome: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ order }),
       });
       if (res.ok) {
@@ -233,12 +246,16 @@ const AdminHome: React.FC = () => {
     e.preventDefault();
     if (!affiliationFile || !affiliationName) return;
     setLoading(true);
-    const formData = new FormData();
-    formData.append("file", affiliationFile);
-    formData.append("name", affiliationName);
-    formData.append("link", affiliationLink);
     try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations`, { method: "POST", body: formData });
+      const logoUrl = await uploadToSupabase(affiliationFile, 'affiliations');
+      if (!logoUrl) throw new Error("Upload failed");
+
+      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations`, { 
+        method: "POST", 
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ name: affiliationName, link: affiliationLink, logoUrl })
+      });
+
       if (res.ok) {
         toast({ title: "Success", description: "Affiliation added" });
         setAffiliationFile(null);
@@ -259,7 +276,10 @@ const AdminHome: React.FC = () => {
   const handleDeleteAffiliation = async (id: string) => {
     if (!confirm("Delete affiliation?")) return;
     try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, { 
+        method: "DELETE",
+        headers: adminHeaders()
+      });
       if (res.ok) {
         toast({ title: "Deleted", description: "Affiliation removed" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
@@ -274,7 +294,7 @@ const AdminHome: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !currentStatus }),
       });
       if (res.ok) {
@@ -288,7 +308,7 @@ const AdminHome: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ order }),
       });
       if (res.ok) {
@@ -302,15 +322,24 @@ const AdminHome: React.FC = () => {
     e.preventDefault();
     if (!newStatLabel || !newStatNumber) return;
     setLoading(true);
-    const formData = new FormData();
-    formData.append("label", newStatLabel);
-    formData.append("number", newStatNumber);
-    formData.append("icon", newStatIcon);
-    formData.append("color", newStatColor);
-    formData.append("order", (stats.length + 1).toString());
-    if (newStatFile) formData.append("file", newStatFile);
     try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/stats`, { method: "POST", body: formData });
+      let iconUrl = "";
+      if (newStatFile) {
+        iconUrl = await uploadToSupabase(newStatFile, 'stats-icons') || "";
+      }
+
+      const res = await fetch(`/api/${collegeSlug}/admin/home/stats`, { 
+        method: "POST", 
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          label: newStatLabel, 
+          number: newStatNumber, 
+          icon: newStatIcon, 
+          color: newStatColor,
+          iconUrl
+        })
+      });
+
       if (res.ok) {
         toast({ title: "Success", description: "Stat added" });
         setNewStatLabel("");
@@ -331,7 +360,10 @@ const AdminHome: React.FC = () => {
   const handleDeleteStat = async (id: string) => {
     if (!confirm("Delete statistic?")) return;
     try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/stats/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/${collegeSlug}/admin/home/stats/${id}`, { 
+        method: "DELETE",
+        headers: adminHeaders()
+      });
       if (res.ok) {
         toast({ title: "Deleted", description: "Stat removed" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/stats`] });
@@ -343,6 +375,7 @@ const AdminHome: React.FC = () => {
   };
 
   if (contentLoading || !editedContent) return <div className="p-8 text-center text-muted-foreground">Loading Home Settings...</div>;
+  if (!isAdmin) return <div className="p-8 text-center text-rose-500 font-bold">Unauthorized</div>;
 
   return (
     <div className="space-y-6">

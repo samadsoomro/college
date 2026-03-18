@@ -20,10 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/contexts/AuthContext";
-import { useCollege } from "@/contexts/CollegeContext";
-import { jsPDF } from "jspdf";
-import * as XLSX from "xlsx";
+import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
 
 const Books: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
@@ -55,7 +52,7 @@ const Books: React.FC = () => {
   const fetchBorrows = async () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/borrowed-books`, {
-        credentials: "include",
+        headers: adminHeaders()
       });
       if (res.ok) {
         const data = await res.json();
@@ -70,7 +67,7 @@ const Books: React.FC = () => {
     try {
       setLoading(true);
       const res = await fetch(`/api/${collegeSlug}/admin/books`, {
-        credentials: "include",
+        headers: adminHeaders()
       });
       if (res.ok) {
         const data = await res.json();
@@ -160,7 +157,7 @@ const Books: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/books/${id}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: adminHeaders()
       });
       if (res.ok) {
         toast({ title: "Success", description: "Book deleted successfully" });
@@ -183,9 +180,8 @@ const Books: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/issue-book`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ bookId, cardNumber }),
-        credentials: "include",
       });
       if (res.ok) {
         toast({ title: "Success", description: "Book issued successfully" });
@@ -205,15 +201,17 @@ const Books: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const submitData = new FormData();
-      submitData.append("bookName", formData.bookName);
-      submitData.append("authorName", formData.authorName);
-      submitData.append("shortIntro", formData.shortIntro);
-      submitData.append("description", formData.description);
-      submitData.append("totalCopies", formData.totalCopies);
+      let bookImage = isEditing ? selectedBook?.bookImage : "";
       if (selectedFile) {
-        submitData.append("bookImage", selectedFile);
+        const url = await uploadToSupabase(selectedFile, 'books');
+        if (url) bookImage = url;
       }
+
+      const payload = {
+        ...formData,
+        bookImage,
+        totalCopies: parseInt(formData.totalCopies)
+      };
 
       const url = isEditing
         ? `/api/${collegeSlug}/admin/books/${selectedBook.id}`
@@ -222,8 +220,8 @@ const Books: React.FC = () => {
 
       const res = await fetch(url, {
         method,
-        body: submitData,
-        credentials: "include",
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -263,7 +261,7 @@ const Books: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/book-borrows/${borrowId}/return`, {
         method: "PATCH",
-        credentials: "include",
+        headers: adminHeaders()
       });
       if (res.ok) {
         toast({ title: "Success", description: "Book marked as returned" });
@@ -286,7 +284,7 @@ const Books: React.FC = () => {
     }
   };
 
-  if (!isAdmin) return <Navigate to={`/${collegeSlug}/login`} />;
+  if (!isAdmin) return <div className="p-8 text-center text-rose-500 font-bold">Unauthorized</div>;
 
   const filteredBooks = books.filter((book) =>
     book.bookName.toLowerCase().includes(searchQuery.toLowerCase()),

@@ -21,12 +21,15 @@ import {
 // @ts-ignore
 import { Switch } from "@/components/ui/switch"; // Assuming we might have this, if not I'll just use status dropdown
 
+import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
+
 const AdminBlog: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentPost, setCurrentPost] = useState<any>(null);
+  const { isAdmin } = useAuth();
 
   // Form State
   const [title, setTitle] = useState("");
@@ -60,7 +63,7 @@ const AdminBlog: React.FC = () => {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/${collegeSlug}/admin/blog`, { credentials: "include" });
+      const res = await fetch(`/api/${collegeSlug}/admin/blog`, { headers: adminHeaders() });
       if (res.ok) {
         const data = await res.json();
         setPosts(data);
@@ -111,30 +114,15 @@ const AdminBlog: React.FC = () => {
     input.onchange = async () => {
       const file = input.files ? input.files[0] : null;
       if (file) {
-        const formData = new FormData();
-        formData.append("image", file);
-
         try {
-          const res = await fetch(`/api/${collegeSlug}/admin/blog/upload-image`, {
-            method: "POST",
-            body: formData,
-            credentials: "include",
-          });
-
-          if (res.ok) {
-            const data = await res.json();
+          const url = await uploadToSupabase(file, 'blog-content');
+          if (url) {
             const range = quillRef.current?.getEditor().getSelection();
             if (range) {
               quillRef.current
                 ?.getEditor()
-                .insertEmbed(range.index, "image", data.url);
+                .insertEmbed(range.index, "image", url);
             }
-          } else {
-            toast({
-              title: "Error",
-              description: "Image upload failed",
-              variant: "destructive",
-            });
           }
         } catch (err) {
           console.error(err);
@@ -179,15 +167,21 @@ const AdminBlog: React.FC = () => {
 
     try {
       setLoading(true);
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("slug", slug);
-      formData.append("shortDescription", shortDescription);
-      formData.append("content", content);
-      formData.append("status", status);
+      
+      let finalFeaturedImage = featuredImagePreview;
       if (featuredImage) {
-        formData.append("featuredImage", featuredImage);
+        const url = await uploadToSupabase(featuredImage, 'blog-featured');
+        if (url) finalFeaturedImage = url;
       }
+
+      const payload = {
+        title,
+        slug,
+        shortDescription,
+        content,
+        status,
+        featuredImage: finalFeaturedImage
+      };
 
       const url = currentPost
         ? `/api/${collegeSlug}/admin/blog/${currentPost.id}`
@@ -196,8 +190,8 @@ const AdminBlog: React.FC = () => {
 
       const res = await fetch(url, {
         method,
-        body: formData,
-        credentials: "include",
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -232,7 +226,7 @@ const AdminBlog: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/blog/${id}`, {
         method: "DELETE",
-        credentials: "include",
+        headers: adminHeaders()
       });
       if (res.ok) {
         setPosts(posts.filter((p) => p.id !== id));
@@ -256,12 +250,12 @@ const AdminBlog: React.FC = () => {
   const handleTogglePin = async (id: string) => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/blog/${id}/pin`, {
-        method: "POST",
-        credentials: "include",
+        method: "PATCH",
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: true }), // Simple toggle logic in api/index.ts
       });
       if (res.ok) {
-        const updated = await res.json();
-        setPosts(posts.map((p) => (p.id === id ? updated : p)));
+        fetchPosts();
         toast({ title: "Success", description: "Pin status updated" });
       }
     } catch (err) {
@@ -272,6 +266,8 @@ const AdminBlog: React.FC = () => {
       });
     }
   };
+
+  if (!isAdmin) return <div className="p-8 text-center text-rose-500 font-bold">Unauthorized</div>;
 
   return (
     <div className="space-y-6">

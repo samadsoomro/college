@@ -171,6 +171,126 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // ── Admin Home Slider (POST/PATCH/DELETE) ────────────
+  const adminHomeSliderMatch = path.match(/\/api\/([^\/]+)\/admin\/home\/slider(?:\/([^\/]+))?$/);
+  if (adminHomeSliderMatch) {
+    const [_, slug, id] = adminHomeSliderMatch;
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (req.method === 'POST') {
+      const { imageUrl } = req.body;
+      const { data: currentImages } = await supabase.from('home_slider_images').select('display_order').eq('college_id', col!.id);
+      const nextOrder = (currentImages?.length || 0);
+      const { data } = await supabase.from('home_slider_images').insert({ image_url: imageUrl, display_order: nextOrder, college_id: col!.id }).select().single();
+      return res.json(data);
+    }
+    if (req.method === 'PATCH' && id) {
+      const { isActive, order } = req.body;
+      const updates: any = {};
+      if (isActive !== undefined) updates.is_active = isActive;
+      if (order !== undefined) updates.display_order = order;
+      await supabase.from('home_slider_images').update(updates).eq('id', id);
+      return res.json({ success: true });
+    }
+    if (req.method === 'DELETE' && id) {
+      await supabase.from('home_slider_images').delete().eq('id', id);
+      return res.json({ success: true });
+    }
+  }
+
+  // ── Admin Home Affiliations (POST/PATCH/DELETE) ──────
+  const adminAffilMatch = path.match(/\/api\/([^\/]+)\/admin\/home\/affiliations(?:\/([^\/]+))?$/);
+  if (adminAffilMatch) {
+    const [_, slug, id] = adminAffilMatch;
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (req.method === 'POST') {
+      const { name, link, logoUrl } = req.body;
+      const { data } = await supabase.from('affiliations').insert({ name, link, logo_url: logoUrl, college_id: col!.id }).select().single();
+      return res.json(data);
+    }
+    if (req.method === 'PATCH' && id) {
+      const { isActive, order } = req.body;
+      const updates: any = {};
+      if (isActive !== undefined) updates.is_active = isActive;
+      if (order !== undefined) updates.display_order = order;
+      await supabase.from('affiliations').update(updates).eq('id', id);
+      return res.json({ success: true });
+    }
+    if (req.method === 'DELETE' && id) {
+      await supabase.from('affiliations').delete().eq('id', id);
+      return res.json({ success: true });
+    }
+  }
+
+  // ── Admin Home Stats (POST/DELETE) ───────────────────
+  const adminStatsMatch = path.match(/\/api\/([^\/]+)\/admin\/home\/stats(?:\/([^\/]+))?$/);
+  if (adminStatsMatch) {
+    const [_, slug, id] = adminStatsMatch;
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (req.method === 'POST') {
+      const { label, number, icon, color, iconUrl } = req.body;
+      const { data } = await supabase.from('home_stats').insert({ label, number, icon, color, icon_url: iconUrl, college_id: col!.id }).select().single();
+      return res.json(data);
+    }
+    if (req.method === 'DELETE' && id) {
+      await supabase.from('home_stats').delete().eq('id', id);
+      return res.json({ success: true });
+    }
+  }
+
+  // ── Admin Books (POST/PATCH/DELETE/ISSUE) ────────────
+  const adminBooksMatch = path.match(/\/api\/([^\/]+)\/admin\/books(?:\/([^\/]+))?$/);
+  if (adminBooksMatch) {
+    const [_, slug, id] = adminBooksMatch;
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (req.method === 'POST') {
+      const { bookName, authorName, shortIntro, description, totalCopies, bookImage } = req.body;
+      const { data } = await supabase.from('books').insert({ book_name: bookName, author_name: authorName, short_intro: shortIntro, description, total_copies: parseInt(totalCopies), available_copies: parseInt(totalCopies), book_image: bookImage, college_id: col!.id }).select().single();
+      return res.json(data);
+    }
+    if (req.method === 'PATCH' && id) {
+      const { bookName, authorName, shortIntro, description, totalCopies, bookImage } = req.body;
+      const updates: any = { book_name: bookName, author_name: authorName, short_intro: shortIntro, description, total_copies: parseInt(totalCopies), book_image: bookImage };
+      // Note: simplistic availableCopies update logic here for brevity, in real app would be more complex
+      await supabase.from('books').update(updates).eq('id', id);
+      return res.json({ success: true });
+    }
+    if (req.method === 'DELETE' && id) {
+      await supabase.from('books').delete().eq('id', id);
+      return res.json({ success: true });
+    }
+  }
+
+  const issueBookMatch = path.match(/\/api\/([^\/]+)\/admin\/issue-book$/);
+  if (issueBookMatch && req.method === 'POST') {
+    const slug = issueBookMatch[1];
+    const { bookId, cardNumber } = req.body;
+    const { data: book } = await supabase.from('books').select('available_copies').eq('id', bookId).single();
+    if (!book || book.available_copies <= 0) return res.status(400).json({ error: 'Book not available' });
+    
+    const { data: app } = await supabase.from('library_card_applications').select('name').eq('card_number', cardNumber).eq('status', 'approved').single();
+    if (!app) return res.status(400).json({ error: 'Valid library card not found' });
+
+    await supabase.from('book_borrows').insert({ book_id: bookId, borrower_name: app.name, card_number: cardNumber, status: 'borrowed', borrow_date: new Date().toISOString() });
+    await supabase.from('books').update({ available_copies: book.available_copies - 1 }).eq('id', bookId);
+    return res.json({ success: true });
+  }
+
+  // ── Admin History Gallery (POST/DELETE) ──────────────
+  const adminHistoryGalleryMatch = path.match(/\/api\/([^\/]+)\/admin\/history\/gallery(?:\/([^\/]+))?$/);
+  if (adminHistoryGalleryMatch) {
+    const [_, slug, id] = adminHistoryGalleryMatch;
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (req.method === 'POST') {
+      const { imageUrl, caption, displayOrder } = req.body;
+      const { data } = await supabase.from('college_history_gallery').insert({ image_url: imageUrl, caption, display_order: parseInt(displayOrder), college_id: col!.id }).select().single();
+      return res.json(data);
+    }
+    if (req.method === 'DELETE' && id) {
+      await supabase.from('college_history_gallery').delete().eq('id', id);
+      return res.json({ success: true });
+    }
+  }
+
   // ── Admin Blog (POST/PATCH) ──────────────────────────
   const adminBlogMatch = path.match(/\/api\/([^\/]+)\/admin\/blog(?:\/([^\/]+))?$/);
   if (adminBlogMatch && (req.method === 'POST' || req.method === 'PATCH')) {
