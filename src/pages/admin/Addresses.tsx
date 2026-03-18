@@ -73,8 +73,7 @@ const Addresses = () => {
       const approvedOnly = data
         .filter((app) => {
           const s = (app.status || "").toLowerCase();
-          const match = s === "approved";
-          return match;
+          return s === "approved" || s === "suspended";
         })
         .map((app) => ({
           ...app,
@@ -218,9 +217,16 @@ const Addresses = () => {
                       <TableRow key={app.id}>
                         <TableCell className="align-top py-3">
                           <div className="flex flex-col gap-1">
-                            <span className="font-semibold text-foreground">
-                              {app.firstName} {app.lastName}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-foreground">
+                                {app.firstName} {app.lastName}
+                              </span>
+                              {app.status === "suspended" && (
+                                <span className="text-[8px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-rose-200">
+                                  Card Suspended
+                                </span>
+                              )}
+                            </div>
                             <span className="text-xs text-muted-foreground">
                               S/O: {app.fatherName || "-"}
                             </span>

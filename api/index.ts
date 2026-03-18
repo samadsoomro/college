@@ -183,13 +183,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!book) return res.status(404).json({ error: 'Book not found' });
         
         // Proxy storage directly to avoid CORS/Auth issues for protected viewer
-        const bucket = 'rare-books'; // Standardize bucket name
-        // pdf_path might be a full URL or just a filename
         const pdfPath = book.pdf_path || '';
+        let bucket = 'rare-books'; // Default new bucket
+        if (pdfPath.includes('rare-books-pdfs/')) {
+          bucket = 'rare-books-pdfs';
+        }
+
         let fileName = pdfPath;
         if (pdfPath.includes('/')) {
           fileName = pdfPath.split('/').pop() || '';
         }
+        
         const { data, error } = await supabase.storage.from(bucket).download(fileName);
         
         if (error) {
@@ -453,7 +457,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (subResource === 'borrowed-books') {
       const { data } = await supabase.from('borrowed_books').select(`
         *,
-        library_card_applications (first_name, last_name, card_number)
+        library_card_applications (first_name, last_name, card_number, status)
       `).eq('college_id', col.id).order('borrow_date', { ascending: false });
       
       return res.json((data || []).map((b: any) => ({
@@ -462,6 +466,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         borrowerName: b.library_card_applications ? `${b.library_card_applications.first_name} ${b.library_card_applications.last_name}` : 'Card Deleted',
         cardNumber: b.library_card_applications?.card_number || 'N/A',
         cardDeleted: !b.library_card_applications,
+        cardSuspended: b.library_card_applications?.status === 'suspended',
         borrowDate: b.borrow_date,
         dueDate: b.due_date,
         status: b.status

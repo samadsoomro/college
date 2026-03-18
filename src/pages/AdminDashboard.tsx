@@ -1830,6 +1830,11 @@ export default function AdminDashboard() {
                                       Card Deleted
                                     </span>
                                   )}
+                                  {book.cardSuspended && (
+                                    <span className="text-[8px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-amber-200">
+                                      Card Suspended
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="text-xs text-neutral-500 font-medium">
                                   {book.borrowerEmail || "-"}
@@ -3127,6 +3132,7 @@ export default function AdminDashboard() {
 
                             const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
                               method: "POST",
+                              headers: adminHeaders(),
                               credentials: "include",
                               body: formData,
                             });
