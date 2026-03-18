@@ -184,8 +184,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         // Proxy storage directly to avoid CORS/Auth issues for protected viewer
         const pdfPath = book.pdf_path || '';
-        let bucket = 'rare-books'; // Default new bucket
-        if (pdfPath.includes('rare-books-pdfs/')) {
+        let bucket = 'rare-books'; // Default
+        
+        // Extract bucket from URL if present
+        const bucketMatch = pdfPath.match(/\/storage\/v1\/object\/public\/([^\/?#]+)/);
+        if (bucketMatch) {
+          bucket = bucketMatch[1];
+        } else if (pdfPath.includes('rare-books-pdfs/')) {
           bucket = 'rare-books-pdfs';
         }
 
@@ -193,15 +198,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (pdfPath.includes('/')) {
           fileName = pdfPath.split('/').pop() || '';
         }
+        // Ensure filename is decoded (e.g., %20 -> space) for storage download
+        fileName = decodeURIComponent(fileName);
         
         let { data, error } = await supabase.storage.from(bucket).download(fileName);
         
-        // Fallback for legacy storage if not found in primary inferred bucket
-        if (error && bucket === 'rare-books') {
-          const { data: fallbackData, error: fallbackError } = await supabase.storage.from('rare-books-pdfs').download(fileName);
-          if (!fallbackError) {
-            data = fallbackData;
-            error = null;
+        // Robust fallback: if initial attempt fails, try common alternative buckets
+        if (error) {
+          const alternatives = ['rare-books', 'rare-books-pdfs'].filter(b => b !== bucket);
+          for (const altBucket of alternatives) {
+            const { data: altData, error: altError } = await supabase.storage.from(altBucket).download(fileName);
+            if (!altError && altData) {
+              data = altData;
+              error = null;
+              break;
+            }
           }
         }
         
