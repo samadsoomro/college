@@ -39,10 +39,11 @@ const History: React.FC = () => {
   useEffect(() => {
     const fetchHistoryData = async () => {
       try {
+        const ts = Date.now();
         const [pageRes, sectionsRes, galleryRes] = await Promise.all([
-          fetch(`/api/${collegeSlug}/history/page`),
-          fetch(`/api/${collegeSlug}/history/sections`),
-          fetch(`/api/${collegeSlug}/history/gallery`),
+          fetch(`/api/${collegeSlug}/history/page?t=${ts}`),
+          fetch(`/api/${collegeSlug}/history/sections?t=${ts}`),
+          fetch(`/api/${collegeSlug}/history/gallery?t=${ts}`),
         ]);
 
         if (pageRes.ok) setHeader(await pageRes.json());

@@ -70,10 +70,11 @@ const AdminHistory: React.FC = () => {
 
   const fetchData = async () => {
     try {
+      const ts = Date.now();
       const [pageRes, sectionsRes, galleryRes] = await Promise.all([
-        fetch(`/api/${collegeSlug}/history/page`, { headers: adminHeaders() }),
-        fetch(`/api/${collegeSlug}/history/sections`, { headers: adminHeaders() }),
-        fetch(`/api/${collegeSlug}/history/gallery`, { headers: adminHeaders() }),
+        fetch(`/api/${collegeSlug}/history/page?t=${ts}`, { headers: adminHeaders() }),
+        fetch(`/api/${collegeSlug}/history/sections?t=${ts}`, { headers: adminHeaders() }),
+        fetch(`/api/${collegeSlug}/history/gallery?t=${ts}`, { headers: adminHeaders() }),
       ]);
 
       if (pageRes.ok) setHeader(await pageRes.json());

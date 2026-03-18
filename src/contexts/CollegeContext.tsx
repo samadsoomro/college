@@ -191,8 +191,9 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!collegeSlug) return;
     setLoading(true);
     try {
-      // 1. Fetch College Metadata
-      const collegeRes = await fetch(`/api/colleges/${collegeSlug}`);
+    // 1. Fetch College Metadata
+    const ts = Date.now();
+    const collegeRes = await fetch(`/api/colleges/${collegeSlug}?t=${ts}`);
       if (!collegeRes.ok) throw new Error("College not found");
       const collegeData = await collegeRes.json();
       setCollege(collegeData);
@@ -203,7 +204,7 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       // 2. Fetch specific site settings for this college
-      const settingsRes = await fetch(`/api/${collegeSlug}/settings`);
+      const settingsRes = await fetch(`/api/${collegeSlug}/settings?t=${ts}`);
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
         if (settingsData && settingsData.id) {
@@ -252,8 +253,12 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/settings`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-admin-token": "gcfm-admin-token-2026"
+        },
         body: JSON.stringify(newSettings),
+        credentials: "include"
       });
 
       if (!res.ok) {

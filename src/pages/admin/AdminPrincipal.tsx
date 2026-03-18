@@ -24,7 +24,8 @@ const AdminPrincipal: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const res = await api.get(`/api/${collegeSlug}/principal`);
+      const ts = Date.now();
+      const res = await api.get(`/api/${collegeSlug}/principal?t=${ts}`);
       if (res.data) {
         setFormData({ name: res.data.name || "", message: res.data.message || "" });
         setCurrentImageUrl(res.data.imageUrl);

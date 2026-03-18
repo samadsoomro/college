@@ -24,6 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const path = url.pathname;
   const parts = path.split('/').filter(Boolean); // ["api", "slug", "module", ...]
 
+  // Disable caching for all API routes to ensure real-time sync
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+
   if (parts[parts.length - 1] === 'health') return res.json({ status: 'ok' });
   if (parts[0] !== 'api') return res.status(404).json({ error: 'Route not found' });
 
@@ -276,9 +282,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       bankBranch: 'bank_branch', accountTitle: 'account_title', creditsText: 'credits_text', contributorsText: 'contributors_text'
     };
     for (const [k, v] of Object.entries(req.body || {})) {
+      if (!fieldMap[k]) continue; // Only allow mapped fields to be updated
       let val = v;
       if (k === 'rbWatermarkOpacity' || k === 'heroBackgroundOpacity') val = parseFloat(v as string) || 0;
-      updates[fieldMap[k] || k] = val;
+      updates[fieldMap[k]] = val;
     }
     const { data: ex } = await supabase.from('site_settings').select('id').eq('college_id', col.id).maybeSingle();
     if (ex) await supabase.from('site_settings').update(updates).eq('id', ex.id);

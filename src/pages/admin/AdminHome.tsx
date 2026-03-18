@@ -75,7 +75,8 @@ const AdminHome: React.FC = () => {
   const { data: content, isLoading: contentLoading } = useQuery<HomeContent>({
     queryKey: [`/api/${collegeSlug}/admin/home/content`],
     queryFn: async () => {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/content`, { headers: adminHeaders() });
+      const ts = Date.now();
+      const res = await fetch(`/api/${collegeSlug}/admin/home/content?t=${ts}`, { headers: adminHeaders() });
       if (!res.ok) throw new Error("Failed to fetch content");
       return res.json();
     }
@@ -84,7 +85,8 @@ const AdminHome: React.FC = () => {
   const { data: sliderImages = [], isLoading: sliderLoading } = useQuery<SliderImage[]>({
     queryKey: [`/api/${collegeSlug}/admin/home/slider`],
     queryFn: async () => {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/slider`, { headers: adminHeaders() });
+      const ts = Date.now();
+      const res = await fetch(`/api/${collegeSlug}/admin/home/slider?t=${ts}`, { headers: adminHeaders() });
       if (!res.ok) throw new Error("Failed to fetch slider");
       return res.json();
     }
@@ -93,7 +95,8 @@ const AdminHome: React.FC = () => {
   const { data: stats = [], isLoading: statsLoading } = useQuery<HomeStat[]>({
     queryKey: [`/api/${collegeSlug}/admin/home/stats`],
     queryFn: async () => {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/stats`, { headers: adminHeaders() });
+      const ts = Date.now();
+      const res = await fetch(`/api/${collegeSlug}/admin/home/stats?t=${ts}`, { headers: adminHeaders() });
       if (!res.ok) throw new Error("Failed to fetch stats");
       return res.json();
     }
@@ -102,7 +105,8 @@ const AdminHome: React.FC = () => {
   const { data: affiliations = [], isLoading: affiliationsLoading } = useQuery<Affiliation[]>({
     queryKey: [`/api/${collegeSlug}/admin/home/affiliations`],
     queryFn: async () => {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations`, { headers: adminHeaders() });
+      const ts = Date.now();
+      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations?t=${ts}`, { headers: adminHeaders() });
       if (!res.ok) throw new Error("Failed to fetch affiliations");
       return res.json();
     }

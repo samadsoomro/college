@@ -60,49 +60,19 @@ const ThemeBranding: React.FC = () => {
       const isProd = window.location.hostname !== 'localhost';
       const updates = { ...formData };
 
-      if (isProd) {
-        // Direct uploads for prod
-        if (files.navbarLogo) updates.navbarLogo = await uploadToSupabase(files.navbarLogo, settings.storageBucket || 'colleges');
-        if (files.loadingLogo) updates.loadingLogo = await uploadToSupabase(files.loadingLogo, settings.storageBucket || 'colleges');
-        if (files.heroBackgroundLogo) updates.heroBackgroundLogo = await uploadToSupabase(files.heroBackgroundLogo, settings.storageBucket || 'colleges');
-        if (files.cardLogo) updates.cardLogoUrl = await uploadToSupabase(files.cardLogo, settings.storageBucket || 'colleges');
-        
-        const res = await fetch(`/api/${collegeSlug}/admin/settings`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-token": import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
-          },
-          body: JSON.stringify(updates),
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("Failed to update settings");
-      } else {
-        // Local fallback
-        const res = await fetch(`/api/${collegeSlug}/admin/settings`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-token": import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
-          },
-          body: JSON.stringify(updates),
-        });
-        if (!res.ok) throw new Error("Failed local update");
-      }
+      const { updateSettings } = useCollege();
+      await updateSettings(updates);
 
-      toast({ title: "Success", description: "Settings saved!" });
+      toast({ title: "Success", description: "Settings saved successfully!" });
       // Clear file inputs
       setFiles({ navbarLogo: null, loadingLogo: null, heroBackgroundLogo: null, cardLogo: null });
       
-      // Soft refresh — invalidate queries so new data is fetched
+      // Soft refresh — invalidate queries
       queryClient.invalidateQueries({ queryKey: ['college', collegeSlug] });
-      queryClient.invalidateQueries({ queryKey: [`/api/colleges/${collegeSlug}`] });
       queryClient.invalidateQueries({ queryKey: ['settings', collegeSlug] });
       
-      // Dispatch event for CollegeContext to re-fetch
-      setTimeout(() => {
-        window.dispatchEvent(new Event('college-settings-updated'));
-      }, 500);
+      // Trigger global refresh event
+      window.dispatchEvent(new Event('college-settings-updated'));
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally { setLoading(false); }
