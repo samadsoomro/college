@@ -86,13 +86,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!col) return res.status(404).json({ error: 'College not found' });
     const updates: any = { updated_at: new Date().toISOString() };
     const fieldMap: any = {
-      instituteFullName:'institute_full_name', instituteShortName:'institute_short_name',
-      primaryColor:'primary_color', navbarLogo:'navbar_logo', loadingLogo:'loading_logo',
-      footerTitle:'footer_title', footerTagline:'footer_tagline',
-      contactAddress:'contact_address', contactPhone:'contact_phone', contactEmail:'contact_email',
-      cardHeaderText:'card_header_text', cardSubheaderText:'card_subheader_text'
+      // Branding
+      instituteFullName: 'institute_full_name',
+      instituteShortName: 'institute_short_name',
+      primaryColor: 'primary_color',
+      navbarLogo: 'navbar_logo',
+      loadingLogo: 'loading_logo',
+      footerTitle: 'footer_title',
+      footerTagline: 'footer_tagline',
+      footerDescription: 'footer_description',
+      
+      // Hero
+      heroBackgroundLogo: 'hero_background_logo',
+      heroBackgroundOpacity: 'hero_background_opacity',
+
+      // Social
+      facebookUrl: 'facebook_url',
+      twitterUrl: 'twitter_url',
+      instagramUrl: 'instagram_url',
+      youtubeUrl: 'youtube_url',
+
+      // Contact
+      contactAddress: 'contact_address',
+      contactPhone: 'contact_phone',
+      contactEmail: 'contact_email',
+      googleMapLink: 'google_map_link',
+      mapEmbedUrl: 'map_embed_url',
+
+      // Card
+      cardHeaderText: 'card_header_text',
+      cardSubheaderText: 'card_subheader_text',
+      cardLogoUrl: 'card_logo_url',
+      cardQrEnabled: 'card_qr_enabled',
+      cardQrUrl: 'card_qr_url',
+      cardTermsText: 'card_terms_text',
+      cardContactAddress: 'card_contact_address',
+      cardContactEmail: 'card_contact_email',
+      cardContactPhone: 'card_contact_phone',
+
+      // Rare Books
+      rbWatermarkText: 'rb_watermark_text',
+      rbWatermarkOpacity: 'rb_watermark_opacity',
+      rbDisclaimerText: 'rb_disclaimer_text',
+      rbWatermarkEnabled: 'rb_watermark_enabled',
+
+      // Donations
+      easypaisaNumber: 'easypaisa_number',
+      bankAccountNumber: 'bank_account_number',
+      bankName: 'bank_name',
+      bankBranch: 'bank_branch',
+      accountTitle: 'account_title',
+
+      // Credits
+      creditsText: 'credits_text',
+      contributorsText: 'contributors_text'
     };
-    for (const [k, v] of Object.entries(req.body || {})) { updates[fieldMap[k] || k] = v; }
+    for (const [k, v] of Object.entries(req.body || {})) {
+      let value = v;
+      if (k === 'rbWatermarkOpacity' || k === 'heroBackgroundOpacity') value = parseFloat(v as string) || 0;
+      updates[fieldMap[k] || k] = value;
+    }
     await supabase.from('site_settings').upsert({ ...updates, college_id: col.id }, { onConflict: 'college_id' });
     return res.json({ success: true });
   }
