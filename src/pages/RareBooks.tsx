@@ -388,8 +388,8 @@ const RareBooks: React.FC = () => {
                         >
                           <p className="text-[8vw] font-black text-black leading-none text-center">
                             {(
-                              settings.rbWatermarkText ||
-                              `${settings.instituteShortName || "COLLEGE"} LIBRARY ARCHIVE`
+                              settings?.rbWatermarkText ||
+                              `${settings?.instituteShortName || "COLLEGE"} LIBRARY ARCHIVE`
                             )
                               .split("\n")
                               .map((line: string, idx: number) => (
@@ -411,8 +411,8 @@ const RareBooks: React.FC = () => {
                               className="flex items-center justify-center"
                             >
                               <span className="font-bold text-2xl text-black">
-                                {settings.rbWatermarkText?.split("\n")[0] ||
-                                  `${settings.instituteShortName || "COLLEGE"} ARCHIVE`}
+                                {settings?.rbWatermarkText?.split("\n")[0] ||
+                                  `${settings?.instituteShortName || "COLLEGE"} ARCHIVE`}
                               </span>
                             </div>
                           ))}

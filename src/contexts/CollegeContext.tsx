@@ -72,45 +72,45 @@ interface CollegeContextType {
 
 const defaultSettings: SiteSettings = {
   id: "00000000-0000-0000-0000-000000000000",
-  primaryColor: "#1f6be5",
+  primaryColor: "#006600",
   navbarLogo: null,
   loadingLogo: null,
-  instituteShortName: "COLLEGE CMS",
-  instituteFullName: "COLLEGE CMS SAAS",
-  footerTitle: "College Library",
-  footerDescription: "Providing quality educational resources and fostering a culture of learning.",
-  facebookUrl: "https://facebook.com",
-  twitterUrl: "https://twitter.com",
-  instagramUrl: "https://instagram.com",
-  youtubeUrl: "https://youtube.com",
-  creditsText: "Multi-Tenant CMS",
-  contributorsText: "CMS Team",
-  contactAddress: "Karachi, Pakistan",
-  contactPhone: "+92 21 XXXX XXXX",
-  contactEmail: "contact@college.edu",
+  instituteShortName: "COL",
+  instituteFullName: "College",
+  footerTitle: "",
+  footerDescription: "",
+  facebookUrl: "",
+  twitterUrl: "",
+  instagramUrl: "",
+  youtubeUrl: "",
+  creditsText: "",
+  contributorsText: "",
+  contactAddress: "",
+  contactPhone: "",
+  contactEmail: "",
   mapEmbedUrl: "",
   googleMapLink: "",
-  footerTagline: "Empowering Education",
+  footerTagline: "",
   heroBackgroundLogo: null,
   heroBackgroundOpacity: 0.35,
-  cardHeaderText: "COLLEGE CARD",
-  cardSubheaderText: "IDENTITY CARD",
+  cardHeaderText: "",
+  cardSubheaderText: "",
   cardLogoUrl: null,
   cardQrEnabled: true,
   cardQrUrl: "",
-  cardTermsText: "• Use your College Card ID to login.\n• Keep your password secure.",
-  cardContactAddress: "Karachi, Pakistan",
-  cardContactEmail: "library@college.edu",
-  cardContactPhone: "+92 21 XXXX XXXX",
-  rbWatermarkText: "COLLEGE ARCHIVE",
+  cardTermsText: "",
+  cardContactAddress: "",
+  cardContactEmail: "",
+  cardContactPhone: "",
+  rbWatermarkText: "",
   rbWatermarkOpacity: 0.1,
-  rbDisclaimerText: "Confidential • Do Not Distribute",
+  rbDisclaimerText: "",
   rbWatermarkEnabled: true,
-  easypaisaNumber: "0300-0000000",
+  easypaisaNumber: "",
   bankAccountNumber: "",
-  bankName: "Habib Bank Limited (HBL)",
+  bankName: "",
   bankBranch: "",
-  accountTitle: "GCFMN Library",
+  accountTitle: "",
   updatedAt: new Date().toISOString(),
   storageBucket: "colleges",
 };
@@ -207,7 +207,9 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
         if (settingsData && settingsData.id) {
-          const bustered = applyCacheBuster(settingsData);
+          // Merge DB settings with defaults so nothing is ever undefined
+          const mergedSettings = { ...defaultSettings, ...settingsData };
+          const bustered = applyCacheBuster(mergedSettings);
           setSettings(bustered);
           // Prefer color from settings if it exists
           if (bustered.primaryColor) {
@@ -226,6 +228,12 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     fetchCollegeAndSettings();
   }, [collegeSlug]);
+
+  useEffect(() => {
+    const handler = () => fetchCollegeAndSettings();
+    window.addEventListener('college-settings-updated', handler);
+    return () => window.removeEventListener('college-settings-updated', handler);
+  }, []);
 
   useEffect(() => {
     if (settings.instituteFullName) {

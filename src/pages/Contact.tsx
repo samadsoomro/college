@@ -111,9 +111,9 @@ const Contact = () => {
   };
 
   const contactCards = [
-    { icon: <MapPin />, title: "Address", content: settings.contactAddress },
-    { icon: <Phone />, title: "Phone", content: settings.contactPhone },
-    { icon: <Mail />, title: "Email", content: settings.contactEmail },
+    { icon: <MapPin />, title: "Address", content: settings?.contactAddress || 'Address' },
+    { icon: <Phone />, title: "Phone", content: settings?.contactPhone || 'Phone' },
+    { icon: <Mail />, title: "Email", content: settings?.contactEmail || 'Email' },
     { icon: <Clock />, title: "Hours", content: "Mon-Fri: 9AM - 1PM" },
   ];
 
@@ -137,7 +137,11 @@ const Contact = () => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <div className="py-12 lg:py-16 gradient-dark text-white text-center overflow-hidden">
+      <div className="py-12 lg:py-16 gradient-dark text-white text-center overflow-hidden"
+        style={{
+          background: `linear-gradient(to right, ${settings?.primaryColor || "#1b2838"}, #111)`,
+        }}
+      >
         <div className="container">
           <motion.h1
             className="text-3xl lg:text-4xl font-bold mb-4"
@@ -320,7 +324,7 @@ const Contact = () => {
                   settings.mapEmbedUrl &&
                   settings.mapEmbedUrl.includes("google.com/maps/embed")
                     ? settings.mapEmbedUrl
-                    : `https://maps.google.com/maps?q=${encodeURIComponent(settings.contactAddress || "Karachi, Pakistan")}&t=&z=13&ie=UTF8&iwloc=&output=embed`
+                    : `https://maps.google.com/maps?q=${encodeURIComponent(settings?.contactAddress || "Karachi, Pakistan")}&t=&z=13&ie=UTF8&iwloc=&output=embed`
                 }
                 width="100%"
                 height="100%"
@@ -328,7 +332,7 @@ const Contact = () => {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title={`${settings.instituteShortName} Location`}
+                title={`${settings?.instituteShortName || 'College'} Location`}
               />
             </motion.div>
           </div>

@@ -63,7 +63,7 @@ const PrincipalMessage: React.FC = () => {
     ? data
     : {
         name: "Principal Name",
-        message: `Welcome to ${settings.instituteShortName} Library. We are dedicated to providing the best educational resources for our students.`,
+        message: `Welcome to ${settings?.instituteShortName || 'College'} Library. We are dedicated to providing the best educational resources for our students.`,
         imageUrl: null,
       };
 
@@ -107,7 +107,7 @@ const PrincipalMessage: React.FC = () => {
                     {principal.name}
                   </h3>
                   <p className="text-sm text-primary font-medium mt-1">
-                    Principal, {settings.instituteShortName}
+                    Principal, {settings?.instituteShortName || 'College'}
                   </p>
                 </div>
 

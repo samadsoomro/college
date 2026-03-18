@@ -113,7 +113,7 @@ const Donate = () => {
     }
   };
 
-  if (!settings || !settings.instituteFullName) {
+  if (!settings || !settings?.instituteFullName) {
     return (
       <div className="min-h-screen bg-background py-10 px-4">
         <div className="max-w-4xl mx-auto space-y-8">
@@ -321,7 +321,7 @@ const Donate = () => {
                       </p>
                       <div className="flex items-center justify-center gap-2 mt-2">
                         <p className="text-2xl font-mono font-bold text-primary">
-                          {settings.easypaisaNumber || "0300-0000000"}
+                          {settings?.easypaisaNumber || "0300-0000000"}
                         </p>
                         <Button
                           variant="ghost"
@@ -343,7 +343,7 @@ const Donate = () => {
                         </Button>
                       </div>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Account Title: {settings.accountTitle || "GCFMN Library"}
+                        Account Title: {settings?.accountTitle || "GCFMN Library"}
                       </p>
                     </div>
 
@@ -368,13 +368,13 @@ const Donate = () => {
                             Account Title
                           </p>
                           <p className="font-bold mb-2">
-                            {settings.accountTitle || "GCFMN Library"}
+                            {settings?.accountTitle || "GCFMN Library"}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             Account Number
                           </p>
                           <p className="font-mono font-bold">
-                            {settings.bankAccountNumber || "Contact college for details"}
+                            {settings?.bankAccountNumber || "Contact college for details"}
                           </p>
                         </div>
                         <Button
@@ -399,13 +399,13 @@ const Donate = () => {
                             Bank Name
                           </p>
                           <p className="font-bold">
-                            {settings.bankName || 'Contact college for bank details'}
+                            {settings?.bankName || 'Contact college for bank details'}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground">Branch</p>
                           <p className="font-bold">
-                            {settings.bankBranch || ''}
+                            {settings?.bankBranch || ''}
                           </p>
                         </div>
                       </div>

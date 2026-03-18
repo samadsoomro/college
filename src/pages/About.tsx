@@ -74,7 +74,7 @@ const About: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            About {settings.instituteShortName}
+            About {settings?.instituteShortName || 'College'}
           </motion.h1>
           <motion.p
             className="text-lg text-white/90"
@@ -82,8 +82,8 @@ const About: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            {settings.footerTagline ||
-              `${settings.instituteFullName} - Empowering Education Since 1953`}
+            {settings?.footerTagline ||
+              `${settings?.instituteFullName || 'College'} - Empowering Education Since 1953`}
           </motion.p>
         </div>
       </div>
@@ -138,7 +138,7 @@ const About: React.FC = () => {
                 Our History
               </h2>
               <p className="mb-4">
-                {settings.instituteFullName} was established in 1953 and has
+                {settings?.instituteFullName || 'College'} was established in 1953 and has
                 been a pillar of higher education in Karachi for over seven
                 decades.
               </p>

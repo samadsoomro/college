@@ -69,29 +69,40 @@ const ThemeBranding: React.FC = () => {
         
         const res = await fetch(`/api/${collegeSlug}/admin/settings`, {
           method: "PATCH",
-          headers: adminHeaders(),
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-token": import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+          },
           body: JSON.stringify(updates),
           credentials: "include",
         });
         if (!res.ok) throw new Error("Failed to update settings");
       } else {
-        // Local fallback (Multer logic would be here, but we're focusing on Vercel compatibility)
-        const d = new FormData();
-        Object.entries(updates).forEach(([k, v]) => { if (v !== null) d.append(k, String(v)); });
-        if (files.navbarLogo) d.append("navbarLogo", files.navbarLogo);
-        const res = await fetch(`/api/${collegeSlug}/admin/settings`, { method: "PATCH", body: d, credentials: "include" });
+        // Local fallback
+        const res = await fetch(`/api/${collegeSlug}/admin/settings`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-token": import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+          },
+          body: JSON.stringify(updates),
+        });
         if (!res.ok) throw new Error("Failed local update");
       }
 
       toast({ title: "Success", description: "Settings saved!" });
-      refreshSettings();
-      // Force refresh of queries and page to update branding immediately
-      queryClient.invalidateQueries({ queryKey: ['college', collegeSlug] });
-      queryClient.invalidateQueries({ queryKey: [`/api/colleges/${collegeSlug}`] });
-      
-      setTimeout(() => window.location.reload(), 1000);
       // Clear file inputs
       setFiles({ navbarLogo: null, loadingLogo: null, heroBackgroundLogo: null, cardLogo: null });
+      
+      // Soft refresh — invalidate queries so new data is fetched
+      queryClient.invalidateQueries({ queryKey: ['college', collegeSlug] });
+      queryClient.invalidateQueries({ queryKey: [`/api/colleges/${collegeSlug}`] });
+      queryClient.invalidateQueries({ queryKey: ['settings', collegeSlug] });
+      
+      // Dispatch event for CollegeContext to re-fetch
+      setTimeout(() => {
+        window.dispatchEvent(new Event('college-settings-updated'));
+      }, 500);
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally { setLoading(false); }

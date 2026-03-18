@@ -56,7 +56,7 @@ const Faculty: React.FC = () => {
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Meet the dedicated educators and staff members who make{" "}
-            {settings.instituteShortName} a center of excellence.
+            {settings?.instituteShortName || 'College'} a center of excellence.
           </p>
         </div>
 
@@ -118,7 +118,7 @@ const Faculty: React.FC = () => {
                   <CardContent>
                     <p className="text-sm text-muted-foreground line-clamp-3">
                       {member.description ||
-                        `Dedicated faculty member of ${settings.instituteFullName}.`}
+                        `Dedicated faculty member of ${settings?.instituteFullName || 'College'}.`}
                     </p>
                   </CardContent>
                 </Card>

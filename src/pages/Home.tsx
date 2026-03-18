@@ -392,7 +392,7 @@ const Home: React.FC = () => {
               viewport={{ once: true }}
             >
               {content.featuresHeading ||
-                `Why Choose ${settings.instituteShortName}?`}
+                `Why Choose ${settings?.instituteShortName || 'College'}?`}
             </motion.h2>
             <motion.p
               className="text-lg text-muted-foreground"
@@ -468,7 +468,7 @@ const Home: React.FC = () => {
             </h2>
             <p className="text-lg text-white/90 mb-8">
               {content.ctaSubheading ||
-                `Join thousands of students who are already using ${settings.instituteShortName} for their academic success.`}
+                `Join thousands of students who are already using ${settings?.instituteShortName || 'College'} for their academic success.`}
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <a

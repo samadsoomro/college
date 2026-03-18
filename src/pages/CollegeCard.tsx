@@ -341,8 +341,8 @@ const CollegeCard = () => {
     const { cardNumber, studentId, issueDate, validThrough, formData } =
       submissionResult;
 
-    const qrDestination = settings.cardQrEnabled
-      ? settings.cardQrUrl
+    const qrDestination = settings?.cardQrEnabled
+      ? settings?.cardQrUrl
       : `${window.location.origin}/${collegeSlug}/library-card/${cardNumber}`;
     const qrCodeUrl = getQRCodeUrl(qrDestination, 100);
 
@@ -358,7 +358,7 @@ const CollegeCard = () => {
     // Load Logo (Dynamic or Default)
     const logoImg = new Image();
     logoImg.crossOrigin = "anonymous";
-    logoImg.src = settings.cardLogoUrl || collegeLogo;
+    logoImg.src = settings?.cardLogoUrl || collegeLogo;
     await new Promise((resolve) => {
       logoImg.onload = resolve;
       logoImg.onerror = resolve; // Fallback to avoid hanging
@@ -392,7 +392,7 @@ const CollegeCard = () => {
         : [22, 78, 59];
     };
 
-    const primaryColorRgb = hexToRgb(settings.primaryColor);
+    const primaryColorRgb = hexToRgb(settings?.primaryColor || "#1b2838");
     const whiteColor: [number, number, number] = [255, 255, 255];
 
     // ==========================================
@@ -423,7 +423,7 @@ const CollegeCard = () => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.text(
-      settings.cardHeaderText || settings.instituteFullName.toUpperCase(),
+      settings?.cardHeaderText || (settings?.instituteFullName || "COLLEGE").toUpperCase(),
       pageW / 2,
       topY + 19,
       { align: "center" },
@@ -431,7 +431,7 @@ const CollegeCard = () => {
 
     doc.setFontSize(10);
     doc.text(
-      settings.cardSubheaderText || "COLLEGE CARD",
+      settings?.cardSubheaderText || "COLLEGE CARD",
       pageW / 2,
       topY + 25,
       { align: "center" },
@@ -581,7 +581,7 @@ const CollegeCard = () => {
     const termX = margin + 12;
     const termSpacing = 5;
 
-    const terms = (settings.cardTermsText || "").split("\n");
+    const terms = (settings?.cardTermsText || "").split("\n");
 
     terms.forEach((line) => {
       if (termY > botY + boxH - 25) return;
@@ -596,13 +596,13 @@ const CollegeCard = () => {
     termY += termSpacing;
     doc.setFont("helvetica", "normal");
     doc.text(
-      settings.cardContactAddress || `Library, ${settings.instituteShortName}`,
+      settings?.cardContactAddress || `Library, ${settings?.instituteShortName || 'College'}`,
       termX,
       termY,
     );
     termY += termSpacing;
     doc.text(
-      `Email: ${settings.cardContactEmail || "library@example.edu"} | Phone: ${settings.cardContactPhone || "+92 21 XXXX XXXX"}`,
+      `Email: ${settings?.cardContactEmail || "library@example.edu"} | Phone: ${settings?.cardContactPhone || "+92 21 XXXX XXXX"}`,
       termX,
       termY,
     );

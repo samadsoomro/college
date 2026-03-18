@@ -81,10 +81,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── Admin Settings (PATCH) ───────────────────────────
   const adminSettingsMatch = path.match(/\/api\/([^\/]+)\/admin\/settings$/);
   if (adminSettingsMatch && req.method === 'PATCH') {
-    const slug = adminSettingsMatch[1];
-    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
-    if (!col) return res.status(404).json({ error: 'College not found' });
-    const updates: any = { updated_at: new Date().toISOString() };
+    try {
+      const slug = adminSettingsMatch[1];
+      
+      // Explicit Admin Token Check for Write Operation
+      const token = req.headers['x-admin-token'];
+      if (token !== process.env.ADMIN_API_TOKEN) {
+        return res.status(403).json({ error: 'Unauthorized: Admin token required' });
+      }
+
+      const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+      if (!col) return res.status(404).json({ error: 'College not found' });
+      
+      const updates: any = { updated_at: new Date().toISOString() };
     const fieldMap: any = {
       instituteFullName: 'institute_full_name',
       instituteShortName: 'institute_short_name',
@@ -119,16 +128,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updates[dbKey] = value;
     }
 
-    const { data: existing } = await supabase.from('site_settings').select('id').eq('college_id', col.id).maybeSingle();
-    if (existing) {
-      const { error } = await supabase.from('site_settings').update(updates).eq('id', existing.id).eq('college_id', col.id);
-      if (error) return res.status(500).json({ error: error.message });
-    } else {
-      updates.college_id = col.id;
-      const { error } = await supabase.from('site_settings').insert(updates);
-      if (error) return res.status(500).json({ error: error.message });
+      const { data: existing } = await supabase.from('site_settings').select('id').eq('college_id', col.id).maybeSingle();
+      if (existing) {
+        const { error } = await supabase.from('site_settings').update(updates).eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        updates.college_id = col.id;
+        const { error } = await supabase.from('site_settings').insert(updates);
+        if (error) throw error;
+      }
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error('[SETTINGS ERROR]', err.message);
+      return res.status(500).json({ error: err.message });
     }
-    return res.json({ success: true });
   }
 
   // ── Admin Notifications (POST/PATCH/DELETE) ──────────
@@ -349,6 +362,147 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const slug = path.split('/')[2];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'Not found' });
+
+
+    // Admin home content GET
+    if (path.endsWith('/admin/home/content')) {
+      const { data } = await supabase.from('home_content').select('*').eq('college_id', col.id).maybeSingle();
+      return res.json(data || {});
+    }
+
+    // Admin home slider GET
+    if (path.endsWith('/admin/home/slider')) {
+      const { data } = await supabase.from('home_slider_images').select('*').eq('college_id', col.id).order('display_order');
+      return res.json((data || []).map((img: any) => ({ id: img.id, imageUrl: img.image_url, displayOrder: img.display_order, isActive: img.is_active })));
+    }
+
+    // Admin home affiliations GET
+    if (path.endsWith('/admin/home/affiliations')) {
+      const { data } = await supabase.from('affiliations').select('*').eq('college_id', col.id).order('display_order');
+      return res.json((data || []).map((a: any) => ({ id: a.id, name: a.name, link: a.link, logoUrl: a.logo_url, isActive: a.is_active, displayOrder: a.display_order })));
+    }
+
+    // Admin home stats GET
+    if (path.endsWith('/admin/home/stats')) {
+      const { data } = await supabase.from('home_stats').select('*').eq('college_id', col.id).order('display_order');
+      return res.json((data || []).map((s: any) => ({ id: s.id, label: s.label, number: s.number, icon: s.icon, color: s.color, iconUrl: s.icon_url, displayOrder: s.display_order })));
+    }
+
+    // Admin settings GET
+    if (path.endsWith('/admin/settings')) {
+      const { data } = await supabase.from('site_settings').select('*').eq('college_id', col.id).maybeSingle();
+      if (!data) return res.json({});
+      return res.json({
+        id: data.id, primaryColor: data.primary_color, navbarLogo: data.navbar_logo, loadingLogo: data.loading_logo,
+        instituteShortName: data.institute_short_name, instituteFullName: data.institute_full_name,
+        footerTitle: data.footer_title, footerDescription: data.footer_description,
+        facebookUrl: data.facebook_url, twitterUrl: data.twitter_url, instagramUrl: data.instagram_url, youtubeUrl: data.youtube_url,
+        creditsText: data.credits_text, contributorsText: data.contributors_text, contactAddress: data.contact_address,
+        contactPhone: data.contact_phone, contactEmail: data.contact_email, mapEmbedUrl: data.map_embed_url, googleMapLink: data.google_map_link,
+        footerTagline: data.footer_tagline, heroBackgroundLogo: data.hero_background_logo, heroBackgroundOpacity: data.hero_background_opacity,
+        cardHeaderText: data.card_header_text, cardSubheaderText: data.card_subheader_text, cardLogoUrl: data.card_logo_url,
+        cardQrEnabled: data.card_qr_enabled, cardQrUrl: data.card_qr_url, cardTermsText: data.card_terms_text,
+        cardContactAddress: data.card_contact_address, cardContactEmail: data.card_contact_email, cardContactPhone: data.card_contact_phone,
+        rbWatermarkText: data.rb_watermark_text, rbWatermarkOpacity: data.rb_watermark_opacity, rbDisclaimerText: data.rb_disclaimer_text,
+        rbWatermarkEnabled: data.rb_watermark_enabled, easypaisaNumber: data.easypaisa_number, bankAccountNumber: data.bank_account_number,
+        bankName: data.bank_name, bankBranch: data.bank_branch, accountTitle: data.account_title
+      });
+    }
+
+    // Admin blog GET
+    if (path.endsWith('/admin/blog')) {
+      const { data } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map((p: any) => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, content: p.content, featuredImage: p.featured_image, isPinned: p.is_pinned, status: p.status, createdAt: p.created_at })));
+    }
+
+    // Admin notifications GET
+    if (path.endsWith('/admin/notifications')) {
+      const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map((n: any) => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status, createdAt: n.created_at })));
+    }
+
+    // Admin faculty GET
+    if (path.endsWith('/admin/faculty')) {
+      const { data } = await supabase.from('faculty_staff').select('*').eq('college_id', col.id);
+      return res.json((data || []).map((f: any) => ({ id: f.id, name: f.name, designation: f.designation, description: f.description, imageUrl: f.image_url, createdAt: f.created_at })));
+    }
+
+    // Admin rare books GET
+    if (path.endsWith('/admin/rare-books')) {
+      const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id);
+      return res.json((data || []).map((b: any) => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image, status: b.status, createdAt: b.created_at })));
+    }
+
+    // Admin notes GET
+    if (path.endsWith('/admin/notes')) {
+      const { data } = await supabase.from('notes').select('*').eq('college_id', col.id);
+      return res.json((data || []).map((n: any) => ({ id: n.id, title: n.title, description: n.description, subject: n.subject, class: n.class, pdfPath: n.pdf_path, status: n.status, createdAt: n.created_at })));
+    }
+
+    // Admin books GET
+    if (path.endsWith('/admin/books')) {
+      const { data } = await supabase.from('books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map((b: any) => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
+    }
+
+    // Admin users GET
+    if (path.endsWith('/admin/users')) {
+      const { data: students } = await supabase.from('students').select('*').eq('college_id', col.id);
+      const { data: nonStudents } = await supabase.from('non_students').select('*').eq('college_id', col.id);
+      return res.json({ students: students || [], nonStudents: nonStudents || [] });
+    }
+
+    // Admin library cards GET
+    if (path.endsWith('/admin/library-cards')) {
+      const { data } = await supabase.from('library_card_applications').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map((c: any) => ({ id: c.id, firstName: c.first_name, lastName: c.last_name, fatherName: c.father_name, email: c.email, phone: c.phone, class: c.class, field: c.field, rollNo: c.roll_no, cardNumber: c.card_number, status: c.status, createdAt: c.created_at, dynamicFields: c.dynamic_fields })));
+    }
+
+    // Admin borrowed books GET
+    if (path.endsWith('/admin/borrowed-books')) {
+      const { data } = await supabase.from('book_borrows').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map((b: any) => ({ id: b.id, bookTitle: b.book_title, borrowerName: b.borrower_name, borrowerEmail: b.borrower_email, borrowerPhone: b.borrower_phone, libraryCardId: b.library_card_id, borrowDate: b.borrow_date, dueDate: b.due_date, returnDate: b.return_date, status: b.status })));
+    }
+
+    // Admin donations GET
+    if (path.endsWith('/admin/donations')) {
+      const { data } = await supabase.from('donations').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json(data || []);
+    }
+
+    // Admin stats counts
+    if (path.endsWith('/admin/stats')) {
+      const [cards, borrows, donations, users] = await Promise.all([
+        supabase.from('library_card_applications').select('id', { count: 'exact', head: true }).eq('college_id', col.id),
+        supabase.from('book_borrows').select('id', { count: 'exact', head: true }).eq('college_id', col.id),
+        supabase.from('donations').select('id', { count: 'exact', head: true }).eq('college_id', col.id),
+        supabase.from('users').select('id', { count: 'exact', head: true }).eq('college_id', col.id),
+      ]);
+      return res.json({
+        libraryCards: cards.count || 0,
+        borrowedBooks: borrows.count || 0,
+        donations: donations.count || 0,
+        totalUsers: users.count || 0,
+      });
+    }
+
+    // History & Principal
+    if (path.endsWith('/admin/history/page')) {
+      const { data } = await supabase.from('college_history_page').select('*').eq('college_id', col.id).maybeSingle();
+      return res.json(data || { title: 'History of College', subtitle: '' });
+    }
+    if (path.endsWith('/admin/history/sections')) {
+      const { data } = await supabase.from('college_history_sections').select('*').eq('college_id', col.id).order('display_order');
+      return res.json(data || []);
+    }
+    if (path.endsWith('/admin/history/gallery')) {
+      const { data } = await supabase.from('college_history_gallery').select('*').eq('college_id', col.id).order('display_order');
+      return res.json(data || []);
+    }
+    if (path.endsWith('/admin/principal')) {
+      const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
+      return res.json(data || {});
+    }
 
     if (path.endsWith('/books')) {
       const { data } = await supabase.from('books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
