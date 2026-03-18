@@ -147,7 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'blog') {
       // Individual blog post by slug or id
       if (subResource && !['stream'].includes(subResource)) {
-        const { data: post } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).or(`slug.eq.${subResource},id.eq.${subResource}`).eq('status', 'published').maybeSingle();
+        const { data: post } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).eq('slug', subResource).eq('status', 'published').maybeSingle();
         if (!post) return res.status(404).json({ error: 'Post not found' });
         return res.json({ id: post.id, title: post.title, slug: post.slug, shortDescription: post.short_description, content: post.content, featuredImage: post.featured_image, createdAt: post.created_at, isPinned: post.is_pinned });
       }
@@ -155,8 +155,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json((data || []).map((p: any) => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, featuredImage: p.featured_image, createdAt: p.created_at })));
     }
     if (resource === 'notifications') {
-      const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).eq('status', 'active').order('created_at', { ascending: false });
-      return res.json((data || []).map(n => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status })));
+      const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).eq('status', 'published').order('pin', { ascending: false }).order('created_at', { ascending: false });
+      return res.json((data || []).map(n => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status, createdAt: n.created_at })));
     }
     if (resource === 'rare-books') {
       if (subResource === 'stream') {
@@ -270,6 +270,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Map camelCase to snake_case if needed
         if (sub === 'slider') { payload.image_url = req.body.imageUrl; delete payload.imageUrl; }
         if (sub === 'affiliations') { payload.logo_url = req.body.logoUrl; delete payload.logoUrl; payload.is_active = true; }
+        if (sub === 'stats') { payload.icon_url = req.body.iconUrl; delete payload.iconUrl; }
         const { data, error } = await supabase.from(table).insert(payload).select().single();
         return res.json(data || { success: true });
       }
@@ -422,7 +423,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (subResource === 'library-cards') {
       const { data } = await supabase.from('library_card_applications').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
-      return res.json((data || []).map(c => ({ id: c.id, firstName: c.first_name, lastName: c.last_name, fatherName: c.father_name, email: c.email, phone: c.phone, class: c.class, field: c.field, rollNo: c.roll_no, cardNumber: c.card_number, status: c.status, createdAt: c.created_at, dynamicFields: c.dynamic_fields })));
+      return res.json((data || []).map(c => ({ 
+        id: c.id, firstName: c.first_name, lastName: c.last_name, 
+        fatherName: c.father_name, email: c.email, phone: c.phone, 
+        class: c.class, field: c.field, rollNo: c.roll_no, 
+        addressStreet: c.address_street, addressCity: c.address_city,
+        addressState: c.address_state, addressZip: c.address_zip,
+        dob: c.dob, cardNumber: c.card_number, status: c.status, 
+        createdAt: c.created_at, dynamicFields: c.dynamic_fields 
+      })));
     }
     if (subResource === 'donations') {
        const { data } = await supabase.from('donations').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
@@ -477,53 +486,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 5. Admin POST/PATCH/DELETE Operations
   if (req.method !== 'GET' && parts[2] === 'admin') {
     const resrc = parts[3];
-    const id = parts[4];
+    const sub = parts[4];
+    const id = parts[5];
     
-    if (resrc === 'principal') {
+    // Admin History
+    if (resrc === 'history') {
+      const tableMap: any = { page: 'college_history_page', sections: 'college_history_sections', gallery: 'college_history_gallery' };
+      const table = tableMap[sub];
+      if (!table) return res.status(400).json({ error: 'Invalid history sub-resource' });
+
       if (req.method === 'POST' || req.method === 'PATCH') {
-        const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
-        delete payload.imageUrl;
-        const { data: existing } = await supabase.from('principal').select('id').eq('college_id', col.id).maybeSingle();
-        if (existing) await supabase.from('principal').update(payload).eq('id', existing.id);
-        else await supabase.from('principal').insert(payload);
+        const payload: any = { ...req.body, college_id: col.id };
+        if (req.body.imageUrl !== undefined) { payload.image_url = req.body.imageUrl; delete payload.imageUrl; }
+        if (req.body.iconName !== undefined) { payload.icon_name = req.body.iconName; delete payload.iconName; }
+        if (req.body.layoutType !== undefined) { payload.layout_type = req.body.layoutType; delete payload.layoutType; }
+        if (req.body.displayOrder !== undefined) { payload.display_order = req.body.displayOrder; delete payload.displayOrder; }
+        
+        const itemId = (sub === 'page') ? null : (id || req.body.id);
+        if (itemId && itemId !== sub) {
+          await supabase.from(table).update(payload).eq('id', itemId);
+        } else if (sub === 'page') {
+          const { data: ex } = await supabase.from(table).select('id').eq('college_id', col.id).maybeSingle();
+          if (ex) await supabase.from(table).update(payload).eq('id', ex.id);
+          else await supabase.from(table).insert(payload);
+        } else {
+          await supabase.from(table).insert(payload);
+        }
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from(table).delete().eq('id', id);
         return res.json({ success: true });
       }
     }
 
-    if (resrc === 'history') {
-      const sub = parts[4]; // sections, gallery
-      if (sub === 'sections') {
-        if (req.method === 'POST' || req.method === 'PATCH') {
-          const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl, layout_type: req.body.layoutType };
-          delete payload.imageUrl; delete payload.layoutType;
-          if (id && id !== 'sections') await supabase.from('college_history').update(payload).eq('id', id);
-          else await supabase.from('college_history').insert(payload);
-          return res.json({ success: true });
-        }
-        if (req.method === 'DELETE') {
-          await supabase.from('college_history').delete().eq('id', id);
-          return res.json({ success: true });
-        }
-      }
-      if (sub === 'gallery') {
-        if (req.method === 'POST') {
-          const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
-          delete payload.imageUrl;
-          await supabase.from('college_gallery').insert(payload);
-          return res.json({ success: true });
-        }
-        if (req.method === 'DELETE') {
-          await supabase.from('college_gallery').delete().eq('id', id);
-          return res.json({ success: true });
-        }
-      }
+    // Admin Principal
+    if (resrc === 'principal') {
+      const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl, updated_at: new Date().toISOString() };
+      delete payload.imageUrl;
+      const { data: ex } = await supabase.from('principal').select('id').eq('college_id', col.id).maybeSingle();
+      if (ex) await supabase.from('principal').update(payload).eq('id', ex.id);
+      else await supabase.from('principal').insert(payload);
+      return res.json({ success: true });
     }
 
+    // Admin Faculty
     if (resrc === 'faculty') {
       if (req.method === 'POST' || req.method === 'PATCH') {
         const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
         delete payload.imageUrl;
-        if (id && id !== 'faculty') await supabase.from('faculty_staff').update(payload).eq('id', id);
+        const itemId = id || req.body.id;
+        if (itemId && itemId !== 'faculty') await supabase.from('faculty_staff').update(payload).eq('id', itemId);
         else await supabase.from('faculty_staff').insert(payload);
         return res.json({ success: true });
       }
@@ -533,7 +546,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Admin Notes
     if (resrc === 'notes') {
+      if (id && id.includes('/toggle')) {
+        const actualId = id.split('/')[0];
+        const { data: curr } = await supabase.from('notes').select('status').eq('id', actualId).single();
+        const newStatus = (curr as any)?.status === 'active' ? 'inactive' : 'active';
+        await supabase.from('notes').update({ status: newStatus }).eq('id', actualId);
+        return res.json({ success: true, status: newStatus });
+      }
       if (req.method === 'POST') {
         const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath };
         delete payload.pdfPath;
@@ -546,7 +567,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Admin Rare Books
     if (resrc === 'rare-books') {
+      if (id && id.includes('/toggle')) {
+        const actualId = id.split('/')[0];
+        const { data: curr } = await supabase.from('rare_books').select('status').eq('id', actualId).single();
+        const newStatus = (curr as any)?.status === 'active' ? 'inactive' : 'active';
+        await supabase.from('rare_books').update({ status: newStatus }).eq('id', actualId);
+        return res.json({ success: true, status: newStatus });
+      }
       if (req.method === 'POST') {
         const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath, cover_image: req.body.coverImage };
         delete payload.pdfPath; delete payload.coverImage;
@@ -559,20 +588,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Admin Events
     if (resrc === 'events') {
       if (req.method === 'POST') {
-        const payload: any = { college_id: col.id, title: req.body.title, description: req.body.description, date: req.body.date, images: req.body.images || [] };
+        const payload = { ...req.body, college_id: col.id, images: req.body.images || [] };
         const { data, error } = await supabase.from('events').insert(payload).select().single();
         if (error) return res.status(500).json({ error: error.message });
         return res.json(data);
       }
       if (req.method === 'PATCH') {
-        const payload: any = {};
-        if (req.body.title !== undefined) payload.title = req.body.title;
-        if (req.body.description !== undefined) payload.description = req.body.description;
-        if (req.body.date !== undefined) payload.date = req.body.date;
-        if (req.body.images !== undefined) payload.images = req.body.images;
-        await supabase.from('events').update(payload).eq('id', id);
+        await supabase.from('events').update(req.body).eq('id', id);
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
@@ -581,25 +606,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Admin Notifications
     if (resrc === 'notifications') {
-      // Handle sub-routes: /notifications/:id/status and /notifications/:id/pin
-      const subAction = parts[5]; // 'status' or 'pin'
+      const subAction = parts[5]; 
       if (req.method === 'POST') {
-        const payload: any = { college_id: col.id, title: req.body.title, message: req.body.message, image: req.body.image, pin: req.body.pin || false, status: req.body.status || 'active' };
+        const payload = { ...req.body, college_id: col.id, pin: req.body.pin || false, status: req.body.status || 'active' };
         const { data, error } = await supabase.from('notifications').insert(payload).select().single();
         if (error) return res.status(500).json({ error: error.message });
         return res.json(data);
       }
       if (req.method === 'PATCH') {
         if (subAction === 'status') {
-          // Toggle status
           const { data: curr } = await supabase.from('notifications').select('status').eq('id', id).single();
           const newStatus = (curr as any)?.status === 'active' ? 'inactive' : 'active';
           await supabase.from('notifications').update({ status: newStatus }).eq('id', id);
           return res.json({ success: true, status: newStatus });
         }
         if (subAction === 'pin') {
-          // Toggle pin
           const { data: curr } = await supabase.from('notifications').select('pin').eq('id', id).single();
           const newPin = !(curr as any)?.pin;
           await supabase.from('notifications').update({ pin: newPin }).eq('id', id);
@@ -614,23 +637,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Admin Books
     if (resrc === 'books') {
-      if (req.method === 'POST') {
-        const payload: any = { college_id: col.id, book_name: req.body.bookName, author_name: req.body.authorName, short_intro: req.body.shortIntro, description: req.body.description, book_image: req.body.bookImage, total_copies: req.body.totalCopies || '1', available_copies: req.body.availableCopies || '1', tools_file_name: req.body.toolsFileName, tools_image: req.body.toolsImage };
-        const { data, error } = await supabase.from('books').insert(payload).select().single();
-        if (error) return res.status(500).json({ error: error.message });
-        return res.json(data);
-      }
-      if (req.method === 'PATCH') {
-        const payload: any = {};
-        if (req.body.bookName !== undefined) payload.book_name = req.body.bookName;
-        if (req.body.authorName !== undefined) payload.author_name = req.body.authorName;
-        if (req.body.shortIntro !== undefined) payload.short_intro = req.body.shortIntro;
-        if (req.body.description !== undefined) payload.description = req.body.description;
-        if (req.body.bookImage !== undefined) payload.book_image = req.body.bookImage;
-        if (req.body.totalCopies !== undefined) payload.total_copies = req.body.totalCopies;
-        if (req.body.availableCopies !== undefined) payload.available_copies = req.body.availableCopies;
-        await supabase.from('books').update(payload).eq('id', id);
+      if (req.method === 'POST' || req.method === 'PATCH') {
+        const payload = { 
+          ...req.body, college_id: col.id, 
+          book_name: req.body.bookName, author_name: req.body.authorName, 
+          short_intro: req.body.shortIntro, book_image: req.body.bookImage, 
+          total_copies: req.body.totalCopies, available_copies: req.body.availableCopies 
+        };
+        delete payload.bookName; delete payload.authorName; delete payload.shortIntro; delete payload.bookImage; delete payload.totalCopies; delete payload.availableCopies;
+        if (id && id !== 'books') await supabase.from('books').update(payload).eq('id', id);
+        else await supabase.from('books').insert(payload);
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
@@ -639,6 +657,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Admin Blog
     if (resrc === 'blog') {
       if (req.method === 'POST' || req.method === 'PATCH') {
         const payload: any = {
@@ -665,12 +684,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Admin Library Cards
     if (resrc === 'library-cards') {
       if (req.method === 'PATCH') {
+        if (id && id.includes('/status')) {
+          const actualId = id.split('/')[0];
+          await supabase.from('library_card_applications').update(req.body).eq('id', actualId);
+          return res.json({ success: true });
+        }
         await supabase.from('library_card_applications').update(req.body).eq('id', id);
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
+        // Cascade delete borrowed books for this card
+        await supabase.from('borrowed_books').delete().eq('card_id', id);
         await supabase.from('library_card_applications').delete().eq('id', id);
         return res.json({ success: true });
       }

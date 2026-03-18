@@ -195,11 +195,12 @@ const NotificationsPage: React.FC = () => {
                           )}
                           <span className="text-pakistan-green/80 text-xs font-bold flex items-center gap-1 uppercase tracking-wider">
                             <Clock size={12} />{" "}
-                            {new Date(
-                              notification.createdAt,
-                            ).toLocaleDateString(undefined, {
-                              dateStyle: "long",
-                            })}
+                            {(() => {
+                              const d = new Date(notification.createdAt);
+                              return isNaN(d.getTime()) 
+                                ? "Recently Added" 
+                                : d.toLocaleDateString(undefined, { dateStyle: "long" });
+                            })()}
                           </span>
                         </div>
 

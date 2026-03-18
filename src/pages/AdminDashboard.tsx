@@ -32,7 +32,7 @@ import {
   History,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import collegeLogo from "@/assets/images/college-logo.png";
@@ -352,19 +352,27 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       setLoading(true);
-      const formData = new FormData();
-      formData.append("title", rareBookForm.title);
-      formData.append("description", rareBookForm.description);
-      formData.append("category", rareBookForm.category);
-      formData.append("status", rareBookForm.status);
-      if (rareBookFiles.pdf) formData.append("file", rareBookFiles.pdf);
-      if (rareBookFiles.image)
-        formData.append("coverImage", rareBookFiles.image);
+      let pdfPath = "";
+      let coverImage = "";
+
+      if (rareBookFiles.pdf) {
+        pdfPath = await uploadToSupabase(rareBookFiles.pdf, 'rare-books-pdfs', collegeSlug);
+      }
+      if (rareBookFiles.image) {
+        coverImage = await uploadToSupabase(rareBookFiles.image, 'rare-books-covers', collegeSlug);
+      }
 
       const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
         method: "POST",
-        headers: adminHeaders(),
-        body: formData,
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: rareBookForm.title,
+          description: rareBookForm.description,
+          category: rareBookForm.category,
+          status: rareBookForm.status,
+          pdfPath,
+          coverImage
+        }),
         credentials: "include",
       });
 
@@ -431,18 +439,8 @@ export default function AdminDashboard() {
       if (fileInput?.files && fileInput.files.length > 0) {
         for (let i = 0; i < fileInput.files.length; i++) {
           const file = fileInput.files[i];
-          const formData = new FormData();
-          formData.append('file', file);
-          const uploadRes = await fetch(`/api/${collegeSlug}/admin/upload?bucket=event-images`, {
-            method: 'POST',
-            headers: { 'x-admin-token': 'gcfm-admin-token-2026' },
-            credentials: 'include',
-            body: formData,
-          });
-          if (uploadRes.ok) {
-            const uploadData = await uploadRes.json();
-            imageUrls.push(uploadData.url);
-          }
+          const url = await uploadToSupabase(file, 'event-images', collegeSlug);
+          if (url) imageUrls.push(url);
         }
       }
 
@@ -2761,21 +2759,20 @@ export default function AdminDashboard() {
                         ) {
                           setLoading(true);
                           try {
-                            const formData = new FormData();
-                            formData.append("file", selectedFile);
-                            formData.append("class", noteForm.class);
-                            formData.append("subject", noteForm.subject);
-                            formData.append("title", noteForm.title);
-                            formData.append(
-                              "description",
-                              noteForm.description,
-                            );
-                            formData.append("status", noteForm.status);
+                            const pdfPath = await uploadToSupabase(selectedFile, 'study-notes', collegeSlug);
 
                             const res = await fetch(`/api/${collegeSlug}/admin/notes`, {
                               method: "POST",
+                              headers: { ...adminHeaders(), "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                class: noteForm.class,
+                                subject: noteForm.subject,
+                                title: noteForm.title,
+                                description: noteForm.description,
+                                status: noteForm.status,
+                                pdfPath
+                              }),
                               credentials: "include",
-                              body: formData,
                             });
 
                             if (res.ok) {

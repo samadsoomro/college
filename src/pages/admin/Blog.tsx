@@ -36,7 +36,7 @@ const AdminBlog: React.FC = () => {
   const [slug, setSlug] = useState("");
   const [shortDescription, setShortDescription] = useState("");
   const [content, setContent] = useState("");
-  const [status, setStatus] = useState("draft");
+  const [status, setStatus] = useState("published");
   const [featuredImage, setFeaturedImage] = useState<File | null>(null);
   const [featuredImagePreview, setFeaturedImagePreview] = useState<
     string | null
