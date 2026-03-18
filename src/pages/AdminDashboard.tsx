@@ -53,6 +53,8 @@ import AdminHome from "./admin/AdminHome";
 import AdminHistory from "./admin/AdminHistory";
 import ThemeBranding from "./admin/ThemeBranding";
 import InstituteAddress from "./admin/InstituteAddress";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
 
 const SidebarItem = ({ module, activeModule, onClick }: { module: any; activeModule: string; onClick: () => void }) => {
   const Icon = module.icon;
@@ -1501,8 +1503,8 @@ export default function AdminDashboard() {
           </button>
 
         </div>
-
-        <motion.div
+        <ErrorBoundary>
+          <motion.div
           key={activeModule}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1511,6 +1513,7 @@ export default function AdminDashboard() {
           {/* Messages Module */}
           {activeModule === "messages" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   <h2 className="text-4xl font-black text-neutral-900 tracking-tight">
@@ -1646,6 +1649,7 @@ export default function AdminDashboard() {
           {/* Borrowed Books Module */}
           {activeModule === "books" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   <h2 className="text-4xl font-black text-neutral-900 tracking-tight">
@@ -2150,10 +2154,10 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {activeModule === "branding" && <ThemeBranding />}
-          {activeModule === "home-cms" && <AdminHome />}
-          {activeModule === "addresses" && <Addresses />}
-          {activeModule === "institute-address" && <InstituteAddress />}
+          {activeModule === "branding" && <ErrorBoundary><ThemeBranding /></ErrorBoundary>}
+          {activeModule === "home-cms" && <ErrorBoundary><AdminHome /></ErrorBoundary>}
+          {activeModule === "addresses" && <ErrorBoundary><Addresses /></ErrorBoundary>}
+          {activeModule === "institute-address" && <ErrorBoundary><InstituteAddress /></ErrorBoundary>}
 
           {/* Users Module */}
           {activeModule === "users" && (
@@ -3422,6 +3426,9 @@ export default function AdminDashboard() {
 
           {activeModule === "home" && <AdminHome />}
         </motion.div>
+      </ErrorBoundary>
+
+
       </main>
     </div>
   );

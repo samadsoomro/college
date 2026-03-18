@@ -36,6 +36,8 @@ import CollegeLayout from "@/components/layout/CollegeLayout";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import SuperAdminProtectedRoute from "@/components/auth/SuperAdminProtectedRoute";
 import PageTransition from "@/components/common/PageTransition";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -50,7 +52,9 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <Routes>
+          <ErrorBoundary>
+            <Routes>
+
             <Route path="/" element={<Navigate to="/gcfm" replace />} />
             <Route path="/super-admin/dashboard/*" element={
               <SuperAdminProtectedRoute><SuperAdminDashboard /></SuperAdminProtectedRoute>
@@ -82,7 +86,9 @@ const App = () => (
             <Route path="/404" element={<NotFound />} />
             <Route path="*" element={<Navigate to="/404" replace />} />
           </Routes>
-        </TooltipProvider>
+        </ErrorBoundary>
+      </TooltipProvider>
+
       </BrowserRouter>
     </ThemeProvider>
   </QueryClientProvider>
