@@ -222,8 +222,9 @@ const Addresses = () => {
                                 {app.firstName} {app.lastName}
                               </span>
                               {app.status === "suspended" && (
-                                <span className="text-[8px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-rose-200">
-                                  Card Suspended
+                                <span className="text-[9px] bg-rose-600 text-white px-2.5 py-1 rounded-lg font-black uppercase tracking-widest shadow-md ring-2 ring-rose-100 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                                  College Card Deleted/Suspended (Access Removed)
                                 </span>
                               )}
                             </div>

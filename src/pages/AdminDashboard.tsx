@@ -3118,23 +3118,28 @@ export default function AdminDashboard() {
                                 "rare-book-cover-input",
                               ) as HTMLInputElement
                             ).files?.[0];
-                            const formData = new FormData();
-                            formData.append("file", selectedFile);
-                            if (coverFile)
-                              formData.append("coverImage", coverFile);
-                            formData.append("title", rareBookForm.title);
-                            formData.append(
-                              "description",
-                              rareBookForm.description,
-                            );
-                            formData.append("category", rareBookForm.category);
-                            formData.append("status", rareBookForm.status);
+
+                            // Upload files first using the helper (handles auth and bucket correctly)
+                            const pdfPath = await uploadToSupabase(selectedFile, 'rare-books', collegeSlug);
+                            let coverImageUrl = "";
+                            if (coverFile) {
+                              coverImageUrl = await uploadToSupabase(coverFile, 'rare-books', collegeSlug);
+                            }
+
+                            if (!pdfPath) throw new Error("Failed to upload PDF");
 
                             const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
                               method: "POST",
-                              headers: adminHeaders(),
+                              headers: { ...adminHeaders(), "Content-Type": "application/json" },
                               credentials: "include",
-                              body: formData,
+                              body: JSON.stringify({
+                                title: rareBookForm.title,
+                                description: rareBookForm.description,
+                                category: rareBookForm.category,
+                                status: rareBookForm.status,
+                                pdfPath,
+                                coverImage: coverImageUrl,
+                              }),
                             });
 
                             if (res.ok) {

@@ -194,11 +194,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           fileName = pdfPath.split('/').pop() || '';
         }
         
-        const { data, error } = await supabase.storage.from(bucket).download(fileName);
+        let { data, error } = await supabase.storage.from(bucket).download(fileName);
         
-        if (error) {
-          console.error('[RARE-BOOKS STREAM] Error:', error.message, 'bucket:', bucket, 'file:', fileName);
-          return res.status(500).json({ error: 'Storage fetch failed: ' + error.message });
+        // Fallback for legacy storage if not found in primary inferred bucket
+        if (error && bucket === 'rare-books') {
+          const { data: fallbackData, error: fallbackError } = await supabase.storage.from('rare-books-pdfs').download(fileName);
+          if (!fallbackError) {
+            data = fallbackData;
+            error = null;
+          }
+        }
+        
+        if (error || !data) {
+          console.error('[RARE-BOOKS STREAM] Error:', error?.message || 'No data', 'bucket:', bucket, 'file:', fileName);
+          return res.status(500).json({ error: 'Storage fetch failed' });
         }
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline');
