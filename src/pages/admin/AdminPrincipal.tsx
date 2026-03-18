@@ -45,7 +45,7 @@ const AdminPrincipal: React.FC = () => {
 
       const res = await fetch(`/api/${collegeSlug}/admin/principal`, {
         method: "POST",
-        headers: adminHeaders,
+        headers: adminHeaders(),
         body: JSON.stringify({ ...formData, imageUrl }),
         credentials: "include"
       });

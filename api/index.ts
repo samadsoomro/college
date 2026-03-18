@@ -10,37 +10,34 @@ const supabase = createClient(
 const ADMIN_TOKEN = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
 
 function isAdminRequest(req: VercelRequest): boolean {
-  const authHeader = req.headers['x-admin-token'] as string;
-  return authHeader === ADMIN_TOKEN;
+  return req.headers['x-admin-token'] === ADMIN_TOKEN;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Cookie,x-admin-token');
-
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const path = url.pathname;
-  const parts = path.split('/').filter(Boolean); // ["api", "slug", "module"]
+  const parts = path.split('/').filter(Boolean); // ["api", "slug", "module", ...]
 
-  if (parts[parts.length - 1] === 'health') {
-    return res.json({ status: 'ok', supabaseUrl: process.env.SUPABASE_URL ? 'set' : 'MISSING' });
-  }
-
-  if (parts[0] !== 'api') return res.status(404).json({ error: 'Route not found', path });
+  if (parts[parts.length - 1] === 'health') return res.json({ status: 'ok' });
+  if (parts[0] !== 'api') return res.status(404).json({ error: 'Route not found' });
 
   const collegeSlug = parts[1];
+  if (!collegeSlug) return res.status(400).json({ error: 'College slug required' });
+
+  // Special handle for /api/colleges/:slug (branding/initial load)
   if (collegeSlug === 'colleges' && parts[2]) {
     const slug = parts[2];
     const { data: college } = await supabase.from('colleges').select('*').eq('slug', slug).eq('is_active', true).maybeSingle();
     if (!college) return res.status(404).json({ error: 'College not found' });
     const { data: s } = await supabase.from('site_settings').select('*').eq('college_id', college.id).maybeSingle();
     return res.json({
-      id: college.id, name: college.name, shortName: college.short_name, slug: college.slug,
+      id: college.id, slug: college.slug, name: college.name, shortName: college.short_name,
       primaryColor: s?.primary_color || '#006600',
       instituteFullName: s?.institute_full_name || college.name,
       instituteShortName: s?.institute_short_name || college.short_name,
@@ -50,146 +47,294 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  if (!collegeSlug) return res.status(404).json({ error: 'College slug required' });
-
   const { data: col } = await supabase.from('colleges').select('id').eq('slug', collegeSlug).maybeSingle();
   if (!col) return res.status(404).json({ error: 'College not found' });
 
   const isAdmin = isAdminRequest(req);
   const resource = parts[2];
   const subResource = parts[3];
-  const subId = parts[4];
+  const itemId = parts[parts.length - 1]; // Fallback for DELETE/PATCH ids
 
-  // ── AUTH ──────────────────
+  // ── AUTH ──────────────────────────────────────────────────────────────────
   if (resource === 'auth' && subResource === 'login' && req.method === 'POST') {
     const { email, password } = req.body || {};
     const { data: admin } = await supabase.from('admin_credentials').select('*').eq('admin_email', email).eq('college_id', col.id).eq('is_active', true).maybeSingle();
-    if (admin && await bcrypt.compare(password, admin.password_hash)) {
+    if (admin && (await bcrypt.compare(password, admin.password_hash))) {
       return res.json({ redirect: `/${collegeSlug}/admin-dashboard`, role: 'admin', userId: admin.id, collegeSlug });
     }
     const { data: user } = await supabase.from('users').select('*').eq('email', email).eq('college_id', col.id).maybeSingle();
-    if (user && await bcrypt.compare(password, user.password)) {
+    if (user && (await bcrypt.compare(password, user.password))) {
       return res.json({ redirect: `/${collegeSlug}`, role: 'user', userId: user.id, collegeSlug });
     }
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  // ── PUBLIC GET ────────────
-  if (req.method === 'GET' && !parts.includes('admin')) {
+  // ── PUBLIC DATA ROUTES ────────────────────────────────────────────────────
+  if (req.method === 'GET' && resource !== 'admin') {
+    // 1. Full Home Data (content, slider, stats, affiliations)
+    if (resource === 'home') {
+      const [{ data: c }, { data: sl }, { data: st }, { data: af }] = await Promise.all([
+        supabase.from('home_content').select('*').eq('college_id', col.id).maybeSingle(),
+        supabase.from('home_slider_images').select('*').eq('college_id', col.id).eq('is_active', true).order('order'),
+        supabase.from('home_stats').select('*').eq('college_id', col.id).order('order'),
+        supabase.from('home_affiliations').select('*').eq('college_id', col.id).eq('is_active', true).order('order')
+      ]);
+      return res.json({
+        content: {
+          heroHeading: c?.hero_heading, heroSubheading: c?.hero_subheading, heroOverlayText: c?.hero_overlay_text,
+          featuresHeading: c?.features_heading, featuresSubheading: c?.features_subheading,
+          affiliationsHeading: c?.affiliations_heading, ctaHeading: c?.cta_heading, ctaSubheading: c?.cta_subheading
+        },
+        slider: (sl || []).map(s => ({ id: s.id, imageUrl: s.image_url, order: s.order, isActive: s.is_active })),
+        stats: (st || []).map(s => ({ id: s.id, number: s.number, label: s.label, icon: s.icon, iconUrl: s.icon_url, color: s.color, order: s.order })),
+        affiliations: (af || []).map(a => ({ id: a.id, name: a.name, logoUrl: a.logo_url, link: a.link, order: a.order, isActive: a.is_active }))
+      });
+    }
+
+    // 2. Site Settings (for CollegeContext)
+    if (resource === 'settings') {
+      const { data: d } = await supabase.from('site_settings').select('*').eq('college_id', col.id).maybeSingle();
+      if (!d) return res.json({});
+      return res.json({
+        id: d.id, primaryColor: d.primary_color, navbarLogo: d.navbar_logo, loadingLogo: d.loading_logo,
+        instituteShortName: d.institute_short_name, instituteFullName: d.institute_full_name,
+        footerTitle: d.footer_title, footerDescription: d.footer_description,
+        facebookUrl: d.facebook_url, twitterUrl: d.twitter_url, instagramUrl: d.instagram_url, youtubeUrl: d.youtube_url,
+        creditsText: d.credits_text, contributorsText: d.contributors_text, contactAddress: d.contact_address,
+        contactPhone: d.contact_phone, contactEmail: d.contact_email, mapEmbedUrl: d.map_embed_url, googleMapLink: d.google_map_link,
+        footerTagline: d.footer_tagline, heroBackgroundLogo: d.hero_background_logo, heroBackgroundOpacity: d.hero_background_opacity,
+        cardHeaderText: d.card_header_text, cardSubheaderText: d.card_subheader_text, cardLogoUrl: d.card_logo_url,
+        cardQrEnabled: d.card_qr_enabled, cardQrUrl: d.card_qr_url, cardTermsText: d.card_terms_text,
+        cardContactAddress: d.card_contact_address, cardContactEmail: d.card_contact_email, cardContactPhone: d.card_contact_phone,
+        rbWatermarkText: d.rb_watermark_text, rbWatermarkOpacity: d.rb_watermark_opacity, rbDisclaimerText: d.rb_disclaimer_text,
+        rbWatermarkEnabled: d.rb_watermark_enabled, easypaisaNumber: d.easypaisa_number, bankAccountNumber: d.bank_account_number,
+        bankName: d.bank_name, bankBranch: d.bank_branch, accountTitle: d.account_title
+      });
+    }
+
+    // 3. History
+    if (resource === 'history') {
+      if (subResource === 'page') {
+        const { data } = await supabase.from('college_history_page').select('*').eq('college_id', col.id).maybeSingle();
+        return res.json(data || { title: 'History of College', subtitle: '' });
+      }
+      if (subResource === 'sections') {
+        const { data } = await supabase.from('college_history_sections').select('*').eq('college_id', col.id).order('display_order');
+        return res.json((data || []).map(s => ({ id: s.id, title: s.title, description: s.description, imageUrl: s.image_url, iconName: s.icon_name, layoutType: s.layout_type, displayOrder: s.display_order })));
+      }
+      if (subResource === 'gallery') {
+        const { data } = await supabase.from('college_history_gallery').select('*').eq('college_id', col.id).order('display_order');
+        return res.json((data || []).map(g => ({ id: g.id, imageUrl: g.image_url, caption: g.caption, displayOrder: g.display_order })));
+      }
+    }
+
+    // 4. Standard Modules
     if (resource === 'books') {
       const { data } = await supabase.from('books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
-      return res.json((data || []).map((b: any) => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies, createdAt: b.created_at })));
+      return res.json((data || []).map(b => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
     }
     if (resource === 'events') {
       const { data } = await supabase.from('events').select('*').eq('college_id', col.id).order('date', { ascending: false });
-      return res.json((data || []).map((e: any) => ({ id: e.id, title: e.title, description: e.description, images: e.images, date: e.date, createdAt: e.created_at, updatedAt: e.updated_at })));
+      return res.json((data || []).map(e => ({ id: e.id, title: e.title, description: e.description, images: e.images, date: e.date })));
     }
     if (resource === 'blog') {
       const { data } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).eq('status', 'published').order('created_at', { ascending: false });
-      return res.json((data || []).map((p: any) => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, featuredImage: p.featured_image, createdAt: p.created_at })));
+      return res.json((data || []).map(p => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, featuredImage: p.featured_image, createdAt: p.created_at })));
     }
     if (resource === 'notifications') {
       const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).eq('status', 'active').order('created_at', { ascending: false });
-      return res.json((data || []).map((n: any) => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status, createdAt: n.created_at })));
+      return res.json((data || []).map(n => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status })));
     }
     if (resource === 'rare-books') {
       const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id).eq('status', 'active');
-      return res.json((data || []).map((b: any) => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image, status: b.status, createdAt: b.created_at })));
+      return res.json((data || []).map(b => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image })));
     }
     if (resource === 'notes') {
       const { data } = await supabase.from('notes').select('*').eq('college_id', col.id).eq('status', 'active');
-      return res.json((data || []).map((n: any) => ({ id: n.id, title: n.title, description: n.description, subject: n.subject, class: n.class, pdfPath: n.pdf_path, status: n.status, createdAt: n.created_at })));
+      return res.json((data || []).map(n => ({ id: n.id, title: n.title, description: n.description, subject: n.subject, class: n.class, pdfPath: n.pdf_path })));
+    }
+    if (resource === 'faculty') {
+      const { data } = await supabase.from('faculty_staff').select('*').eq('college_id', col.id);
+      return res.json((data || []).map(f => ({ id: f.id, name: f.name, designation: f.designation, description: f.description, imageUrl: f.image_url })));
+    }
+    if (resource === 'principal') {
+      const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
+      return res.json(data ? { id: data.id, name: data.name, message: data.message, imageUrl: data.image_url } : {});
     }
   }
 
-  // ── ADMIN (ALL) ───────────
-  if (resource === 'admin') {
+  // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
+  if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+
+  // 1. Admin Home CMS
+  if (parts[2] === 'admin' && parts[3] === 'home') {
+    const sub = parts[4]; // content, slider, stats, affiliations
+    if (sub === 'content') {
+      if (req.method === 'GET') {
+        const { data } = await supabase.from('home_content').select('*').eq('college_id', col.id).maybeSingle();
+        return res.json(data ? { heroHeading: data.hero_heading, heroSubheading: data.hero_subheading, heroOverlayText: data.hero_overlay_text, featuresHeading: data.features_heading, featuresSubheading: data.features_subheading, affiliationsHeading: data.affiliations_heading, ctaHeading: data.cta_heading, ctaSubheading: data.cta_subheading } : {});
+      }
+      if (req.method === 'POST') {
+        const { data: existing } = await supabase.from('home_content').select('id').eq('college_id', col.id).maybeSingle();
+        const payload = {
+          hero_heading: req.body.heroHeading, hero_subheading: req.body.heroSubheading, hero_overlay_text: req.body.heroOverlayText,
+          features_heading: req.body.featuresHeading, features_subheading: req.body.featuresSubheading,
+          affiliations_heading: req.body.affiliationsHeading, cta_heading: req.body.ctaHeading, cta_subheading: req.body.ctaSubheading,
+          updated_at: new Date().toISOString()
+        };
+        if (existing) await supabase.from('home_content').update(payload).eq('id', existing.id);
+        else await supabase.from('home_content').insert({ ...payload, college_id: col.id });
+        return res.json({ success: true });
+      }
+    }
+    // Generic handlers for slider, stats, affiliations
+    const tableMap: any = { slider: 'home_slider_images', stats: 'home_stats', affiliations: 'home_affiliations' };
+    const table = tableMap[sub];
+    if (table) {
+      if (req.method === 'GET') {
+        const { data } = await supabase.from(table).select('*').eq('college_id', col.id).order('order');
+        if (sub === 'slider') return res.json((data || []).map(s => ({ id: s.id, imageUrl: s.image_url, order: s.order, isActive: s.is_active })));
+        if (sub === 'stats') return res.json((data || []).map(s => ({ id: s.id, label: s.label, number: s.number, icon: s.icon, color: s.color, iconUrl: s.icon_url, order: s.order })));
+        if (sub === 'affiliations') return res.json((data || []).map(a => ({ id: a.id, name: a.name, logoUrl: a.logo_url, link: a.link, order: a.order, isActive: a.is_active })));
+      }
+      if (req.method === 'POST') {
+        const payload = { ...req.body, college_id: col.id };
+        // Map camelCase to snake_case if needed
+        if (sub === 'slider') { payload.image_url = req.body.imageUrl; delete payload.imageUrl; }
+        if (sub === 'affiliations') { payload.logo_url = req.body.logoUrl; delete payload.logoUrl; payload.is_active = true; }
+        const { data, error } = await supabase.from(table).insert(payload).select().single();
+        return res.json(data || { success: true });
+      }
+      if (req.method === 'PATCH') {
+        const id = parts[5];
+        await supabase.from(table).update(req.body).eq('id', id);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        const id = parts[5];
+        await supabase.from(table).delete().eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+  }
+
+  // 2. Admin History CMS
+  if (parts[2] === 'admin' && parts[3] === 'history') {
+    const sub = parts[4];
+    const tableMap: any = { page: 'college_history_page', sections: 'college_history_sections', gallery: 'college_history_gallery' };
+    const table = tableMap[sub];
+    if (table) {
+      if (req.method === 'POST') {
+        const { data: existing } = await supabase.from(table).select('id').eq('college_id', col.id).eq('id', req.body.id || '').maybeSingle();
+        const payload = { ...req.body, college_id: col.id };
+        if (existing) await supabase.from(table).update(payload).eq('id', existing.id);
+        else await supabase.from(table).insert(payload);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from(table).delete().eq('id', parts[5]);
+        return res.json({ success: true });
+      }
+    }
+  }
+
+  // 3. Admin Principal CMS
+  if (parts[2] === 'admin' && parts[3] === 'principal') {
     if (req.method === 'GET') {
-      if (subResource === 'settings') {
-        const { data: d } = await supabase.from('site_settings').select('*').eq('college_id', col.id).maybeSingle();
-        if (!d) return res.json({});
-        return res.json({
-          id: d.id, primaryColor: d.primary_color, navbarLogo: d.navbar_logo, loadingLogo: d.loading_logo,
-          instituteShortName: d.institute_short_name, instituteFullName: d.institute_full_name,
-          footerTitle: d.footer_title, footerDescription: d.footer_description,
-          facebookUrl: d.facebook_url, twitterUrl: d.twitter_url, instagramUrl: d.instagram_url, youtubeUrl: d.youtube_url,
-          creditsText: d.credits_text, contributorsText: d.contributors_text, contactAddress: d.contact_address,
-          contactPhone: d.contact_phone, contactEmail: d.contact_email, mapEmbedUrl: d.map_embed_url, googleMapLink: d.google_map_link,
-          footerTagline: d.footer_tagline, heroBackgroundLogo: d.hero_background_logo, heroBackgroundOpacity: d.hero_background_opacity,
-          cardHeaderText: d.card_header_text, cardSubheaderText: d.card_subheader_text, cardLogoUrl: d.card_logo_url,
-          cardQrEnabled: d.card_qr_enabled, cardQrUrl: d.card_qr_url, cardTermsText: d.card_terms_text,
-          cardContactAddress: d.card_contact_address, cardContactEmail: d.card_contact_email, cardContactPhone: d.card_contact_phone,
-          rbWatermarkText: d.rb_watermark_text, rbWatermarkOpacity: d.rb_watermark_opacity, rbDisclaimerText: d.rb_disclaimer_text,
-          rbWatermarkEnabled: d.rb_watermark_enabled, easypaisaNumber: d.easypaisa_number, bankAccountNumber: d.bank_account_number,
-          bankName: d.bank_name, bankBranch: d.bank_branch, accountTitle: d.account_title
-        });
-      }
-      if (subResource === 'books') {
-        const { data } = await supabase.from('books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
-        // Corrected mapper for admin/books
-        return res.json((data || []).map((b: any) => ({
-          id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description,
-          bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies
-        })));
-      }
-      if (subResource === 'library-cards') {
-        const { data } = await supabase.from('library_card_applications').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
-        // Corrected mapper for admin/library-card-applications
-        return res.json((data || []).map((c: any) => ({
-          id: c.id, firstName: c.first_name, lastName: c.last_name, fatherName: c.father_name, email: c.email, phone: c.phone,
-          class: c.class, field: c.field, rollNo: c.roll_no, cardNumber: c.card_number, status: c.status, createdAt: c.created_at, dynamicFields: c.dynamic_fields
-        })));
-      }
-      if (subResource === 'donations') {
-        const { data } = await supabase.from('donations').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
-        return res.json((data || []).map((d: any) => ({ id: d.id, amount: d.amount, method: d.method, donorName: d.name, email: d.email, message: d.message, createdAt: d.created_at })));
-      }
-      if (subResource === 'notifications') {
-        const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
-        return res.json((data || []).map((n: any) => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status, createdAt: n.created_at })));
-      }
-      if (subResource === 'events') {
-        const { data } = await supabase.from('events').select('*').eq('college_id', col.id).order('date', { ascending: false });
-        return res.json((data || []).map((e: any) => ({ id: e.id, title: e.title, description: e.description, images: e.images, date: e.date, createdAt: e.created_at })));
-      }
-      if (subResource === 'blog') {
-        const { data } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
-        return res.json((data || []).map((p: any) => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, content: p.content, featuredImage: p.featured_image, isPinned: p.is_pinned, status: p.status, createdAt: p.created_at })));
-      }
+      const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
+      return res.json(data ? { id: data.id, name: data.name, message: data.message, imageUrl: data.image_url } : {});
     }
-
-    if (!isAdmin) return res.status(403).json({ error: 'Unauthorized: Admin token required' });
-
-    if (subResource === 'settings' && req.method === 'PATCH') {
-       const updates: any = { updated_at: new Date().toISOString() };
-       const fieldMap: any = {
-         instituteFullName: 'institute_full_name', instituteShortName: 'institute_short_name', primaryColor: 'primary_color',
-         navbarLogo: 'navbar_logo', loadingLogo: 'loading_logo', heroBackgroundLogo: 'hero_background_logo',
-         heroBackgroundOpacity: 'hero_background_opacity', footerTitle: 'footer_title', footerDescription: 'footer_description',
-         footerTagline: 'footer_tagline', facebookUrl: 'facebook_url', twitterUrl: 'twitter_url', instagramUrl: 'instagram_url',
-         youtubeUrl: 'youtube_url', contactAddress: 'contact_address', contactPhone: 'contact_phone', contactEmail: 'contact_email',
-         mapEmbedUrl: 'map_embed_url', googleMapLink: 'google_map_link', cardHeaderText: 'card_header_text',
-         cardSubheaderText: 'card_subheader_text', cardLogoUrl: 'card_logo_url', cardQrEnabled: 'card_qr_enabled',
-         cardQrUrl: 'card_qr_url', cardTermsText: 'card_terms_text', cardContactAddress: 'card_contact_address',
-         cardContactEmail: 'card_contact_email', cardContactPhone: 'card_contact_phone', rbWatermarkText: 'rb_watermark_text',
-         rbWatermarkOpacity: 'rb_watermark_opacity', rbDisclaimerText: 'rb_disclaimer_text', rbWatermarkEnabled: 'rb_watermark_enabled',
-         easypaisaNumber: 'easypaisa_number', bankAccountNumber: 'bank_account_number', bankName: 'bank_name',
-         bankBranch: 'bank_branch', accountTitle: 'account_title', creditsText: 'credits_text', contributorsText: 'contributors_text'
-       };
-       for (const [k, v] of Object.entries(req.body || {})) {
-         let value = v;
-         if (k === 'rbWatermarkOpacity' || k === 'heroBackgroundOpacity') value = parseFloat(v as string) || 0;
-         const dbKey = fieldMap[k] || k;
-         updates[dbKey] = value;
-       }
-       const { data: existing } = await supabase.from('site_settings').select('id').eq('college_id', col.id).maybeSingle();
-       if (existing) await supabase.from('site_settings').update(updates).eq('id', existing.id);
-       else { updates.college_id = col.id; await supabase.from('site_settings').insert(updates); }
-       return res.json({ success: true });
+    if (req.method === 'POST') {
+      const { data: ex } = await supabase.from('principal').select('id').eq('college_id', col.id).maybeSingle();
+      const payload = {
+        name: req.body.name,
+        message: req.body.message,
+        image_url: req.body.imageUrl,
+        updated_at: new Date().toISOString()
+      };
+      if (ex) await supabase.from('principal').update(payload).eq('id', ex.id);
+      else await supabase.from('principal').insert({ ...payload, college_id: col.id });
+      return res.json({ success: true });
     }
   }
 
-  return res.status(404).json({ error: 'Route not found', path, parts });
+  // 3. Admin Settings (Theme & Branding)
+  if (subResource === 'settings' && req.method === 'PATCH') {
+    const updates: any = { updated_at: new Date().toISOString() };
+    const fieldMap: any = {
+      instituteFullName: 'institute_full_name', instituteShortName: 'institute_short_name', primaryColor: 'primary_color',
+      navbarLogo: 'navbar_logo', loadingLogo: 'loading_logo', heroBackgroundLogo: 'hero_background_logo',
+      heroBackgroundOpacity: 'hero_background_opacity', footerTitle: 'footer_title', footerDescription: 'footer_description',
+      footerTagline: 'footer_tagline', facebookUrl: 'facebook_url', twitterUrl: 'twitter_url', instagramUrl: 'instagram_url',
+      youtubeUrl: 'youtube_url', contactAddress: 'contact_address', contactPhone: 'contact_phone', contactEmail: 'contact_email',
+      mapEmbedUrl: 'map_embed_url', googleMapLink: 'google_map_link', cardHeaderText: 'card_header_text',
+      cardSubheaderText: 'card_subheader_text', cardLogoUrl: 'card_logo_url', cardQrEnabled: 'card_qr_enabled',
+      cardQrUrl: 'card_qr_url', cardTermsText: 'card_terms_text', cardContactAddress: 'card_contact_address',
+      cardContactEmail: 'card_contact_email', cardContactPhone: 'card_contact_phone', rbWatermarkText: 'rb_watermark_text',
+      rbWatermarkOpacity: 'rb_watermark_opacity', rbDisclaimerText: 'rb_disclaimer_text', rbWatermarkEnabled: 'rb_watermark_enabled',
+      easypaisaNumber: 'easypaisa_number', bankAccountNumber: 'bank_account_number', bankName: 'bank_name',
+      bankBranch: 'bank_branch', accountTitle: 'account_title', creditsText: 'credits_text', contributorsText: 'contributors_text'
+    };
+    for (const [k, v] of Object.entries(req.body || {})) {
+      let val = v;
+      if (k === 'rbWatermarkOpacity' || k === 'heroBackgroundOpacity') val = parseFloat(v as string) || 0;
+      updates[fieldMap[k] || k] = val;
+    }
+    const { data: ex } = await supabase.from('site_settings').select('id').eq('college_id', col.id).maybeSingle();
+    if (ex) await supabase.from('site_settings').update(updates).eq('id', ex.id);
+    else await supabase.from('site_settings').insert({ ...updates, college_id: col.id });
+    const { data: updated } = await supabase.from('site_settings').select('*').eq('college_id', col.id).single();
+    // Return mapped object for frontend context
+    return res.json({
+      id: updated.id, primaryColor: updated.primary_color, navbarLogo: updated.navbar_logo, loadingLogo: updated.loading_logo,
+      instituteShortName: updated.institute_short_name, instituteFullName: updated.institute_full_name,
+      footerTitle: updated.footer_title, footerDescription: updated.footer_description,
+      facebookUrl: updated.facebook_url, twitterUrl: updated.twitter_url, instagramUrl: updated.instagram_url, youtubeUrl: updated.youtube_url,
+      creditsText: updated.credits_text, contributorsText: updated.contributors_text, contactAddress: updated.contact_address,
+      contactPhone: updated.contact_phone, contactEmail: updated.contact_email, mapEmbedUrl: updated.map_embed_url, googleMapLink: updated.google_map_link,
+      footerTagline: updated.footer_tagline, heroBackgroundLogo: updated.hero_background_logo, heroBackgroundOpacity: updated.hero_background_opacity,
+      cardHeaderText: updated.card_header_text, cardSubheaderText: updated.card_subheader_text, cardLogoUrl: updated.card_logo_url,
+      cardQrEnabled: updated.card_qr_enabled, cardQrUrl: updated.card_qr_url, cardTermsText: updated.card_terms_text,
+      cardContactAddress: updated.card_contact_address, cardContactEmail: updated.card_contact_email, cardContactPhone: updated.card_contact_phone,
+      rbWatermarkText: updated.rb_watermark_text, rbWatermarkOpacity: updated.rb_watermark_opacity, rbDisclaimerText: updated.rb_disclaimer_text,
+      rbWatermarkEnabled: updated.rb_watermark_enabled, easypaisaNumber: updated.easypaisa_number, bankAccountNumber: updated.bank_account_number,
+      bankName: updated.bank_name, bankBranch: updated.bank_branch, accountTitle: updated.account_title
+    });
+  }
+
+  // 4. Other Admin Lists (Books, Donations, etc.)
+  if (req.method === 'GET' && resource === 'admin') {
+    if (subResource === 'books') {
+      const { data } = await supabase.from('books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map(b => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
+    }
+    if (subResource === 'library-cards') {
+      const { data } = await supabase.from('library_card_applications').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map(c => ({ id: c.id, firstName: c.first_name, lastName: c.last_name, fatherName: c.father_name, email: c.email, phone: c.phone, class: c.class, field: c.field, rollNo: c.roll_no, cardNumber: c.card_number, status: c.status, createdAt: c.created_at, dynamicFields: c.dynamic_fields })));
+    }
+    if (subResource === 'donations') {
+       const { data } = await supabase.from('donations').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+       return res.json((data || []).map(d => ({ id: d.id, amount: d.amount, method: d.method, donorName: d.name, email: d.email, message: d.message, createdAt: d.created_at })));
+    }
+    if (subResource === 'notifications') {
+      const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map(n => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status, createdAt: n.created_at })));
+    }
+    if (subResource === 'events') {
+      const { data } = await supabase.from('events').select('*').eq('college_id', col.id).order('date', { ascending: false });
+      return res.json((data || []).map(e => ({ id: e.id, title: e.title, description: e.description, images: e.images, date: e.date, createdAt: e.created_at })));
+    }
+    if (subResource === 'blog') {
+      const { data } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map(p => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, content: p.content, featuredImage: p.featured_image, isPinned: p.is_pinned, status: p.status, createdAt: p.created_at })));
+    }
+    if (subResource === 'principal') {
+      const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
+      return res.json(data || {});
+    }
+  }
+
+  return res.status(404).json({ error: 'Route not found', path });
 }
 
 

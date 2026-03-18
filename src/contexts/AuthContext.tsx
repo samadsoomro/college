@@ -36,14 +36,12 @@ interface UserProfile {
 }
 
 interface AuthContextType {
-  user: {
-    id: string;
-    email: string;
-    role?: "superadmin" | "admin" | "user";
-    collegeSlug?: string | null;
-  } | null;
+  user: any;
   loading: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  isLibraryCard: boolean;
+  profile: any;
   login: (email?: string, password?: string) => Promise<{ success: boolean; error?: string; redirect?: string; role?: string }>;
   logout: () => Promise<void>;
 }
@@ -57,23 +55,39 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { collegeSlug: routeSlug } = useParams<{ collegeSlug: string }>();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isLibraryCard, setIsLibraryCard] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
     if (role) {
-      setIsAdmin(localStorage.getItem('isAdmin') === 'true' || localStorage.getItem('isSuperAdmin') === 'true');
-      setUser({ role, collegeSlug: localStorage.getItem('collegeSlug'), id: localStorage.getItem('userId') });
+      const isS = localStorage.getItem('isSuperAdmin') === 'true';
+      const isA = localStorage.getItem('isAdmin') === 'true' || isS;
+      const isL = localStorage.getItem('isLibraryCard') === 'true';
+      
+      setIsAdmin(isA);
+      setIsSuperAdmin(isS);
+      setIsLibraryCard(isL);
+      
+      setUser({ 
+        role, 
+        collegeSlug: localStorage.getItem('collegeSlug'), 
+        id: localStorage.getItem('userId'),
+        email: localStorage.getItem('userEmail'),
+        name: localStorage.getItem('userName')
+      });
     }
     setLoading(false);
   }, []);
 
   const login = async (email?: string, password?: string) => {
     try {
-      const res = await fetch(`/api/${collegeSlug}/auth/login`, {
+      const res = await fetch(`/api/${routeSlug}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -82,8 +96,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!res.ok) return { success: false, error: data.error };
       
       localStorage.setItem('userRole', data.role);
+      localStorage.setItem('userEmail', email || '');
       if (data.collegeSlug) localStorage.setItem('collegeSlug', data.collegeSlug);
       if (data.role === 'admin') localStorage.setItem('isAdmin', 'true');
+      if (data.role === 'superadmin') localStorage.setItem('isSuperAdmin', 'true');
       if (data.userId) localStorage.setItem('userId', data.userId);
       
       window.location.href = data.redirect;
@@ -95,11 +111,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.clear();
     setUser(null);
     setIsAdmin(false);
-    window.location.href = `/${collegeSlug}/login`;
+    setIsSuperAdmin(false);
+    setIsLibraryCard(false);
+    window.location.href = `/${routeSlug}/login`;
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, isLibraryCard, profile, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
