@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
+// import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/use-toast";
 import { useCollege } from "@/contexts/CollegeContext";
 import { adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
@@ -67,7 +67,7 @@ const ThemeBranding: React.FC = () => {
         
         const res = await fetch(`/api/${collegeSlug}/admin/settings`, {
           method: "PATCH",
-          headers: adminHeaders,
+          headers: adminHeaders(),
           body: JSON.stringify(updates),
           credentials: "include",
         });
@@ -175,10 +175,14 @@ const ThemeBranding: React.FC = () => {
                     <label className="text-xs font-bold uppercase text-muted-foreground">Hero Background Opacity</label>
                     <span className="text-xs font-mono">{formData.heroBackgroundOpacity || 0.5}</span>
                   </div>
-                  <Slider 
-                    value={[formData.heroBackgroundOpacity || 0.5]} 
-                    min={0} max={1} step={0.05} 
-                    onValueChange={(val) => handleSliderChange("heroBackgroundOpacity", val)} 
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={formData.heroBackgroundOpacity || 0.5}
+                    onChange={(e) => handleSliderChange("heroBackgroundOpacity", [parseFloat(e.target.value)])}
+                    className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-primary"
                   />
                 </div>
               </div>
@@ -285,7 +289,15 @@ const ThemeBranding: React.FC = () => {
                   <label className="text-xs font-bold uppercase text-muted-foreground">Watermark Opacity</label>
                   <span className="text-xs">{formData.rbWatermarkOpacity || 0.1}</span>
                 </div>
-                <Slider value={[formData.rbWatermarkOpacity || 0.1]} min={0} max={1} step={0.01} onValueChange={(val) => handleSliderChange("rbWatermarkOpacity", val)} />
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={formData.rbWatermarkOpacity || 0.1}
+                  onChange={(e) => handleSliderChange("rbWatermarkOpacity", [parseFloat(e.target.value)])}
+                  className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-primary"
+                />
               </div>
               <div className="space-y-2 flex items-center gap-2 pt-4">
                 <Switch checked={formData.rbWatermarkEnabled} onCheckedChange={(val) => handleSwitchChange("rbWatermarkEnabled", val)} />
