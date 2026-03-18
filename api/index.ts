@@ -145,8 +145,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json((data || []).map(e => ({ id: e.id, title: e.title, description: e.description, images: e.images, date: e.date })));
     }
     if (resource === 'blog') {
+      // Individual blog post by slug or id
+      if (subResource && !['stream'].includes(subResource)) {
+        const { data: post } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).or(`slug.eq.${subResource},id.eq.${subResource}`).eq('status', 'published').maybeSingle();
+        if (!post) return res.status(404).json({ error: 'Post not found' });
+        return res.json({ id: post.id, title: post.title, slug: post.slug, shortDescription: post.short_description, content: post.content, featuredImage: post.featured_image, createdAt: post.created_at, isPinned: post.is_pinned });
+      }
       const { data } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).eq('status', 'published').order('created_at', { ascending: false });
-      return res.json((data || []).map(p => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, featuredImage: p.featured_image, createdAt: p.created_at })));
+      return res.json((data || []).map((p: any) => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, featuredImage: p.featured_image, createdAt: p.created_at })));
     }
     if (resource === 'notifications') {
       const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).eq('status', 'active').order('created_at', { ascending: false });
@@ -154,21 +160,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (resource === 'rare-books') {
       if (subResource === 'stream') {
-        const id = parts[5];
+        // Path: /api/:slug/rare-books/stream/:id
+        const id = parts[4]; // parts=[api,slug,rare-books,stream,id]
         const { data: book } = await supabase.from('rare_books').select('*').eq('id', id).single();
         if (!book) return res.status(404).json({ error: 'Book not found' });
         
         // Proxy storage directly to avoid CORS/Auth issues for protected viewer
-        const bucket = book.storage_bucket || 'rare-books';
-        const fileName = book.pdf_path.split('/').pop() || '';
+        const bucket = 'rare-books';
+        // pdf_path might be a full URL or just a filename
+        const pdfPath = book.pdf_path || '';
+        let fileName = pdfPath;
+        if (pdfPath.includes('/')) {
+          fileName = pdfPath.split('/').pop() || '';
+        }
         const { data, error } = await supabase.storage.from(bucket).download(fileName);
         
-        if (error) return res.status(500).json({ error: 'Storage fetch failed' });
+        if (error) {
+          console.error('[RARE-BOOKS STREAM] Error:', error.message, 'bucket:', bucket, 'file:', fileName);
+          return res.status(500).json({ error: 'Storage fetch failed: ' + error.message });
+        }
         res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline');
         return res.send(Buffer.from(await data.arrayBuffer()));
       }
       const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id).eq('status', 'active');
-      return res.json((data || []).map(b => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image })));
+      return res.json((data || []).map((b: any) => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image })));
     }
     if (resource === 'notes') {
       const { data } = await supabase.from('notes').select('*').eq('college_id', col.id).eq('status', 'active');
@@ -245,12 +261,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const tableMap: any = { page: 'college_history_page', sections: 'college_history_sections', gallery: 'college_history_gallery' };
     const table = tableMap[sub];
     if (table) {
+      if (req.method === 'GET') {
+        const { data } = await supabase.from(table).select('*').eq('college_id', col.id).order('display_order');
+        if (sub === 'sections') return res.json((data || []).map((s: any) => ({ id: s.id, title: s.title, description: s.description, imageUrl: s.image_url, iconName: s.icon_name, layoutType: s.layout_type, isFullWidth: s.is_full_width, displayOrder: s.display_order })));
+        if (sub === 'gallery') return res.json((data || []).map((g: any) => ({ id: g.id, imageUrl: g.image_url, caption: g.caption, displayOrder: g.display_order })));
+        if (sub === 'page') { const { data: d } = await supabase.from(table).select('*').eq('college_id', col.id).maybeSingle(); return res.json(d || {}); }
+        return res.json(data || []);
+      }
       if (req.method === 'POST') {
-        const { data: existing } = await supabase.from(table).select('id').eq('college_id', col.id).eq('id', req.body.id || '').maybeSingle();
-        const payload = { ...req.body, college_id: col.id };
-        if (existing) await supabase.from(table).update(payload).eq('id', existing.id);
-        else await supabase.from(table).insert(payload);
-        return res.json({ success: true });
+        if (sub === 'sections') {
+          const payload = {
+            college_id: col.id, title: req.body.title, description: req.body.description,
+            image_url: req.body.imageUrl, icon_name: req.body.iconName, layout_type: req.body.layoutType,
+            is_full_width: req.body.isFullWidth, display_order: req.body.displayOrder || 0
+          };
+          if (req.body.id) {
+            await supabase.from(table).update(payload).eq('id', req.body.id);
+          } else {
+            await supabase.from(table).insert(payload);
+          }
+          return res.json({ success: true });
+        }
+        if (sub === 'gallery') {
+          const payload = { college_id: col.id, image_url: req.body.imageUrl, caption: req.body.caption || '', display_order: req.body.displayOrder || 0 };
+          await supabase.from(table).insert(payload);
+          return res.json({ success: true });
+        }
+        if (sub === 'page') {
+          const { data: existing } = await supabase.from(table).select('id').eq('college_id', col.id).maybeSingle();
+          const payload = { title: req.body.title, subtitle: req.body.subtitle };
+          if (existing) await supabase.from(table).update(payload).eq('id', (existing as any).id);
+          else await supabase.from(table).insert({ ...payload, college_id: col.id });
+          return res.json({ success: true });
+        }
+      }
+      if (req.method === 'PATCH') {
+        const itemId = parts[5];
+        if (sub === 'sections') {
+          const payload: any = {};
+          if (req.body.title !== undefined) payload.title = req.body.title;
+          if (req.body.description !== undefined) payload.description = req.body.description;
+          if (req.body.imageUrl !== undefined) payload.image_url = req.body.imageUrl;
+          if (req.body.iconName !== undefined) payload.icon_name = req.body.iconName;
+          if (req.body.layoutType !== undefined) payload.layout_type = req.body.layoutType;
+          if (req.body.isFullWidth !== undefined) payload.is_full_width = req.body.isFullWidth;
+          if (req.body.displayOrder !== undefined) payload.display_order = req.body.displayOrder;
+          await supabase.from(table).update(payload).eq('id', itemId);
+          return res.json({ success: true });
+        }
       }
       if (req.method === 'DELETE') {
         await supabase.from(table).delete().eq('id', parts[5]);
@@ -415,6 +473,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (req.method === 'DELETE') {
         await supabase.from('rare_books').delete().eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'events') {
+      if (req.method === 'POST') {
+        const payload: any = { college_id: col.id, title: req.body.title, description: req.body.description, date: req.body.date, images: req.body.images || [] };
+        const { data, error } = await supabase.from('events').insert(payload).select().single();
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json(data);
+      }
+      if (req.method === 'PATCH') {
+        const payload: any = {};
+        if (req.body.title !== undefined) payload.title = req.body.title;
+        if (req.body.description !== undefined) payload.description = req.body.description;
+        if (req.body.date !== undefined) payload.date = req.body.date;
+        if (req.body.images !== undefined) payload.images = req.body.images;
+        await supabase.from('events').update(payload).eq('id', id);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from('events').delete().eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'notifications') {
+      // Handle sub-routes: /notifications/:id/status and /notifications/:id/pin
+      const subAction = parts[5]; // 'status' or 'pin'
+      if (req.method === 'POST') {
+        const payload: any = { college_id: col.id, title: req.body.title, message: req.body.message, image: req.body.image, pin: req.body.pin || false, status: req.body.status || 'active' };
+        const { data, error } = await supabase.from('notifications').insert(payload).select().single();
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json(data);
+      }
+      if (req.method === 'PATCH') {
+        if (subAction === 'status') {
+          // Toggle status
+          const { data: curr } = await supabase.from('notifications').select('status').eq('id', id).single();
+          const newStatus = (curr as any)?.status === 'active' ? 'inactive' : 'active';
+          await supabase.from('notifications').update({ status: newStatus }).eq('id', id);
+          return res.json({ success: true, status: newStatus });
+        }
+        if (subAction === 'pin') {
+          // Toggle pin
+          const { data: curr } = await supabase.from('notifications').select('pin').eq('id', id).single();
+          const newPin = !(curr as any)?.pin;
+          await supabase.from('notifications').update({ pin: newPin }).eq('id', id);
+          return res.json({ success: true, pin: newPin });
+        }
+        await supabase.from('notifications').update(req.body).eq('id', id);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from('notifications').delete().eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'books') {
+      if (req.method === 'POST') {
+        const payload: any = { college_id: col.id, book_name: req.body.bookName, author_name: req.body.authorName, short_intro: req.body.shortIntro, description: req.body.description, book_image: req.body.bookImage, total_copies: req.body.totalCopies || '1', available_copies: req.body.availableCopies || '1', tools_file_name: req.body.toolsFileName, tools_image: req.body.toolsImage };
+        const { data, error } = await supabase.from('books').insert(payload).select().single();
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json(data);
+      }
+      if (req.method === 'PATCH') {
+        const payload: any = {};
+        if (req.body.bookName !== undefined) payload.book_name = req.body.bookName;
+        if (req.body.authorName !== undefined) payload.author_name = req.body.authorName;
+        if (req.body.shortIntro !== undefined) payload.short_intro = req.body.shortIntro;
+        if (req.body.description !== undefined) payload.description = req.body.description;
+        if (req.body.bookImage !== undefined) payload.book_image = req.body.bookImage;
+        if (req.body.totalCopies !== undefined) payload.total_copies = req.body.totalCopies;
+        if (req.body.availableCopies !== undefined) payload.available_copies = req.body.availableCopies;
+        await supabase.from('books').update(payload).eq('id', id);
+        return res.json({ success: true });
+      }
+      if (req.method === 'DELETE') {
+        await supabase.from('books').delete().eq('id', id);
         return res.json({ success: true });
       }
     }

@@ -106,6 +106,64 @@ export function registerRoutes(app: Express): void {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // ── Universal File Upload Endpoint ─────────────────────────────────────────
+  // All admin modules call this to upload files. It uses the service-role key
+  // on the server so no RLS/anon-key issues.
+  app.post(
+    "/api/:collegeSlug/admin/upload",
+    resolveCollege,
+    (req, res, next) => {
+      // Accept any field name
+      const uploader = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+      uploader.single('file')(req, res, (err) => {
+        if (err) return res.status(400).json({ error: err.message });
+        next();
+      });
+    },
+    async (req: any, res) => {
+      try {
+        const file: Express.Multer.File = req.file;
+        if (!file) return res.status(400).json({ error: "No file provided" });
+
+        const adminToken = req.headers['x-admin-token'];
+        if (!adminToken || adminToken !== 'gcfm-admin-token-2026') {
+          if (!req.session.isAdmin && !req.session.isSuperAdmin) {
+            return res.status(403).json({ error: "Unauthorized" });
+          }
+        }
+
+        const bucket = (req.query.bucket as string) || 'colleges';
+        const ext = file.originalname.split('.').pop() || 'bin';
+        const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+
+        // Ensure bucket exists first
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const bucketExists = (buckets || []).some((b: any) => b.name === bucket);
+        if (!bucketExists) {
+          await supabase.storage.createBucket(bucket, { public: true });
+        }
+
+        const { data, error } = await supabase.storage
+          .from(bucket)
+          .upload(filename, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          });
+
+        if (error) {
+          console.error(`[UPLOAD] Error uploading to ${bucket}:`, error.message);
+          return res.status(500).json({ error: `Upload failed: ${error.message}` });
+        }
+
+        const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filename);
+        return res.json({ url: publicUrl, path: filename });
+      } catch (err: any) {
+        console.error("[UPLOAD] Unexpected error:", err);
+        return res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
   // ── Super Admin Routes ──────────────────────────────────────────────────
   const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
     if (req.session.isSuperAdmin) {
@@ -1966,25 +2024,18 @@ export function registerRoutes(app: Express): void {
     "/api/:collegeSlug/admin/blog",
     resolveCollege,
     requireAdmin,
-    upload.single("featuredImage"),
     async (req: MulterRequest, res) => {
       try {
-        const { title, content, shortDescription, slug, status } = req.body;
+        const { title, content, shortDescription, slug, status, featuredImage: featuredImageUrl } = req.body;
         if (!title || !content || !slug) {
           return res.status(400).json({ error: "Missing required fields" });
         }
-
-        let featuredImage = null;
-        if (req.file) {
-          featuredImage = await storage.uploadFile("blog", req.file);
-        }
-
         const post = await storage.createBlogPost({
           title,
           slug,
           shortDescription: shortDescription || "",
           content,
-          featuredImage, // string or null
+          featuredImage: featuredImageUrl || null,
           status: status || "draft",
         }, req.collegeId!);
         res.json(post);
@@ -1998,26 +2049,16 @@ export function registerRoutes(app: Express): void {
     "/api/:collegeSlug/admin/blog/:id",
     resolveCollege,
     requireAdmin,
-    upload.single("featuredImage"),
     async (req: MulterRequest, res) => {
       try {
-        const { title, content, shortDescription, slug, status } = req.body;
+        const { title, content, shortDescription, slug, status, featuredImage: featuredImageUrl } = req.body;
         const updateData: any = {};
         if (title) updateData.title = title;
         if (content) updateData.content = content;
-        if (shortDescription !== undefined)
-          updateData.shortDescription = shortDescription;
+        if (shortDescription !== undefined) updateData.shortDescription = shortDescription;
         if (slug) updateData.slug = slug;
         if (status) updateData.status = status;
-
-        if (req.file) {
-          const url = await storage.uploadFile("blog", req.file);
-          updateData.featuredImage = url;
-
-          // Delete old image? Ideally yes, but need to fetch old post first.
-          // skipping for simplicity unless strictly required.
-        }
-
+        if (featuredImageUrl !== undefined) updateData.featuredImage = featuredImageUrl;
         const post = await storage.updateBlogPost(req.params.id, updateData, req.collegeId!);
         res.json(post);
       } catch (error: any) {

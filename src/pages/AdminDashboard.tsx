@@ -424,30 +424,44 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       setLoading(true);
-      const formData = new FormData();
-      formData.append("title", eventForm.title);
-      formData.append("description", eventForm.description);
-      formData.append("date", eventForm.date);
 
-      const fileInput = document.getElementById(
-        "eventImages",
-      ) as HTMLInputElement;
-      if (fileInput?.files) {
+      // Upload event images first via backend proxy
+      const imageUrls: string[] = [];
+      const fileInput = document.getElementById("eventImages") as HTMLInputElement;
+      if (fileInput?.files && fileInput.files.length > 0) {
         for (let i = 0; i < fileInput.files.length; i++) {
-          formData.append("eventImages", fileInput.files[i]);
+          const file = fileInput.files[i];
+          const formData = new FormData();
+          formData.append('file', file);
+          const uploadRes = await fetch(`/api/${collegeSlug}/admin/upload?bucket=event-images`, {
+            method: 'POST',
+            headers: { 'x-admin-token': 'gcfm-admin-token-2026' },
+            credentials: 'include',
+            body: formData,
+          });
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            imageUrls.push(uploadData.url);
+          }
         }
       }
 
       const res = await fetch(`/api/${collegeSlug}/admin/events`, {
         method: "POST",
-        headers: adminHeaders(),
-        body: formData,
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: eventForm.title,
+          description: eventForm.description,
+          date: eventForm.date,
+          images: imageUrls,
+        }),
         credentials: "include",
       });
 
       if (res.ok) {
         toast({ title: "Success", description: "Event added successfully" });
         setEventForm({ title: "", description: "", date: "" });
+        if (fileInput) fileInput.value = "";
         fetchEvents();
       } else {
         const err = await res.json();

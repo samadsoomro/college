@@ -13,18 +13,28 @@ export const adminHeaders = () => ({
   'x-admin-token': 'gcfm-admin-token-2026'
 });
 
-// DIRECT SUPABASE UPLOAD WORKAROUND
-export const uploadToSupabase = async (file: File, bucket: string) => {
-  const { createClient } = await import('@supabase/supabase-js');
-  const supabase = createClient(
-    (import.meta as any).env.VITE_SUPABASE_URL,
-    (import.meta as any).env.VITE_SUPABASE_ANON_KEY
-  );
-  const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-  const { data, error } = await supabase.storage.from(bucket).upload(filename, file, { upsert: false });
-  if (error) throw error;
-  const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filename);
-  return publicUrl;
+// BACKEND UPLOAD PROXY — uses service-role key server-side to avoid anon RLS errors
+export const uploadToSupabase = async (file: File, bucket: string, collegeSlug?: string): Promise<string> => {
+  // Try to determine collegeSlug from URL if not provided
+  const slug = collegeSlug || window.location.pathname.split('/')[1] || 'gcfm';
+  
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`/api/${slug}/admin/upload?bucket=${encodeURIComponent(bucket)}`, {
+    method: 'POST',
+    headers: { 'x-admin-token': 'gcfm-admin-token-2026' },
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Upload failed');
+  }
+
+  const data = await res.json();
+  return data.url;
 };
 
 interface UserProfile {

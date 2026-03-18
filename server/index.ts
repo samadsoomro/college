@@ -78,6 +78,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize storage and ensure all required Supabase buckets exist
+  await storage.init();
+  
   registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
