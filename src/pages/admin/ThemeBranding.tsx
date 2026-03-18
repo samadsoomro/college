@@ -18,9 +18,10 @@ import {
 
 const ThemeBranding: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
-   const { settings, refreshSettings } = useCollege();
+   const { settings, refreshSettings, updateSettings } = useCollege();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<any>({ ...settings });
   
@@ -60,7 +61,7 @@ const ThemeBranding: React.FC = () => {
       const isProd = window.location.hostname !== 'localhost';
       const updates = { ...formData };
 
-      const { updateSettings } = useCollege();
+
       await updateSettings(updates);
 
       toast({ title: "Success", description: "Settings saved successfully!" });
