@@ -173,12 +173,14 @@ export default function AdminDashboard() {
   );
 
   useEffect(() => {
-    if (!isAdmin) {
+    const isAdminStored = localStorage.getItem('isAdmin') === 'true' || 
+                          localStorage.getItem('isSuperAdmin') === 'true';
+    if (!isAdminStored) {
       navigate(`/${collegeSlug}/login`);
     } else {
       fetchMessages();
     }
-  }, [isAdmin, navigate, collegeSlug]);
+  }, [navigate, collegeSlug]);
 
   const fetchMessages = async () => {
     try {

@@ -24,6 +24,7 @@ interface AuthContextType {
     email: string;
     name?: string;
     cardNumber?: string;
+    role?: "superadmin" | "admin" | "user";
     isLibraryCard?: boolean;
   } | null;
   profile: UserProfile | null;
@@ -74,6 +75,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     email: string;
     name?: string;
     cardNumber?: string;
+    role?: "superadmin" | "admin" | "user";
     isLibraryCard?: boolean;
   } | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -91,11 +93,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const storedUserId = localStorage.getItem('userId');
       const storedCollegeSlug = localStorage.getItem('collegeSlug');
 
-      if (storedRole && (storedCollegeSlug === collegeSlug || (!collegeSlug && !storedCollegeSlug))) {
+      if (storedRole && (storedCollegeSlug === collegeSlug || !collegeSlug)) {
         setUser({ 
           id: storedUserId || 'unknown', 
           email: '', // Email not stored for security 
-          name: storedIsSuperAdmin ? 'Super Admin' : (storedIsAdmin ? 'College Admin' : 'User') 
+          name: storedIsSuperAdmin ? 'Super Admin' : (storedIsAdmin ? 'College Admin' : 'User'),
+          role: storedRole as any
         });
         setIsAdmin(storedIsAdmin || storedIsSuperAdmin);
         setIsSuperAdmin(storedIsSuperAdmin);

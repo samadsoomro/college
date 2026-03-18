@@ -71,7 +71,8 @@ const RareBooks: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetch(`/api/${collegeSlug}/rare-books`)
+    setLoading(true);
+    fetch(`/api/${collegeSlug}/rare-books`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         setBooks(data);
