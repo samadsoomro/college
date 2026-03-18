@@ -91,6 +91,11 @@ const Login: React.FC = () => {
 
       // Success - Use window.location.href to force a full reload and clear state
       if (data.redirect) {
+        localStorage.setItem('userRole', data.role);
+        if (data.collegeSlug) localStorage.setItem('collegeSlug', data.collegeSlug);
+        if (data.role === 'admin') localStorage.setItem('isAdmin', 'true');
+        if (data.role === 'superadmin') localStorage.setItem('isSuperAdmin', 'true');
+        if (data.userId) localStorage.setItem('userId', data.userId);
         window.location.href = data.redirect;
       }
     } catch (err: any) {

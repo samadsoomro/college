@@ -177,6 +177,7 @@ export default function AdminDashboard() {
                           localStorage.getItem('isSuperAdmin') === 'true';
     if (!isAdminStored) {
       navigate(`/${collegeSlug}/login`);
+      return;
     } else {
       fetchMessages();
     }

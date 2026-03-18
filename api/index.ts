@@ -46,7 +46,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       slug: college.slug,
       storageBucket: college.storage_bucket,
       isActive: college.is_active,
-      // Spread all settings fields for CollegeContext:
       primaryColor: settings?.primary_color || '#006600',
       instituteFullName: settings?.institute_full_name || college.name,
       instituteShortName: settings?.institute_short_name || college.short_name,
@@ -108,94 +107,184 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from('users').select('*').eq('email', email).eq('college_id', college.id).maybeSingle();
     if (user) {
       const match = await bcrypt.compare(password, user.password);
-      if (match) return res.json({ redirect: `/${collegeSlug}`, role: 'user', userId: user.id });
+      if (match) return res.json({ redirect: `/${collegeSlug}`, role: 'user', userId: user.id, collegeSlug });
     }
 
     return res.status(401).json({ error: 'Invalid email or password' });
   }
 
   // ── Public data routes ──────────────────────────────
-  // Books
+  // Books route — map fields
   const booksMatch = path.match(/\/api\/([^\/]+)\/books$/);
   if (booksMatch && req.method === 'GET') {
     const slug = booksMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
-    return res.json(data || []);
+    return res.json((data || []).map((b: any) => ({
+      id: b.id,
+      bookName: b.book_name,
+      authorName: b.author_name,
+      shortIntro: b.short_intro,
+      description: b.description,
+      bookImage: b.book_image,
+      totalCopies: b.total_copies,
+      availableCopies: b.available_copies,
+      createdAt: b.created_at
+    })));
   }
 
-  // Rare books
+  // Rare books route — map fields
   const rareBooksMatch = path.match(/\/api\/([^\/]+)\/rare-books$/);
   if (rareBooksMatch && req.method === 'GET') {
     const slug = rareBooksMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id).eq('status', 'active');
-    return res.json(data || []);
+    return res.json((data || []).map((b: any) => ({
+      id: b.id, title: b.title, description: b.description,
+      category: b.category, pdfPath: b.pdf_path,
+      coverImage: b.cover_image, status: b.status,
+      createdAt: b.created_at
+    })));
   }
 
-  // Notes
+  // Notes route — map fields
   const notesMatch = path.match(/\/api\/([^\/]+)\/notes$/);
   if (notesMatch && req.method === 'GET') {
     const slug = notesMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('notes').select('*').eq('college_id', col.id).eq('status', 'active');
-    return res.json(data || []);
+    return res.json((data || []).map((n: any) => ({
+      id: n.id, title: n.title, description: n.description,
+      subject: n.subject, class: n.class,
+      pdfPath: n.pdf_path, status: n.status,
+      createdAt: n.created_at
+    })));
   }
 
-  // Blog posts
+  // Blog list route
   const blogMatch = path.match(/\/api\/([^\/]+)\/blog$/);
   if (blogMatch && req.method === 'GET') {
     const slug = blogMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).eq('status', 'published').order('created_at', { ascending: false });
-    return res.json(data || []);
+    return res.json((data || []).map((p: any) => ({
+      id: p.id, title: p.title, slug: p.slug,
+      shortDescription: p.short_description, content: p.content,
+      featuredImage: p.featured_image, isPinned: p.is_pinned,
+      status: p.status, createdAt: p.created_at
+    })));
   }
 
-  // Events
+  // Blog single post route
+  const blogPostMatch = path.match(/\/api\/([^\/]+)\/blog\/([^\/]+)$/);
+  if (blogPostMatch && req.method === 'GET') {
+    const slug = blogPostMatch[1];
+    const postSlug = blogPostMatch[2];
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (!col) return res.status(404).json({ error: 'College not found' });
+    const { data } = await supabase.from('blog_posts').select('*').eq('slug', postSlug).eq('college_id', col.id).eq('status', 'published').maybeSingle();
+    if (!data) return res.status(404).json({ error: 'Post not found' });
+    return res.json({
+      id: data.id, title: data.title, slug: data.slug,
+      shortDescription: data.short_description, content: data.content,
+      featuredImage: data.featured_image, createdAt: data.created_at
+    });
+  }
+
+  // Events route — map fields
   const eventsMatch = path.match(/\/api\/([^\/]+)\/events$/);
   if (eventsMatch && req.method === 'GET') {
     const slug = eventsMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('events').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
-    return res.json(data || []);
+    return res.json((data || []).map((e: any) => ({
+      id: e.id, title: e.title, description: e.description,
+      images: e.images || [], date: e.date,
+      createdAt: e.created_at
+    })));
   }
 
-  // Notifications
+  // Notifications — map fields
   const notifMatch = path.match(/\/api\/([^\/]+)\/notifications$/);
   if (notifMatch && req.method === 'GET') {
     const slug = notifMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).eq('status', 'active');
-    return res.json(data || []);
+    return res.json((data || []).map((n: any) => ({
+      id: n.id, title: n.title, message: n.message,
+      image: n.image, pin: n.pin, status: n.status,
+      createdAt: n.created_at
+    })).sort((a: any, b: any) => a.pin ? -1 : 1));
   }
 
-  // Faculty
+  // Faculty — map fields
   const facultyMatch = path.match(/\/api\/([^\/]+)\/faculty$/);
   if (facultyMatch && req.method === 'GET') {
     const slug = facultyMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('faculty_staff').select('*').eq('college_id', col.id);
-    return res.json(data || []);
+    return res.json((data || []).map((f: any) => ({
+      id: f.id, name: f.name, designation: f.designation,
+      description: f.description, imageUrl: f.image_url,
+      createdAt: f.created_at
+    })));
   }
 
-  // Principal
+  // Principal — map fields
   const principalMatch = path.match(/\/api\/([^\/]+)\/principal$/);
   if (principalMatch && req.method === 'GET') {
     const slug = principalMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
-    return res.json(data || {});
+    if (!data) return res.json({});
+    return res.json({ id: data.id, name: data.name, message: data.message, imageUrl: data.image_url });
   }
 
-  // Home data
+  // History page
+  const historyPageMatch = path.match(/\/api\/([^\/]+)\/history\/page$/);
+  if (historyPageMatch && req.method === 'GET') {
+    const slug = historyPageMatch[1];
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (!col) return res.status(404).json({ error: 'College not found' });
+    const { data } = await supabase.from('college_history_page').select('*').eq('college_id', col.id).maybeSingle();
+    return res.json(data || { title: 'History of College', subtitle: 'Our legacy' });
+  }
+
+  // History sections
+  const historySectionsMatch = path.match(/\/api\/([^\/]+)\/history\/sections$/);
+  if (historySectionsMatch && req.method === 'GET') {
+    const slug = historySectionsMatch[1];
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (!col) return res.status(404).json({ error: 'College not found' });
+    const { data } = await supabase.from('college_history_sections').select('*').eq('college_id', col.id).order('display_order');
+    return res.json((data || []).map((s: any) => ({
+      id: s.id, title: s.title, description: s.description,
+      iconName: s.icon_name, imageUrl: s.image_url,
+      layoutType: s.layout_type, displayOrder: s.display_order
+    })));
+  }
+
+  // History gallery
+  const historyGalleryMatch = path.match(/\/api\/([^\/]+)\/history\/gallery$/);
+  if (historyGalleryMatch && req.method === 'GET') {
+    const slug = historyGalleryMatch[1];
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (!col) return res.status(404).json({ error: 'College not found' });
+    const { data } = await supabase.from('college_history_gallery').select('*').eq('college_id', col.id).order('display_order');
+    return res.json((data || []).map((g: any) => ({
+      id: g.id, imageUrl: g.image_url, caption: g.caption, displayOrder: g.display_order
+    })));
+  }
+
+  // Home data route — map fields
   const homeMatch = path.match(/\/api\/([^\/]+)\/home$/);
   if (homeMatch && req.method === 'GET') {
     const slug = homeMatch[1];
@@ -209,32 +298,75 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       supabase.from('home_buttons').select('*').eq('college_id', col.id)
     ]);
     return res.json({
-      content: content.data || {},
-      slider: slider.data || [],
-      stats: stats.data || [],
-      affiliations: affiliations.data || [],
-      buttons: buttons.data || []
+      content: content.data ? {
+        heroHeading: content.data.hero_heading,
+        heroSubheading: content.data.hero_subheading,
+        heroOverlayText: content.data.hero_overlay_text,
+        featuresHeading: content.data.features_heading,
+        affiliationsHeading: content.data.affiliations_heading,
+        ctaHeading: content.data.cta_heading,
+        ctaSubheading: content.data.cta_subheading,
+      } : {},
+      slider: (slider.data || []).map((s: any) => ({ id: s.id, imageUrl: s.image_url, order: s.order, isActive: s.is_active })),
+      stats: (stats.data || []).map((s: any) => ({ id: s.id, label: s.label, number: s.number, icon: s.icon, iconUrl: s.icon_url, color: s.color })),
+      affiliations: (affiliations.data || []).map((a: any) => ({ id: a.id, name: a.name, logoUrl: a.logo_url, link: a.link })),
+      buttons: (buttons.data || []).map((b: any) => ({ id: b.id, section: b.section, text: b.text, link: b.link, isActive: b.is_active }))
     });
   }
 
-  // Site settings
+  // Site settings route — map fields
   const settingsMatch = path.match(/\/api\/([^\/]+)\/settings$/);
   if (settingsMatch && req.method === 'GET') {
     const slug = settingsMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('site_settings').select('*').eq('college_id', col.id).maybeSingle();
-    return res.json(data || {});
+    if (!data) return res.json({});
+    return res.json({
+      primaryColor: data.primary_color, navbarLogo: data.navbar_logo,
+      instituteFullName: data.institute_full_name, instituteShortName: data.institute_short_name,
+      footerTitle: data.footer_title, footerTagline: data.footer_tagline,
+      contactAddress: data.contact_address, contactPhone: data.contact_phone, contactEmail: data.contact_email,
+      mapEmbedUrl: data.map_embed_url, googleMapLink: data.google_map_link,
+      cardHeaderText: data.card_header_text, cardSubheaderText: data.card_subheader_text,
+      cardLogoUrl: data.card_logo_url, cardQrEnabled: data.card_qr_enabled,
+      cardQrUrl: data.card_qr_url, cardTermsText: data.card_terms_text,
+      cardContactAddress: data.card_contact_address, cardContactEmail: data.card_contact_email,
+      cardContactPhone: data.card_contact_phone, easypaisaNumber: data.easypaisa_number,
+      bankAccountNumber: data.bank_account_number, bankName: data.bank_name, bankBranch: data.bank_branch,
+      rbWatermarkText: data.rb_watermark_text, rbWatermarkEnabled: data.rb_watermark_enabled,
+      rbDisclaimerText: data.rb_disclaimer_text
+    });
   }
 
-  // Library card fields
+  // Library card fields route — map fields
   const cardFieldsMatch = path.match(/\/api\/([^\/]+)\/library-card-fields$/);
   if (cardFieldsMatch && req.method === 'GET') {
     const slug = cardFieldsMatch[1];
     const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
     if (!col) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase.from('library_card_fields').select('*').eq('college_id', col.id).order('display_order');
-    return res.json(data || []);
+    return res.json((data || []).map((f: any) => ({
+      id: f.id, fieldLabel: f.field_label, fieldKey: f.field_key,
+      fieldType: f.field_type, isRequired: f.is_required,
+      showOnForm: f.show_on_form, showOnCard: f.show_on_card,
+      showInAdmin: f.show_in_admin, displayOrder: f.display_order,
+      options: f.options
+    })));
+  }
+
+  // Rare books STREAM route
+  const rareStreamMatch = path.match(/\/api\/([^\/]+)\/rare-books\/stream\/([^\/]+)$/);
+  if (rareStreamMatch && req.method === 'GET') {
+    const slug = rareStreamMatch[1];
+    const id = rareStreamMatch[2];
+    const { data: col } = await supabase.from('colleges').select('id').eq('slug', slug).maybeSingle();
+    if (!col) return res.status(404).json({ error: 'College not found' });
+    const { data: book } = await supabase.from('rare_books').select('pdf_path').eq('id', id).eq('college_id', col.id).eq('status', 'active').maybeSingle();
+    if (!book || !book.pdf_path) return res.status(404).json({ error: 'PDF not found' });
+    // Redirect to the Supabase storage URL directly
+    res.setHeader('Location', book.pdf_path);
+    return res.status(302).end();
   }
 
   // ── Check email availability ─────────────────────────
@@ -269,7 +401,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── Auth me ───────────────────────────────────────────
   const authMeMatch = path.match(/\/api\/([^\/]+)\/auth\/me$/);
   if (authMeMatch && req.method === 'GET') {
-    // Sessions don't persist on serverless — return not authenticated
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
