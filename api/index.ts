@@ -62,15 +62,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const itemId = parts[parts.length - 1]; // Fallback for DELETE/PATCH ids
 
   // ── AUTH ──────────────────────────────────────────────────────────────────
+  // Handle Student/Visitor Login via Email OR Library Card
   if (resource === 'auth' && subResource === 'login' && req.method === 'POST') {
-    const { email, password } = req.body || {};
+    const { email, password, collegeCardId } = req.body || {};
+    
+    // College Card Login
+    if (collegeCardId) {
+      const { data: card } = await supabase.from('library_card_applications').select('*').eq('card_number', collegeCardId).eq('college_id', col.id).maybeSingle();
+      if (!card) return res.status(401).json({ error: 'Invalid College Card ID' });
+      if (card.status === 'suspended') return res.status(403).json({ error: 'Your card has been suspended by college. Please contact the college library for assistance.' });
+      if (card.status !== 'approved') return res.status(401).json({ error: 'Your card application is still pending approval.' });
+      
+      // Check password (matching the plain text password stored in DB for library cards)
+      if (card.password === password) {
+        return res.json({ redirect: `/${collegeSlug}/library-dashboard`, role: 'user', userId: card.id, collegeSlug, isLibraryCard: true });
+      }
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    // Default Email Login
     const { data: admin } = await supabase.from('admin_credentials').select('*').eq('admin_email', email).eq('college_id', col.id).eq('is_active', true).maybeSingle();
     if (admin && (await bcrypt.compare(password, admin.password_hash))) {
       return res.json({ redirect: `/${collegeSlug}/admin-dashboard`, role: 'admin', userId: admin.id, collegeSlug });
     }
-    const { data: user } = await supabase.from('users').select('*').eq('email', email).eq('college_id', col.id).maybeSingle();
-    if (user && (await bcrypt.compare(password, user.password))) {
-      return res.json({ redirect: `/${collegeSlug}`, role: 'user', userId: user.id, collegeSlug });
+    const { data: user } = await supabase.from('registered_people').select('*').eq('email', email).eq('college_id', col.id).maybeSingle();
+    if (user && (await bcrypt.compare(password, user.password_hash))) {
+      return res.json({ redirect: `/${collegeSlug}`, role: user.role, userId: user.id, collegeSlug });
     }
     return res.status(401).json({ error: 'Invalid credentials' });
   }
@@ -166,7 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!book) return res.status(404).json({ error: 'Book not found' });
         
         // Proxy storage directly to avoid CORS/Auth issues for protected viewer
-        const bucket = 'rare-books';
+        const bucket = 'rare-books'; // Standardize bucket name
         // pdf_path might be a full URL or just a filename
         const pdfPath = book.pdf_path || '';
         let fileName = pdfPath;
@@ -433,6 +450,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         createdAt: c.created_at, dynamicFields: c.dynamic_fields 
       })));
     }
+    if (subResource === 'borrowed-books') {
+      const { data } = await supabase.from('borrowed_books').select(`
+        *,
+        library_card_applications (first_name, last_name, card_number)
+      `).eq('college_id', col.id).order('borrow_date', { ascending: false });
+      
+      return res.json((data || []).map((b: any) => ({
+        id: b.id,
+        bookTitle: b.book_title,
+        borrowerName: b.library_card_applications ? `${b.library_card_applications.first_name} ${b.library_card_applications.last_name}` : 'Card Deleted',
+        cardNumber: b.library_card_applications?.card_number || 'N/A',
+        cardDeleted: !b.library_card_applications,
+        borrowDate: b.borrow_date,
+        dueDate: b.due_date,
+        status: b.status
+      })));
+    }
     if (subResource === 'donations') {
        const { data } = await supabase.from('donations').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
        return res.json((data || []).map(d => ({ id: d.id, amount: d.amount, method: d.method, donorName: d.name, email: d.email, message: d.message, createdAt: d.created_at })));
@@ -474,12 +508,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ nonStudents: (data || []).map(u => ({ id: u.id, name: u.full_name, role: u.role, email: u.email, phone: u.phone_number, createdAt: u.created_at })) });
     }
     if (subResource === 'notes') {
-      const { data } = await supabase.from('notes').select('*').eq('college_id', col.id);
-      return res.json((data || []).map(n => ({ id: n.id, title: n.title, description: n.description, subject: n.subject, class: n.class, pdfPath: n.pdf_path })));
+      const { data } = await supabase.from('notes').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map(n => ({ id: n.id, title: n.title, description: n.description, subject: n.subject, class: n.class, pdfPath: n.pdf_path, status: n.status })));
     }
     if (subResource === 'rare-books') {
-      const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id);
-      return res.json((data || []).map(b => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image, status: b.status })));
+      const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      return res.json((data || []).map((b: any) => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image, status: b.status })));
     }
   }
 
@@ -579,7 +613,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.method === 'POST') {
         const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath, cover_image: req.body.coverImage };
         delete payload.pdfPath; delete payload.coverImage;
-        await supabase.from('rare_books').insert(payload);
+        const { error } = await supabase.from('rare_books').insert(payload);
+        if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
@@ -696,9 +731,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
-        // Cascade delete borrowed books for this card
-        await supabase.from('borrowed_books').delete().eq('card_id', id);
-        await supabase.from('library_card_applications').delete().eq('id', id);
+        // Soft delete/Suspend instead of hard delete to preserve history and show suspension message
+        await supabase.from('library_card_applications').update({ status: 'suspended' }).eq('id', id);
+        return res.json({ success: true });
+      }
+    }
+
+    if (resrc === 'borrowed-books') {
+      if (req.method === 'DELETE') {
+        await supabase.from('borrowed_books').delete().eq('id', id);
         return res.json({ success: true });
       }
     }

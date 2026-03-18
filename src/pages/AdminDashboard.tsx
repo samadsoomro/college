@@ -280,7 +280,10 @@ export default function AdminDashboard() {
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/${collegeSlug}/admin/notes`, { credentials: "include" });
+      const res = await fetch(`/api/${collegeSlug}/admin/notes`, { 
+        headers: { ...adminHeaders() },
+        credentials: "include" 
+      });
       if (res.ok) {
         const data = await res.json();
         setNotes(data);
@@ -354,12 +357,10 @@ export default function AdminDashboard() {
       setLoading(true);
       let pdfPath = "";
       let coverImage = "";
-
-      if (rareBookFiles.pdf) {
-        pdfPath = await uploadToSupabase(rareBookFiles.pdf, 'rare-books-pdfs', collegeSlug);
-      }
-      if (rareBookFiles.image) {
-        coverImage = await uploadToSupabase(rareBookFiles.image, 'rare-books-covers', collegeSlug);
+      // Upload PDF and Cover Image
+      if (rareBookFiles.pdf && rareBookFiles.image) {
+        pdfPath = await uploadToSupabase(rareBookFiles.pdf, 'rare-books', collegeSlug);
+        coverImage = await uploadToSupabase(rareBookFiles.image, 'rare-books', collegeSlug);
       }
 
       const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
@@ -1822,15 +1823,20 @@ export default function AdminDashboard() {
                             className="group hover:bg-neutral-50/50 transition-colors"
                           >
                             <td className="py-5 px-6">
-                              <div className="font-bold text-neutral-900">
-                                {book.borrowerName || "-"}
-                              </div>
-                              <div className="text-xs text-neutral-500 font-medium">
-                                {book.borrowerEmail || "-"}
-                              </div>
-                              <div className="text-[10px] text-neutral-400 font-medium mt-0.5">
-                                {book.borrowerPhone || "-"}
-                              </div>
+                                <div className="font-bold text-neutral-900 flex items-center gap-2">
+                                  {book.borrowerName || "-"}
+                                  {book.cardDeleted && (
+                                    <span className="text-[8px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-rose-200">
+                                      Card Deleted
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-neutral-500 font-medium">
+                                  {book.borrowerEmail || "-"}
+                                </div>
+                                <div className="text-[10px] text-neutral-400 font-medium mt-0.5">
+                                  {book.borrowerPhone || "-"}
+                                </div>
                             </td>
                             <td className="py-5 px-6">
                               <div className="text-[10px] font-black text-neutral-400 uppercase tracking-tighter mb-1">
@@ -1897,6 +1903,7 @@ export default function AdminDashboard() {
                                           `/api/${collegeSlug}/book-borrows/${book.id}/return`,
                                           {
                                             method: "PATCH",
+                                            headers: adminHeaders(),
                                             credentials: "include",
                                           },
                                         ).then((res) => {
@@ -1919,7 +1926,20 @@ export default function AdminDashboard() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => deleteBorrowedBook(book.id)}
+                                  onClick={() => {
+                                    if (confirm("Delete this entry?")) {
+                                      fetch(`/api/${collegeSlug}/admin/borrowed-books/${book.id}`, {
+                                        method: "DELETE",
+                                        headers: adminHeaders(),
+                                        credentials: "include"
+                                      }).then(res => {
+                                        if (res.ok) {
+                                          fetchBorrowedBooks();
+                                          toast({ title: "Deleted", description: "Entry removed." });
+                                        }
+                                      });
+                                    }
+                                  }}
                                   className="h-8 w-8 text-neutral-300 hover:text-rose-600 rounded-lg hover:bg-rose-50"
                                 >
                                   <Trash2 size={16} />
@@ -2158,8 +2178,21 @@ export default function AdminDashboard() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => deleteLibraryCard(card.id)}
+                                  onClick={async () => {
+                                    if (confirm("Suspending card will prevent user login. Continue?")) {
+                                      const res = await fetch(`/api/${collegeSlug}/admin/library-cards/${card.id}`, {
+                                        method: "DELETE",
+                                        headers: adminHeaders(),
+                                        credentials: "include"
+                                      });
+                                      if (res.ok) {
+                                        fetchLibraryCards();
+                                        toast({ title: "Suspended", description: "Card has been suspended." });
+                                      }
+                                    }
+                                  }}
                                   className="h-8 w-8 text-neutral-300 hover:text-rose-600 rounded-lg hover:bg-rose-50"
+                                  title="Suspend Card"
                                 >
                                   <Trash2 size={16} />
                                 </Button>

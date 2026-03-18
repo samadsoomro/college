@@ -65,7 +65,7 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   isLibraryCard: boolean;
   profile: any;
-  login: (email?: string, password?: string) => Promise<{ success: boolean; error?: string; redirect?: string; role?: string }>;
+  login: (email?: string, password?: string, collegeCardId?: string) => Promise<{ success: boolean; error?: string; redirect?: string; role?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -108,12 +108,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email?: string, password?: string) => {
+  const login = async (email?: string, password?: string, collegeCardId?: string) => {
     try {
       const res = await fetch(`/api/${routeSlug}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, collegeCardId }),
       });
       const data = await res.json();
       if (!res.ok) return { success: false, error: data.error };
