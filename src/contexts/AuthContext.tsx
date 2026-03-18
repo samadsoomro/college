@@ -84,7 +84,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchCurrentUser = async () => {
     try {
-      // If we have a collegeSlug, check college-scoped endpoint
+      // READ FROM LOCALSTORAGE FOR STATELESS VERCEL
+      const storedRole = localStorage.getItem('userRole');
+      const storedIsAdmin = localStorage.getItem('isAdmin') === 'true';
+      const storedIsSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+      const storedUserId = localStorage.getItem('userId');
+      const storedCollegeSlug = localStorage.getItem('collegeSlug');
+
+      if (storedRole && (storedCollegeSlug === collegeSlug || (!collegeSlug && !storedCollegeSlug))) {
+        setUser({ 
+          id: storedUserId || 'unknown', 
+          email: '', // Email not stored for security 
+          name: storedIsSuperAdmin ? 'Super Admin' : (storedIsAdmin ? 'College Admin' : 'User') 
+        });
+        setIsAdmin(storedIsAdmin || storedIsSuperAdmin);
+        setIsSuperAdmin(storedIsSuperAdmin);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: If we have a collegeSlug, check college-scoped endpoint
       if (collegeSlug) {
         const res = await fetch(`/api/${collegeSlug}/auth/me`, { credentials: "include" });
         if (res.ok) {
@@ -114,7 +133,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       }
 
-      // If not authenticated in college or no collegeSlug, check global super-admin info
+      // Global super-admin check fallback
       const saRes = await fetch(`/api/super-admin/me`, { credentials: "include" });
       if (saRes.ok) {
         const saData = await saRes.json();
@@ -171,12 +190,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return { success: false, error: data.error || "Login failed" };
       }
 
-      await fetchCurrentUser();
-      return { 
-        success: true, 
-        redirect: data.redirect,
-        role: data.role
-      };
+      // Success - Use window.location.href to force a full reload and clear state
+      if (data.redirect) {
+        // Store session in localStorage for stateless Vercel
+        localStorage.setItem('userRole', data.role);
+        localStorage.setItem('collegeSlug', data.collegeSlug || collegeSlug || '');
+        if (data.role === 'admin') localStorage.setItem('isAdmin', 'true');
+        if (data.role === 'superadmin') localStorage.setItem('isSuperAdmin', 'true');
+        if (data.userId) localStorage.setItem('userId', data.userId);
+        
+        window.location.href = data.redirect;
+        // The execution will stop here due to the redirect, but we still need a return for type safety
+        return { success: true, redirect: data.redirect, role: data.role };
+      }
+      // If no redirect, just return success and role
+      return { success: true, role: data.role };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
@@ -230,12 +258,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
     } catch (error) {
       console.error("Logout error:", error);
+    } finally {
+      // ALWAYS CLEAR LOCALSTORAGE ON LOGOUT
+      localStorage.clear();
+      setUser(null);
+      setProfile(null);
+      setIsAdmin(false);
+      setIsSuperAdmin(false);
+      setIsLibraryCard(false);
     }
-    setUser(null);
-    setProfile(null);
-    setIsAdmin(false);
-    setIsSuperAdmin(false);
-    setIsLibraryCard(false);
   };
   return (
     <AuthContext.Provider
