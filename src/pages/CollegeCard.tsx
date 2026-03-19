@@ -133,14 +133,14 @@ const CollegeCard = () => {
   const [emailDebounce, setEmailDebounce] = useState<any>(null);
 
   const checkEmail = async (email: string) => {
-    if (!email || !email.includes("@")) {
+    if (!email || !email.includes("@") || email.length < 5) {
       setEmailStatus("idle");
       return;
     }
     setEmailStatus("checking");
     try {
       const res = await fetch(
-        `/api/${collegeSlug}/auth/check-email?email=${encodeURIComponent(email)}`,
+        `/api/${collegeSlug}/auth/check-email?email=${encodeURIComponent(email.trim().toLowerCase())}`,
       );
       const data = await res.json();
       setEmailStatus(data.available ? "available" : "taken");

@@ -133,6 +133,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
+  // Route: GET /api/:slug/auth/check-email?email=...
+  if (resource === 'auth' && subResource === 'check-email' && req.method === 'GET') {
+    const email = (req.query?.email as string || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) return res.json({ available: true });
+    
+    // Check ACTIVE card with same email in THIS college
+    const { data: existing } = await supabase
+      .from('library_card_applications')
+      .select('id, status')
+      .eq('email', email)
+      .eq('college_id', col.id)
+      .in('status', ['pending', 'approved']) // suspended = email is free again
+      .maybeSingle();
+
+    return res.json({ available: !existing });
+  }
+
   // ── PUBLIC DATA ROUTES ────────────────────────────────────────────────────
   if (req.method === 'GET' && resource !== 'admin') {
     // 1. Full Home Data (content, slider, stats, affiliations)
@@ -300,10 +317,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         showOnForm: f.show_on_form,
         showOnCard: f.show_on_card,
         showInAdmin: f.show_in_admin,
-        displayOrder: f.display_order,
-        options: Array.isArray(f.options) ? f.options : []
       })));
     }
+  }
+
+  // 6. Submit Library Card Application
+  if (resource === 'library-card-applications' && req.method === 'POST') {
+    const b = req.body;
+    if (!b.email || !b.password) return res.status(400).json({ error: 'Email and password required' });
+
+    // Check for existing ACTIVE card with same email in THIS college
+    const { data: existing } = await supabase
+      .from('library_card_applications')
+      .select('id, status')
+      .eq('email', b.email.trim().toLowerCase())
+      .eq('college_id', col.id)
+      .in('status', ['pending', 'approved'])
+      .maybeSingle();
+
+    if (existing) {
+      return res.status(400).json({ error: 'A college card application with this email is already active.' });
+    }
+
+    // Generate Card Number
+    const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const num = Math.floor(1000 + Math.random() * 9000);
+    const cardNumber = `CS-${code}-${num}`;
+
+    const { data, error } = await supabase
+      .from('library_card_applications')
+      .insert({
+        college_id: col.id,
+        first_name: b.firstName,
+        last_name: b.lastName,
+        father_name: b.fatherName,
+        dob: b.dob,
+        class: b.class,
+        field: b.field,
+        roll_no: b.rollNo,
+        email: b.email.trim().toLowerCase(),
+        phone: b.phone,
+        address_street: b.addressStreet,
+        address_city: b.addressCity,
+        address_state: b.addressState,
+        address_zip: b.addressZip,
+        password: b.password,
+        card_number: cardNumber,
+        status: 'pending',
+        dynamic_fields: b.dynamicFields,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    return res.json({
+      success: true,
+      cardNumber: data.card_number,
+      studentId: data.id,
+      issueDate: new Date().toLocaleDateString(),
+      validThrough: new Date(new Date().setFullYear(new Date().getFullYear() + 4)).toLocaleDateString()
+    });
   }
 
   // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
