@@ -78,13 +78,30 @@ const Books = () => {
       const cardNumber = localStorage.getItem('cardNumber');
       const userName = localStorage.getItem('userName');
       const userId = localStorage.getItem('userId');
-      const userEmail = localStorage.getItem('userEmail');
+
+      // fetch full details from card application if card user
+      let borrowerEmail = localStorage.getItem('userEmail') || '';
+      let borrowerPhone = '';
+
+      if (isCardUser && cardNumber) {
+        try {
+          const cardRes = await fetch(`/api/${collegeSlug}/library-card-applications/by-card/${cardNumber}`);
+          if (cardRes.ok) {
+            const cardData = await cardRes.json();
+            borrowerEmail = cardData.email || '';
+            borrowerPhone = cardData.phone || '';
+          }
+        } catch (e) {
+          console.error('Could not fetch card details:', e);
+        }
+      }
 
       const body: any = {
         bookId: String(book.id),
         bookTitle: book.bookName,
         borrowerName: userName || 'Student',
-        borrowerEmail: userEmail || '',
+        borrowerEmail: borrowerEmail,
+        borrowerPhone: borrowerPhone,
         userId: userId || null,
       };
 

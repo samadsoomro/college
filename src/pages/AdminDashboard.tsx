@@ -1898,6 +1898,11 @@ export default function AdminDashboard() {
                                     </div>
                                   )}
                                 </div>
+                                {book.fatherName && (
+                                  <div className="text-[11px] text-neutral-500 font-bold">
+                                    S/O: {book.fatherName}
+                                  </div>
+                                )}
                                 <div className="text-xs text-neutral-500 font-medium">
                                   {book.borrowerEmail || "-"}
                                 </div>
@@ -1910,7 +1915,7 @@ export default function AdminDashboard() {
                                 SN #{idx + 1}
                               </div>
                               <span className="bg-neutral-100 px-2 py-1 rounded text-[10px] font-black text-neutral-600">
-                                {book.collegeCardId || "-"}
+                                {book.libraryCardId || book.library_card_id || "-"}
                               </span>
                             </td>
                             <td className="py-5 px-6">

@@ -87,6 +87,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let itemId = parts[parts.length - 1]; 
   if (sub3 === 'status') itemId = sub2;
 
+  // GET /api/:slug/library-card-applications/by-card/:cardNumber
+  if (resource === 'library-card-applications' && subResource === 'by-card' && sub2 && req.method === 'GET') {
+    const { data: cards } = await supabase.from('colleges').select('id').eq('slug', collegeSlug).maybeSingle();
+    if (!cards) return res.status(404).json({ error: 'College not found' });
+    
+    const { data } = await supabase
+      .from('library_card_applications')
+      .select('email, phone, first_name, last_name, card_number, status')
+      .ilike('card_number', sub2)
+      .eq('college_id', cards.id)
+      .eq('status', 'approved')
+      .maybeSingle();
+
+    if (!data) return res.status(404).json({ error: 'Card not found' });
+    return res.json({
+      email: data.email,
+      phone: data.phone,
+      name: `${data.first_name} ${data.last_name}`,
+      cardNumber: data.card_number
+    });
+  }
+
   // ── AUTH ──────────────────────────────────────────────────────────────────
   // Handle Student/Visitor Login via Email OR Library Card
   if (resource === 'auth' && subResource === 'login' && req.method === 'POST') {
@@ -814,6 +836,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         suspendedSet = new Set((cards || []).map((c: any) => c.card_number));
       }
 
+      // Look up father names from library_card_applications
+      const allCardIds = [...new Set((borrows || [])
+        .map((b: any) => b.library_card_id).filter(Boolean))];
+
+      let fatherNameMap: Record<string, string> = {};
+      if (allCardIds.length > 0) {
+        const { data: cardDetails } = await supabase
+          .from('library_card_applications')
+          .select('card_number, father_name')
+          .in('card_number', allCardIds)
+          .eq('college_id', col.id);
+
+        (cardDetails || []).forEach((c: any) => {
+          if (c.card_number && c.father_name) {
+            fatherNameMap[c.card_number] = c.father_name;
+          }
+        });
+      }
+
       return res.json((borrows || []).map((b: any) => ({
         id: b.id,
         bookId: b.book_id,
@@ -821,6 +862,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         borrowerName: b.borrower_name,
         borrowerEmail: b.borrower_email,
         borrowerPhone: b.borrower_phone,
+        fatherName: fatherNameMap[b.library_card_id] || null,
         libraryCardId: b.library_card_id,
         userId: b.user_id,
         borrowDate: b.borrow_date,
