@@ -447,19 +447,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // ── CONTACT MESSAGES (POST) ─────────────────────────────────────────────
-  if (resource === 'contact-messages' && !subResource && req.method === 'POST') {
-    const { name, email, subject, message } = req.body || {};
-    const { error } = await supabase.from('contact_messages').insert({
-      college_id: col.id,
-      name,
-      email: (email || '').toLowerCase(),
-      subject,
-      message,
-      is_seen: false
-    });
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ success: true });
+  // ── CONTACT MESSAGES (POST & GET) ─────────────────────────────────────────────
+  if (resource === 'contact-messages' && !subResource) {
+    if (req.method === 'POST') {
+      const { name, email, subject, message } = req.body || {};
+      const { error } = await supabase.from('contact_messages').insert({
+        college_id: col.id,
+        name,
+        email: (email || '').toLowerCase(),
+        subject,
+        message,
+        is_seen: false
+      });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ success: true });
+    }
+    
+    if (req.method === 'GET') {
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .select('*')
+        .eq('college_id', col.id)
+        .order('created_at', { ascending: false });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json((data || []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        subject: m.subject,
+        message: m.message,
+        isSeen: m.is_seen,
+        createdAt: m.created_at
+      })));
+    }
   }
 
   // ─── POST /api/:slug/library-card-applications ───────────────────────────
@@ -1072,6 +1092,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rollNo: s.roll_no,
         createdAt: s.created_at,
         email: emailMap[s.user_id] || '-',
+        phone: s.phone || '-',
         type: 'student',
         role: 'Student'
       }));
@@ -1090,6 +1111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             rollNo: app.roll_no,
             createdAt: app.created_at,
             email: emailMap[app.user_id] || app.email || '-',
+            phone: app.phone || '-',
             type: 'student',
             role: 'Student'
           });

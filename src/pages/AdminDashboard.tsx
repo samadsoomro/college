@@ -2388,6 +2388,11 @@ export default function AdminDashboard() {
                                         Admin
                                       </span>
                                     )}
+                                    {user.cardId && (
+                                      <span className="text-[8px] bg-primary/10 text-primary px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-primary/20">
+                                        {user.cardId}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
