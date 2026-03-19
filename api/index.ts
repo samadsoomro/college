@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY)!
 );
 
 const ADMIN_TOKEN = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
@@ -374,9 +374,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const validThrough = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const studentId = `GCFM-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
 
-      // Hash password (if bcrypt is available, otherwise just use plaintext. The prompt assumes bcrypt)
-      // BUT Wait! AdminLogin uses `const bcrypt = require('bcryptjs');` at top? Let me check if bcrypt exists in index.ts.
-      // Hash password
+      // Hash password using imported bcrypt
       const hashedPassword = b.password ? await bcrypt.hash(b.password, 10) : null;
 
       const insertData = {
@@ -398,6 +396,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         student_id: studentId,
         issue_date: issueDate,
         valid_through: validThrough,
+        status: 'pending',
         college_id: col.id,
         dynamic_fields: b.dynamicFields || {}
       };
@@ -667,12 +666,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json((data || []).map(b => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
     }
     if (subResource === 'library-cards') {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('library_card_applications')
         .select('*')
         .eq('college_id', col.id)
-        .in('status', ['pending', 'approved'])  // exclude suspended
         .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[ADMIN LIBRARY-CARDS] Fetch error:', error.message);
+        return res.status(500).json({ error: error.message });
+      }
 
       return res.json((data || []).map((c: any) => ({
         id: c.id,
