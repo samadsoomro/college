@@ -456,7 +456,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       email: (email || '').toLowerCase(),
       subject,
       message,
-      status: 'new'
+      is_seen: false
     });
     if (error) return res.status(500).json({ error: error.message });
     return res.json({ success: true });
@@ -1022,7 +1022,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         email: m.email,
         subject: m.subject,
         message: m.message,
-        status: m.status,
+        isSeen: m.is_seen,
         createdAt: m.created_at
       })));
     }
@@ -1073,7 +1073,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           role: p.role,
           email: emailMap[p.user_id] || '-',
           phone: p.phone,
-          createdAt: p.created_at
+          createdAt: p.created_at,
+          type: 'registered people'
         }));
 
       return res.json({ students, nonStudents });
