@@ -447,6 +447,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // ── CONTACT MESSAGES (POST) ─────────────────────────────────────────────
+  if (resource === 'contact-messages' && !subResource && req.method === 'POST') {
+    const { name, email, subject, message } = req.body || {};
+    const { error } = await supabase.from('contact_messages').insert({
+      college_id: col.id,
+      name,
+      email: (email || '').toLowerCase(),
+      subject,
+      message,
+      status: 'new'
+    });
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ success: true });
+  }
+
   // ─── POST /api/:slug/library-card-applications ───────────────────────────
   if (resource === 'library-card-applications' && !subResource && req.method === 'POST') {
     // 1. Get college (with short_name for student ID prefix)
@@ -994,35 +1009,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json((data || []).map(g => ({ id: g.id, imageUrl: g.image_url, caption: g.caption, displayOrder: g.display_order })));
       }
     }
+    if (subResource === 'contact-messages') {
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .select('*')
+        .eq('college_id', col.id)
+        .order('created_at', { ascending: false });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json((data || []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        subject: m.subject,
+        message: m.message,
+        status: m.status,
+        createdAt: m.created_at
+      })));
+    }
+
     if (subResource === 'users') {
-      // Step 1: Fetch all profiles for this college
+      // Step 1: Fetch Students
+      const { data: studentsData } = await supabase
+        .from('students')
+        .select('*')
+        .eq('college_id', col.id);
+
+      // Step 2: Fetch all profiles for this college
       const { data: profiles } = await supabase.from('profiles').select('*').eq('college_id', col.id);
       
-      if (!profiles || profiles.length === 0) {
-        return res.json({ nonStudents: [] });
+      const emailMap: Record<string, string> = {};
+      const userIds = [
+        ...(studentsData || []).map(s => s.user_id),
+        ...(profiles || []).map(p => p.user_id)
+      ].filter(Boolean);
+
+      if (userIds.length > 0) {
+        const { data: userAccounts } = await supabase.from('users').select('id, email').in('id', userIds);
+        (userAccounts || []).forEach(ua => {
+          emailMap[ua.id] = ua.email;
+        });
       }
 
-      // Step 2: Fetch corresponding emails from 'users' table
-      const userIds = profiles.map(p => p.user_id).filter(Boolean);
-      const { data: userAccounts } = await supabase.from('users').select('id, email').in('id', userIds);
-      
-      const emailMap: Record<string, string> = {};
-      (userAccounts || []).forEach(ua => {
-        emailMap[ua.id] = ua.email;
-      });
-
-      // Step 3: Merge and return
-      const merged = (profiles || []).map(p => ({
-        id: p.id,
-        userId: p.user_id,
-        name: p.full_name,
-        role: p.role,
-        email: emailMap[p.user_id] || '-',
-        phone: p.phone,
-        createdAt: p.created_at
+      const students = (studentsData || []).map(s => ({
+        id: s.id,
+        userId: s.user_id,
+        cardId: s.card_id,
+        name: s.name,
+        class: s.class,
+        field: s.field,
+        rollNo: s.roll_no,
+        createdAt: s.created_at,
+        email: emailMap[s.user_id] || '-',
+        type: 'student',
+        role: 'Student'
       }));
 
-      return res.json({ nonStudents: merged });
+      const nonStudents = (profiles || [])
+        .filter(p => (p.role || '').toLowerCase() !== 'student')
+        .map(p => ({
+          id: p.id,
+          userId: p.user_id,
+          name: p.full_name,
+          role: p.role,
+          email: emailMap[p.user_id] || '-',
+          phone: p.phone,
+          createdAt: p.created_at
+        }));
+
+      return res.json({ students, nonStudents });
     }
     if (subResource === 'notes') {
       const { data } = await supabase.from('notes').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
