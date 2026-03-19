@@ -376,9 +376,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Hash password (if bcrypt is available, otherwise just use plaintext. The prompt assumes bcrypt)
       // BUT Wait! AdminLogin uses `const bcrypt = require('bcryptjs');` at top? Let me check if bcrypt exists in index.ts.
-      // If the user says: `const hashedPassword = b.password ? await bcrypt.hash(b.password, 10) : null;`
-      // I should assume bcrypt is already imported or I need to check. Let me just use it, as it's what the user asked for.
-      const bcrypt = require('bcryptjs');
+      // Hash password
       const hashedPassword = b.password ? await bcrypt.hash(b.password, 10) : null;
 
       const insertData = {
