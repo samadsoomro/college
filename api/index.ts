@@ -137,6 +137,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ authenticated: true, role: 'superadmin' });
   }
 
+  // ── SUPER ADMIN COLLEGES ──────────────────────────────────────────────────
+  if (collegeSlug === 'super-admin' && resource === 'colleges') {
+    if (req.method === 'GET') {
+      const { data, error } = await supabase.from('colleges').select('*').order('created_at', { ascending: false });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json(data);
+    }
+    if (req.method === 'POST') {
+      const { name, shortName, slug: newSlug } = req.body;
+      const { data, error } = await supabase.from('colleges').insert({ name, short_name: shortName, slug: newSlug, is_active: true }).select().single();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json(data);
+    }
+    if (req.method === 'DELETE' && sub1) {
+      const { error } = await supabase.from('colleges').delete().eq('id', sub1);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ success: true });
+    }
+  }
+
+  // ── SUPER ADMIN LOGOUT ────────────────────────────────────────────────────
+  if (collegeSlug === 'super-admin' && resource === 'logout' && req.method === 'POST') {
+    return res.json({ success: true });
+  }
+
+  // ── SUPER ADMIN RECENT REGISTRATIONS ──────────────────────────────────────
+  if (collegeSlug === 'super-admin' && resource === 'recent-registrations' && req.method === 'GET') {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, email, role, created_at, colleges(name)')
+      .order('created_at', { ascending: false })
+      .limit(10);
+      
+    if (error) return res.status(500).json({ error: error.message });
+    
+    // Flatten the college name for the frontend
+    const flattened = data.map((p: any) => ({
+      ...p,
+      collegeName: p.colleges?.name || 'Unknown'
+    }));
+    
+    return res.json(flattened);
+  }
+
+  // Safety check: for all other routes, we MUST have a valid college
+  if (!col) return res.status(404).json({ error: 'College context required' });
+  const colId = col.id;
+
   // ── AUTH ──────────────────────────────────────────────────────────────────
   // Handle Student/Visitor Login via Email OR Library Card
   if (resource === 'auth' && subResource === 'login' && req.method === 'POST') {
@@ -148,7 +196,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('library_card_applications')
         .select('*')
         .ilike('card_number', collegeCardId)
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .order('created_at', { ascending: false });
 
       if (!cards || cards.length === 0)
@@ -214,7 +262,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('admin_credentials')
         .select('id, admin_email, password_hash, role')
         .eq('admin_email', email.trim().toLowerCase())
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .eq('role', 'client_admin')
         .eq('is_active', true)
         .maybeSingle();
@@ -237,7 +285,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('users')
         .select('*')
         .eq('email', email.trim().toLowerCase())
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .maybeSingle();
       
       if (userAccount && (await bcrypt.compare(String(password), String(userAccount.password)))) {
@@ -270,7 +318,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from('library_card_applications')
       .select('id, status')
       .eq('email', email)
-      .eq('college_id', col.id)
+      .eq('college_id', colId)
       .in('status', ['pending', 'approved']) // suspended = email is free again
       .maybeSingle();
 
@@ -286,7 +334,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 1. Check if email exists in 'users'
-    const { data: existingUser } = await supabase.from('users').select('id').eq('email', email).eq('college_id', col.id).maybeSingle();
+    const { data: existingUser } = await supabase.from('users').select('id').eq('email', email).eq('college_id', colId).maybeSingle();
     if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
@@ -300,7 +348,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .insert({
         email,
         password: hashedPassword,
-        college_id: col.id
+        college_id: colId
       })
       .select('id')
       .single();
@@ -318,7 +366,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         full_name: fullName,
         phone,
         role: classification || 'visitor',
-        college_id: col.id
+        college_id: colId
       });
 
     if (profileError) {
@@ -341,10 +389,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 1. Full Home Data (content, slider, stats, affiliations)
     if (resource === 'home') {
       const [{ data: c }, { data: sl }, { data: st }, { data: af }] = await Promise.all([
-        supabase.from('home_content').select('*').eq('college_id', col.id).maybeSingle(),
-        supabase.from('home_slider_images').select('*').eq('college_id', col.id).eq('is_active', true).order('order'),
-        supabase.from('home_stats').select('*').eq('college_id', col.id).order('order'),
-        supabase.from('home_affiliations').select('*').eq('college_id', col.id).eq('is_active', true).order('order')
+        supabase.from('home_content').select('*').eq('college_id', colId).maybeSingle(),
+        supabase.from('home_slider_images').select('*').eq('college_id', colId).eq('is_active', true).order('order'),
+        supabase.from('home_stats').select('*').eq('college_id', colId).order('order'),
+        supabase.from('home_affiliations').select('*').eq('college_id', colId).eq('is_active', true).order('order')
       ]);
       return res.json({
         content: {
@@ -360,7 +408,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 2. Site Settings (for CollegeContext)
     if (resource === 'settings') {
-      const { data: d } = await supabase.from('site_settings').select('*').eq('college_id', col.id).maybeSingle();
+      const { data: d } = await supabase.from('site_settings').select('*').eq('college_id', colId).maybeSingle();
       if (!d) return res.json({});
       return res.json({
         id: d.id, primaryColor: d.primary_color, navbarLogo: d.navbar_logo, loadingLogo: d.loading_logo,
@@ -383,40 +431,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 3. History
     if (resource === 'history') {
       if (subResource === 'page') {
-        const { data } = await supabase.from('college_history_page').select('*').eq('college_id', col.id).maybeSingle();
+        const { data } = await supabase.from('college_history_page').select('*').eq('college_id', colId).maybeSingle();
         return res.json(data || { title: 'History of College', subtitle: '' });
       }
       if (subResource === 'sections') {
-        const { data } = await supabase.from('college_history_sections').select('*').eq('college_id', col.id).order('display_order');
+        const { data } = await supabase.from('college_history_sections').select('*').eq('college_id', colId).order('display_order');
         return res.json((data || []).map(s => ({ id: s.id, title: s.title, description: s.description, imageUrl: s.image_url, iconName: s.icon_name, layoutType: s.layout_type, displayOrder: s.display_order })));
       }
       if (subResource === 'gallery') {
-        const { data } = await supabase.from('college_history_gallery').select('*').eq('college_id', col.id).order('display_order');
+        const { data } = await supabase.from('college_history_gallery').select('*').eq('college_id', colId).order('display_order');
         return res.json((data || []).map(g => ({ id: g.id, imageUrl: g.image_url, caption: g.caption, displayOrder: g.display_order })));
       }
     }
 
     // 4. Standard Modules
     if (resource === 'books') {
-      const { data } = await supabase.from('books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      const { data } = await supabase.from('books').select('*').eq('college_id', colId).order('created_at', { ascending: false });
       return res.json((data || []).map(b => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
     }
     if (resource === 'events') {
-      const { data } = await supabase.from('events').select('*').eq('college_id', col.id).order('date', { ascending: false });
+      const { data } = await supabase.from('events').select('*').eq('college_id', colId).order('date', { ascending: false });
       return res.json((data || []).map(e => ({ id: e.id, title: e.title, description: e.description, images: e.images, date: e.date })));
     }
     if (resource === 'blog') {
       // Individual blog post by slug or id
       if (subResource && !['stream'].includes(subResource)) {
-        const { data: post } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).eq('slug', subResource).eq('status', 'published').maybeSingle();
+        const { data: post } = await supabase.from('blog_posts').select('*').eq('college_id', colId).eq('slug', subResource).eq('status', 'published').maybeSingle();
         if (!post) return res.status(404).json({ error: 'Post not found' });
         return res.json({ id: post.id, title: post.title, slug: post.slug, shortDescription: post.short_description, content: post.content, featuredImage: post.featured_image, createdAt: post.created_at, isPinned: post.is_pinned });
       }
-      const { data } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).eq('status', 'published').order('created_at', { ascending: false });
+      const { data } = await supabase.from('blog_posts').select('*').eq('college_id', colId).eq('status', 'published').order('created_at', { ascending: false });
       return res.json((data || []).map((p: any) => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, featuredImage: p.featured_image, createdAt: p.created_at })));
     }
     if (resource === 'notifications') {
-      const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).eq('status', 'published').order('pin', { ascending: false }).order('created_at', { ascending: false });
+      const { data } = await supabase.from('notifications').select('*').eq('college_id', colId).eq('status', 'published').order('pin', { ascending: false }).order('created_at', { ascending: false });
       return res.json((data || []).map(n => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status, createdAt: n.created_at })));
     }
     if (resource === 'rare-books') {
@@ -468,19 +516,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.setHeader('Content-Disposition', 'inline');
         return res.send(Buffer.from(await data.arrayBuffer()));
       }
-      const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id).eq('status', 'active');
+      const { data } = await supabase.from('rare_books').select('*').eq('college_id', colId).eq('status', 'active');
       return res.json((data || []).map((b: any) => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image })));
     }
     if (resource === 'notes') {
-      const { data } = await supabase.from('notes').select('*').eq('college_id', col.id).eq('status', 'active');
+      const { data } = await supabase.from('notes').select('*').eq('college_id', colId).eq('status', 'active');
       return res.json((data || []).map(n => ({ id: n.id, title: n.title, description: n.description, subject: n.subject, class: n.class, pdfPath: n.pdf_path })));
     }
     if (resource === 'faculty') {
-      const { data } = await supabase.from('faculty_staff').select('*').eq('college_id', col.id);
+      const { data } = await supabase.from('faculty_staff').select('*').eq('college_id', colId);
       return res.json((data || []).map(f => ({ id: f.id, name: f.name, designation: f.designation, description: f.description, imageUrl: f.image_url })));
     }
     if (resource === 'principal') {
-      const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
+      const { data } = await supabase.from('principal').select('*').eq('college_id', colId).maybeSingle();
       return res.json(data ? { id: data.id, name: data.name, message: data.message, imageUrl: data.image_url } : {});
     }
 
@@ -489,7 +537,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await supabase
         .from('library_card_fields')
         .select('*')
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .eq('show_on_form', true)
         .order('display_order', { ascending: true });
 
@@ -513,7 +561,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'POST') {
       const { name, email, subject, message } = req.body || {};
       const { error } = await supabase.from('contact_messages').insert({
-        college_id: col.id,
+        college_id: colId,
         name,
         email: (email || '').toLowerCase(),
         subject,
@@ -528,7 +576,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await supabase
         .from('contact_messages')
         .select('*')
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .order('created_at', { ascending: false });
       if (error) return res.status(500).json({ error: error.message });
       return res.json((data || []).map((m: any) => ({
@@ -671,7 +719,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { data: book } = await supabase.from('books').select('*')
-      .eq('id', subResource).eq('college_id', col.id).maybeSingle();
+      .eq('id', subResource).eq('college_id', colId).maybeSingle();
     
     if (!book) return res.status(404).json({ error: 'Book not found' });
     if (book.available_copies < 1) return res.status(400).json({ error: 'No copies available' });
@@ -680,7 +728,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: borrow, error: borrowErr } = await supabase
       .from('book_borrows')
       .insert({
-        college_id: col.id,
+        college_id: colId,
         book_id: subResource,
         book_title: book.book_name,
         borrower_name: b.borrowerName || b.name || 'Student',
@@ -748,11 +796,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sub = parts[4]; // content, slider, stats, affiliations
     if (sub === 'content') {
       if (req.method === 'GET') {
-        const { data } = await supabase.from('home_content').select('*').eq('college_id', col.id).maybeSingle();
+        const { data } = await supabase.from('home_content').select('*').eq('college_id', colId).maybeSingle();
         return res.json(data ? { heroHeading: data.hero_heading, heroSubheading: data.hero_subheading, heroOverlayText: data.hero_overlay_text, featuresHeading: data.features_heading, featuresSubheading: data.features_subheading, affiliationsHeading: data.affiliations_heading, ctaHeading: data.cta_heading, ctaSubheading: data.cta_subheading } : {});
       }
       if (req.method === 'POST') {
-        const { data: existing } = await supabase.from('home_content').select('id').eq('college_id', col.id).maybeSingle();
+        const { data: existing } = await supabase.from('home_content').select('id').eq('college_id', colId).maybeSingle();
         const payload = {
           hero_heading: req.body.heroHeading, hero_subheading: req.body.heroSubheading, hero_overlay_text: req.body.heroOverlayText,
           features_heading: req.body.featuresHeading, features_subheading: req.body.featuresSubheading,
@@ -760,7 +808,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           updated_at: new Date().toISOString()
         };
         if (existing) await supabase.from('home_content').update(payload).eq('id', existing.id);
-        else await supabase.from('home_content').insert({ ...payload, college_id: col.id });
+        else await supabase.from('home_content').insert({ ...payload, college_id: colId });
         return res.json({ success: true });
       }
     }
@@ -769,13 +817,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const table = tableMap[sub];
     if (table) {
       if (req.method === 'GET') {
-        const { data } = await supabase.from(table).select('*').eq('college_id', col.id).order('order');
+        const { data } = await supabase.from(table).select('*').eq('college_id', colId).order('order');
         if (sub === 'slider') return res.json((data || []).map(s => ({ id: s.id, imageUrl: s.image_url, order: s.order, isActive: s.is_active })));
         if (sub === 'stats') return res.json((data || []).map(s => ({ id: s.id, label: s.label, number: s.number, icon: s.icon, color: s.color, iconUrl: s.icon_url, order: s.order })));
         if (sub === 'affiliations') return res.json((data || []).map(a => ({ id: a.id, name: a.name, logoUrl: a.logo_url, link: a.link, order: a.order, isActive: a.is_active })));
       }
       if (req.method === 'POST') {
-        const payload = { ...req.body, college_id: col.id };
+        const payload = { ...req.body, college_id: colId };
         // Map camelCase to snake_case if needed
         if (sub === 'slider') { payload.image_url = req.body.imageUrl; delete payload.imageUrl; }
         if (sub === 'affiliations') { payload.logo_url = req.body.logoUrl; delete payload.logoUrl; payload.is_active = true; }
@@ -810,16 +858,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const table = tableMap[sub];
     if (table) {
       if (req.method === 'GET') {
-        const { data } = await supabase.from(table).select('*').eq('college_id', col.id).order('display_order');
+        const { data } = await supabase.from(table).select('*').eq('college_id', colId).order('display_order');
         if (sub === 'sections') return res.json((data || []).map((s: any) => ({ id: s.id, title: s.title, description: s.description, imageUrl: s.image_url, iconName: s.icon_name, layoutType: s.layout_type, isFullWidth: s.is_full_width, displayOrder: s.display_order })));
         if (sub === 'gallery') return res.json((data || []).map((g: any) => ({ id: g.id, imageUrl: g.image_url, caption: g.caption, displayOrder: g.display_order })));
-        if (sub === 'page') { const { data: d } = await supabase.from(table).select('*').eq('college_id', col.id).maybeSingle(); return res.json(d || {}); }
+        if (sub === 'page') { const { data: d } = await supabase.from(table).select('*').eq('college_id', colId).maybeSingle(); return res.json(d || {}); }
         return res.json(data || []);
       }
       if (req.method === 'POST') {
         if (sub === 'sections') {
           const payload = {
-            college_id: col.id, title: req.body.title, description: req.body.description,
+            college_id: colId, title: req.body.title, description: req.body.description,
             image_url: req.body.imageUrl, icon_name: req.body.iconName, layout_type: req.body.layoutType,
             is_full_width: req.body.isFullWidth, display_order: req.body.displayOrder || 0
           };
@@ -831,15 +879,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.json({ success: true });
         }
         if (sub === 'gallery') {
-          const payload = { college_id: col.id, image_url: req.body.imageUrl, caption: req.body.caption || '', display_order: req.body.displayOrder || 0 };
+          const payload = { college_id: colId, image_url: req.body.imageUrl, caption: req.body.caption || '', display_order: req.body.displayOrder || 0 };
           await supabase.from(table).insert(payload);
           return res.json({ success: true });
         }
         if (sub === 'page') {
-          const { data: existing } = await supabase.from(table).select('id').eq('college_id', col.id).maybeSingle();
+          const { data: existing } = await supabase.from(table).select('id').eq('college_id', colId).maybeSingle();
           const payload = { title: req.body.title, subtitle: req.body.subtitle };
           if (existing) await supabase.from(table).update(payload).eq('id', (existing as any).id);
-          else await supabase.from(table).insert({ ...payload, college_id: col.id });
+          else await supabase.from(table).insert({ ...payload, college_id: colId });
           return res.json({ success: true });
         }
       }
@@ -871,11 +919,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 3. Admin Principal CMS
   if (parts[2] === 'admin' && parts[3] === 'principal') {
     if (req.method === 'GET') {
-      const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
+      const { data } = await supabase.from('principal').select('*').eq('college_id', colId).maybeSingle();
       return res.json(data ? { id: data.id, name: data.name, message: data.message, imageUrl: data.image_url } : {});
     }
     if (req.method === 'POST') {
-      const { data: ex } = await supabase.from('principal').select('id').eq('college_id', col.id).maybeSingle();
+      const { data: ex } = await supabase.from('principal').select('id').eq('college_id', colId).maybeSingle();
       const payload = {
         name: req.body.name,
         message: req.body.message,
@@ -883,7 +931,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updated_at: new Date().toISOString()
       };
       if (ex) await supabase.from('principal').update(payload).eq('id', ex.id);
-      else await supabase.from('principal').insert({ ...payload, college_id: col.id });
+      else await supabase.from('principal').insert({ ...payload, college_id: colId });
       return res.json({ success: true });
     }
   }
@@ -912,10 +960,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (k === 'rbWatermarkOpacity' || k === 'heroBackgroundOpacity') val = parseFloat(v as string) || 0;
       updates[fieldMap[k]] = val;
     }
-    const { data: ex } = await supabase.from('site_settings').select('id').eq('college_id', col.id).maybeSingle();
+    const { data: ex } = await supabase.from('site_settings').select('id').eq('college_id', colId).maybeSingle();
     if (ex) await supabase.from('site_settings').update(updates).eq('id', ex.id);
-    else await supabase.from('site_settings').insert({ ...updates, college_id: col.id });
-    const { data: updated } = await supabase.from('site_settings').select('*').eq('college_id', col.id).single();
+    else await supabase.from('site_settings').insert({ ...updates, college_id: colId });
+    const { data: updated } = await supabase.from('site_settings').select('*').eq('college_id', colId).single();
     // Return mapped object for frontend context
     return res.json({
       id: updated.id, primaryColor: updated.primary_color, navbarLogo: updated.navbar_logo, loadingLogo: updated.loading_logo,
@@ -937,7 +985,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 4. Other Admin Lists (Books, Donations, etc.)
   if (req.method === 'GET' && resource === 'admin') {
     if (subResource === 'books') {
-      const { data } = await supabase.from('books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      const { data } = await supabase.from('books').select('*').eq('college_id', colId).order('created_at', { ascending: false });
       return res.json((data || []).map(b => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
     }
     if (subResource === 'library-cards') {
@@ -948,7 +996,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await supabase
         .from('library_card_applications')
         .select('*')
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .in('status', ['pending', 'approved'])
         .order('created_at', { ascending: false });
 
@@ -973,7 +1021,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data } = await supabase
         .from('library_card_applications')
         .select('*')
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .order('created_at', { ascending: false });
 
       // De-duplicate by email — keep approved over suspended
@@ -1000,7 +1048,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (subResource === 'borrowed-books' || subResource === 'book-borrows') {
       const { data: borrows, error } = await supabase.from('book_borrows')
         .select('*')
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .order('created_at', { ascending: false });
 
       if (error) return res.status(500).json({ error: error.message });
@@ -1014,7 +1062,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .from('library_card_applications')
           .select('card_number, status')
           .in('card_number', cardIds)
-          .eq('college_id', col.id)
+          .eq('college_id', colId)
           .eq('status', 'suspended');
         suspendedSet = new Set((cards || []).map((c: any) => c.card_number));
       }
@@ -1029,7 +1077,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .from('library_card_applications')
           .select('card_number, father_name')
           .in('card_number', allCardIds)
-          .eq('college_id', col.id);
+          .eq('college_id', colId);
 
         (cardDetails || []).forEach((c: any) => {
           if (c.card_number && c.father_name) {
@@ -1056,37 +1104,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })));
     }
     if (subResource === 'donations') {
-       const { data } = await supabase.from('donations').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+       const { data } = await supabase.from('donations').select('*').eq('college_id', colId).order('created_at', { ascending: false });
        return res.json((data || []).map(d => ({ id: d.id, amount: d.amount, method: d.method, donorName: d.name, email: d.email, message: d.message, createdAt: d.created_at })));
     }
     if (subResource === 'notifications') {
-      const { data } = await supabase.from('notifications').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      const { data } = await supabase.from('notifications').select('*').eq('college_id', colId).order('created_at', { ascending: false });
       return res.json((data || []).map(n => ({ id: n.id, title: n.title, message: n.message, image: n.image, pin: n.pin, status: n.status, createdAt: n.created_at })));
     }
     if (subResource === 'events') {
-      const { data } = await supabase.from('events').select('*').eq('college_id', col.id).order('date', { ascending: false });
+      const { data } = await supabase.from('events').select('*').eq('college_id', colId).order('date', { ascending: false });
       return res.json((data || []).map(e => ({ id: e.id, title: e.title, description: e.description, images: e.images, date: e.date, createdAt: e.created_at })));
     }
     if (subResource === 'blog') {
-      const { data } = await supabase.from('blog_posts').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      const { data } = await supabase.from('blog_posts').select('*').eq('college_id', colId).order('created_at', { ascending: false });
       return res.json((data || []).map(p => ({ id: p.id, title: p.title, slug: p.slug, shortDescription: p.short_description, content: p.content, featuredImage: p.featured_image, isPinned: p.is_pinned, status: p.status, createdAt: p.created_at })));
     }
     if (subResource === 'principal') {
-      const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
+      const { data } = await supabase.from('principal').select('*').eq('college_id', colId).maybeSingle();
       return res.json(data ? { id: data.id, name: data.name, designation: data.designation, message: data.message, imageUrl: data.image_url } : {});
     }
     if (subResource === 'faculty') {
-      const { data } = await supabase.from('faculty_staff').select('*').eq('college_id', col.id);
+      const { data } = await supabase.from('faculty_staff').select('*').eq('college_id', colId);
       return res.json((data || []).map(f => ({ id: f.id, name: f.name, designation: f.designation, description: f.description, imageUrl: f.image_url, supervises: f.supervises })));
     }
     if (subResource === 'history') {
       const sub = parts[4]; // sections, gallery
       if (sub === 'sections') {
-        const { data } = await supabase.from('college_history_sections').select('*').eq('college_id', col.id).order('display_order');
+        const { data } = await supabase.from('college_history_sections').select('*').eq('college_id', colId).order('display_order');
         return res.json((data || []).map(s => ({ id: s.id, title: s.title, description: s.description, imageUrl: s.image_url, layoutType: s.layout_type, displayOrder: s.display_order })));
       }
       if (sub === 'gallery') {
-        const { data } = await supabase.from('college_history_gallery').select('*').eq('college_id', col.id).order('display_order');
+        const { data } = await supabase.from('college_history_gallery').select('*').eq('college_id', colId).order('display_order');
         return res.json((data || []).map(g => ({ id: g.id, imageUrl: g.image_url, caption: g.caption, displayOrder: g.display_order })));
       }
     }
@@ -1094,7 +1142,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await supabase
         .from('contact_messages')
         .select('*')
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .order('created_at', { ascending: false });
       if (error) return res.status(500).json({ error: error.message });
       return res.json((data || []).map((m: any) => ({
@@ -1113,16 +1161,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: studentsData } = await supabase
         .from('students')
         .select('*')
-        .eq('college_id', col.id);
+        .eq('college_id', colId);
 
       // Step 2: Fetch all profiles for this college
-      const { data: profiles } = await supabase.from('profiles').select('*').eq('college_id', col.id);
+      const { data: profiles } = await supabase.from('profiles').select('*').eq('college_id', colId);
 
       // Step 3: Fetch Approved Library Card Applications (as fallback students and main data source for phone/cardId)
       const { data: cardApps } = await supabase
         .from('library_card_applications')
         .select('*')
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .eq('status', 'approved');
 
       const phoneMap: Record<string, string> = {};
@@ -1230,11 +1278,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ students, nonStudents });
     }
     if (subResource === 'notes') {
-      const { data } = await supabase.from('notes').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      const { data } = await supabase.from('notes').select('*').eq('college_id', colId).order('created_at', { ascending: false });
       return res.json((data || []).map(n => ({ id: n.id, title: n.title, description: n.description, subject: n.subject, class: n.class, pdfPath: n.pdf_path, status: n.status })));
     }
     if (subResource === 'rare-books') {
-      const { data } = await supabase.from('rare_books').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      const { data } = await supabase.from('rare_books').select('*').eq('college_id', colId).order('created_at', { ascending: false });
       return res.json((data || []).map((b: any) => ({ id: b.id, title: b.title, description: b.description, category: b.category, pdfPath: b.pdf_path, coverImage: b.cover_image, status: b.status })));
     }
   }
@@ -1260,7 +1308,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('library_card_applications')
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', itemId)
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .select('id, card_number, status')
         .single();
 
@@ -1277,7 +1325,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Get the borrow record to find the book
       const { data: borrow } = await supabase
         .from('book_borrows').select('book_id, status')
-        .eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        .eq('id', sub2).eq('college_id', colId).maybeSingle();
 
       if (!borrow) return res.status(404).json({ error: 'Borrow record not found' });
       if (borrow.status === 'returned') return res.status(400).json({ error: 'Book already returned' });
@@ -1287,7 +1335,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { error: updateErr } = await supabase
         .from('book_borrows')
         .update({ status: 'returned', return_date: returnDate })
-        .eq('id', sub2).eq('college_id', col.id);
+        .eq('id', sub2).eq('college_id', colId);
 
       if (updateErr) return res.status(500).json({ error: updateErr.message });
 
@@ -1315,7 +1363,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('library_card_applications')
         .update({ status: 'suspended', updated_at: new Date().toISOString() })
         .eq('id', itemId)
-        .eq('college_id', col.id);
+        .eq('college_id', colId);
 
       if (error) {
         console.error('[DELETE LIBRARY-CARD-APP] DB error:', error.message);
@@ -1335,7 +1383,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('library_card_applications')
         .select('card_number, email')
         .eq('id', sub2)
-        .eq('college_id', col.id)
+        .eq('college_id', colId)
         .maybeSingle();
 
       if (!card) {
@@ -1348,7 +1396,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('library_card_applications')
         .delete()
         .eq('id', sub2)
-        .eq('college_id', col.id);
+        .eq('college_id', colId);
 
       if (delErr) {
         console.error('[DELETE STUDENT-ADDRESS] Card delete error:', delErr.message);
@@ -1359,7 +1407,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { error: stuErr } = await supabase.from('students')
         .delete()
         .eq('card_id', card.card_number)
-        .eq('college_id', col.id);
+        .eq('college_id', colId);
       
       if (stuErr) {
         console.error('[DELETE STUDENT-ADDRESS] Student delete error:', stuErr.message);
@@ -1374,9 +1422,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         console.log('[DELETE BOOKS] id:', sub2);
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-        const { data: item } = await supabase.from('books').select('book_image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        const { data: item } = await supabase.from('books').select('book_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
         if (item?.book_image) await deleteFile(item.book_image);
-        const { error } = await supabase.from('books').delete().eq('id', sub2).eq('college_id', col.id);
+        const { error } = await supabase.from('books').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         console.log('[DELETE BOOKS] Success:', sub2);
         return res.json({ success: true });
@@ -1385,14 +1433,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log('[UPSERT BOOKS] method:', req.method, 'id:', sub2);
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
         const payload = { 
-          ...req.body, college_id: col.id, 
+          ...req.body, college_id: colId, 
           book_name: req.body.bookName, author_name: req.body.authorName, 
           short_intro: req.body.shortIntro, book_image: req.body.bookImage, 
           total_copies: req.body.totalCopies, available_copies: req.body.availableCopies 
         };
         delete payload.bookName; delete payload.authorName; delete payload.shortIntro; delete payload.bookImage; delete payload.totalCopies; delete payload.availableCopies;
         if (req.method === 'PATCH' && sub2) {
-          const { error } = await supabase.from('books').update(payload).eq('id', sub2).eq('college_id', col.id);
+          const { error } = await supabase.from('books').update(payload).eq('id', sub2).eq('college_id', colId);
           if (error) return res.status(500).json({ error: error.message });
         } else {
           const { error } = await supabase.from('books').insert(payload);
@@ -1407,21 +1455,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         console.log('[DELETE NOTES] id:', sub2);
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-        const { data: item } = await supabase.from('notes').select('pdf_path').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        const { data: item } = await supabase.from('notes').select('pdf_path').eq('id', sub2).eq('college_id', colId).maybeSingle();
         if (item?.pdf_path) await deleteFile(item.pdf_path);
-        const { error } = await supabase.from('notes').delete().eq('id', sub2).eq('college_id', col.id);
+        const { error } = await supabase.from('notes').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         console.log('[DELETE NOTES] Success:', sub2);
         return res.json({ success: true });
       }
       if (req.method === 'PATCH' && sub2 && sub3 === 'toggle') {
-        const { data: curr } = await supabase.from('notes').select('status').eq('id', sub2).eq('college_id', col.id).single();
+        const { data: curr } = await supabase.from('notes').select('status').eq('id', sub2).eq('college_id', colId).single();
         const newStatus = curr?.status === 'active' ? 'inactive' : 'active';
-        await supabase.from('notes').update({ status: newStatus }).eq('id', sub2).eq('college_id', col.id);
+        await supabase.from('notes').update({ status: newStatus }).eq('id', sub2).eq('college_id', colId);
         return res.json({ success: true, status: newStatus });
       }
       if (req.method === 'POST') {
-        const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath };
+        const payload = { ...req.body, college_id: colId, pdf_path: req.body.pdfPath };
         delete payload.pdfPath;
         const { error } = await supabase.from('notes').insert(payload);
         if (error) return res.status(500).json({ error: error.message });
@@ -1433,21 +1481,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'rare-books' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-        const { data: item } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        const { data: item } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
         if (item?.pdf_path) await deleteFile(item.pdf_path);
         if (item?.cover_image) await deleteFile(item.cover_image);
-        const { error } = await supabase.from('rare_books').delete().eq('id', sub2).eq('college_id', col.id);
+        const { error } = await supabase.from('rare_books').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
       if (req.method === 'PATCH' && sub2 && sub3 === 'toggle') {
-        const { data: curr } = await supabase.from('rare_books').select('status').eq('id', sub2).eq('college_id', col.id).single();
+        const { data: curr } = await supabase.from('rare_books').select('status').eq('id', sub2).eq('college_id', colId).single();
         const newStatus = curr?.status === 'active' ? 'inactive' : 'active';
-        await supabase.from('rare_books').update({ status: newStatus }).eq('id', sub2).eq('college_id', col.id);
+        await supabase.from('rare_books').update({ status: newStatus }).eq('id', sub2).eq('college_id', colId);
         return res.json({ success: true, status: newStatus });
       }
       if (req.method === 'POST') {
-        const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath, cover_image: req.body.coverImage };
+        const payload = { ...req.body, college_id: colId, pdf_path: req.body.pdfPath, cover_image: req.body.coverImage };
         delete payload.pdfPath; delete payload.coverImage;
         const { error } = await supabase.from('rare_books').insert(payload);
         if (error) return res.status(500).json({ error: error.message });
@@ -1459,20 +1507,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'events' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-        const { data: item } = await supabase.from('events').select('images').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        const { data: item } = await supabase.from('events').select('images').eq('id', sub2).eq('college_id', colId).maybeSingle();
         for (const img of (item?.images || [])) await deleteFile(img);
-        const { error } = await supabase.from('events').delete().eq('id', sub2).eq('college_id', col.id);
+        const { error } = await supabase.from('events').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
       if (req.method === 'POST') {
-        const payload = { ...req.body, college_id: col.id, images: req.body.images || [] };
+        const payload = { ...req.body, college_id: colId, images: req.body.images || [] };
         const { data, error } = await supabase.from('events').insert(payload).select().single();
         if (error) return res.status(500).json({ error: error.message });
         return res.json(data);
       }
       if (req.method === 'PATCH' && sub2) {
-        const { error } = await supabase.from('events').update(req.body).eq('id', sub2).eq('college_id', col.id);
+        const { error } = await supabase.from('events').update(req.body).eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
@@ -1482,31 +1530,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'notifications' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-        const { data: item } = await supabase.from('notifications').select('image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        const { data: item } = await supabase.from('notifications').select('image').eq('id', sub2).eq('college_id', colId).maybeSingle();
         if (item?.image) await deleteFile(item.image);
-        const { error } = await supabase.from('notifications').delete().eq('id', sub2).eq('college_id', col.id);
+        const { error } = await supabase.from('notifications').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
       if (req.method === 'POST') {
-        const payload = { ...req.body, college_id: col.id, pin: req.body.pin || false, status: req.body.status || 'published' };
+        const payload = { ...req.body, college_id: colId, pin: req.body.pin || false, status: req.body.status || 'published' };
         const { data, error } = await supabase.from('notifications').insert(payload).select().single();
         if (error) return res.status(500).json({ error: error.message });
         return res.json(data);
       }
       if (req.method === 'PATCH' && sub2) {
         if (sub3 === 'status') {
-          const { data: curr } = await supabase.from('notifications').select('status').eq('id', sub2).eq('college_id', col.id).single();
+          const { data: curr } = await supabase.from('notifications').select('status').eq('id', sub2).eq('college_id', colId).single();
           const newStatus = curr?.status === 'published' ? 'inactive' : 'published';
-          await supabase.from('notifications').update({ status: newStatus }).eq('id', sub2).eq('college_id', col.id);
+          await supabase.from('notifications').update({ status: newStatus }).eq('id', sub2).eq('college_id', colId);
           return res.json({ success: true, status: newStatus });
         }
         if (sub3 === 'pin') {
-          const { data: curr } = await supabase.from('notifications').select('pin').eq('id', sub2).eq('college_id', col.id).single();
-          await supabase.from('notifications').update({ pin: !curr?.pin }).eq('id', sub2).eq('college_id', col.id);
+          const { data: curr } = await supabase.from('notifications').select('pin').eq('id', sub2).eq('college_id', colId).single();
+          await supabase.from('notifications').update({ pin: !curr?.pin }).eq('id', sub2).eq('college_id', colId);
           return res.json({ success: true, pin: !curr?.pin });
         }
-        const { error } = await supabase.from('notifications').update(req.body).eq('id', sub2).eq('college_id', col.id);
+        const { error } = await supabase.from('notifications').update(req.body).eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
@@ -1516,21 +1564,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'blog' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-        const { data: item } = await supabase.from('blog_posts').select('featured_image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        const { data: item } = await supabase.from('blog_posts').select('featured_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
         if (item?.featured_image) await deleteFile(item.featured_image);
-        const { error } = await supabase.from('blog_posts').delete().eq('id', sub2).eq('college_id', col.id);
+        const { error } = await supabase.from('blog_posts').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
       if (req.method === 'POST' || req.method === 'PATCH') {
         const payload: any = {
-          college_id: col.id, title: req.body.title, content: req.body.content,
+          college_id: colId, title: req.body.title, content: req.body.content,
           featured_image: req.body.featuredImage, short_description: req.body.shortDescription,
           slug: req.body.slug, is_pinned: req.body.isPinned || false,
           status: req.body.status || 'published', updated_at: new Date().toISOString()
         };
         if (req.method === 'PATCH' && sub2) {
-          const { error } = await supabase.from('blog_posts').update(payload).eq('id', sub2).eq('college_id', col.id);
+          const { error } = await supabase.from('blog_posts').update(payload).eq('id', sub2).eq('college_id', colId);
           if (error) return res.status(500).json({ error: error.message });
         } else {
           const { error } = await supabase.from('blog_posts').insert(payload);
@@ -1544,17 +1592,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'faculty' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-        const { data: item } = await supabase.from('faculty_staff').select('image_url').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        const { data: item } = await supabase.from('faculty_staff').select('image_url').eq('id', sub2).eq('college_id', colId).maybeSingle();
         if (item?.image_url) await deleteFile(item.image_url);
-        const { error } = await supabase.from('faculty_staff').delete().eq('id', sub2).eq('college_id', col.id);
+        const { error } = await supabase.from('faculty_staff').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
       if (req.method === 'POST' || req.method === 'PATCH') {
-        const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
+        const payload = { ...req.body, college_id: colId, image_url: req.body.imageUrl };
         delete payload.imageUrl;
         if (req.method === 'PATCH' && sub2) {
-          const { error } = await supabase.from('faculty_staff').update(payload).eq('id', sub2).eq('college_id', col.id);
+          const { error } = await supabase.from('faculty_staff').update(payload).eq('id', sub2).eq('college_id', colId);
           if (error) return res.status(500).json({ error: error.message });
         } else {
           const { error } = await supabase.from('faculty_staff').insert(payload);
@@ -1566,14 +1614,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── BORROWED BOOKS (DELETE) ─────────────────────────────────────────────────────
     if (resource === 'admin' && sub1 === 'borrowed-books' && isApi && req.method === 'DELETE' && sub2 && !sub3) {
-      const { error } = await supabase.from('book_borrows').delete().eq('id', sub2).eq('college_id', col.id);
+      const { error } = await supabase.from('book_borrows').delete().eq('id', sub2).eq('college_id', colId);
       if (error) return res.status(500).json({ error: error.message });
       return res.json({ success: true });
     }
 
     // ── CONTACT MESSAGES (DELETE) ───────────────────────────────────────────────────
     if (resource === 'contact-messages' && isApi && req.method === 'DELETE' && sub1 && !sub2) {
-      const { error } = await supabase.from('contact_messages').delete().eq('id', sub1).eq('college_id', col.id);
+      const { error } = await supabase.from('contact_messages').delete().eq('id', sub1).eq('college_id', colId);
       if (error) return res.status(500).json({ error: error.message });
       return res.json({ success: true });
     }
@@ -1587,14 +1635,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!table) return res.status(404).json({ error: 'History sub-resource not found' });
 
       if (req.method === 'DELETE' && id) {
-        const { data: item } = await supabase.from(table).select('*').eq('id', id).eq('college_id', col.id).maybeSingle();
+        const { data: item } = await supabase.from(table).select('*').eq('id', id).eq('college_id', colId).maybeSingle();
         if ((item as any)?.image_url) await deleteFile((item as any).image_url);
-        const { error } = await supabase.from(table).delete().eq('id', id).eq('college_id', col.id);
+        const { error } = await supabase.from(table).delete().eq('id', id).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
       if (req.method === 'POST' || req.method === 'PATCH') {
-        const payload: any = { ...req.body, college_id: col.id };
+        const payload: any = { ...req.body, college_id: colId };
         if (req.body.imageUrl !== undefined) { payload.image_url = req.body.imageUrl; delete payload.imageUrl; }
         if (req.body.iconName !== undefined) { payload.icon_name = req.body.iconName; delete payload.iconName; }
         if (req.body.layoutType !== undefined) { payload.layout_type = req.body.layoutType; delete payload.layoutType; }
