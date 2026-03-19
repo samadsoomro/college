@@ -124,13 +124,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('userName', data.name || data.firstName || 'User');
       localStorage.setItem('cardNumber', data.cardNumber || '');
       
-      if (data.collegeSlug) localStorage.setItem('collegeSlug', data.collegeSlug);
-      if (data.role === 'admin') localStorage.setItem('isAdmin', 'true');
-      if (data.role === 'superadmin') localStorage.setItem('isSuperAdmin', 'true');
-      if (data.userId) localStorage.setItem('userId', data.userId);
-      
-      const target = data.isLibraryCard ? `/${routeSlug}` : data.redirect;
-      window.location.href = target;
+      if (data.role === "superadmin") {
+        localStorage.setItem("isSuperAdmin", "true");
+        localStorage.setItem("isAdmin", "true");
+        localStorage.setItem("userName", "Super Admin");
+        if (data.userId) localStorage.setItem("userId", data.userId);
+        window.location.href = "/super-admin/dashboard";
+        return { success: true };
+      }
+
+      if (data.role === "admin") {
+        localStorage.setItem("isAdmin", "true");
+        localStorage.setItem("isSuperAdmin", "false");
+        if (data.collegeSlug) localStorage.setItem("collegeSlug", data.collegeSlug);
+        if (data.userId) localStorage.setItem("userId", data.userId);
+        window.location.href = `/${data.collegeSlug || routeSlug}/admin-dashboard`;
+        return { success: true };
+      }
+
+      if (data.isLibraryCard || data.role === "user") {
+        localStorage.setItem("isAdmin", "false");
+        localStorage.setItem("isSuperAdmin", "false");
+        if (data.collegeSlug) localStorage.setItem("collegeSlug", data.collegeSlug);
+        if (data.userId) localStorage.setItem("userId", data.userId);
+        const target = data.isLibraryCard ? `/${routeSlug}` : data.redirect;
+        window.location.href = target;
+        return { success: true };
+      }
+
+      window.location.href = data.redirect || `/${routeSlug}`;
       return { success: true };
     } catch (e: any) { return { success: false, error: e.message }; }
   };

@@ -75,7 +75,8 @@ const Login: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`/api/${collegeSlug}/auth/login`, {
+      // Add timestamp as cache buster to ensure we get the latest backend role logic
+      const response = await fetch(`/api/${collegeSlug}/auth/login?t=${Date.now()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // ← CRITICAL: needed for session cookie
