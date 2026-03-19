@@ -49,9 +49,14 @@ const Header: React.FC = () => {
   const navLinks = [
     { path: `/${collegeSlug}`, label: "Home" },
     { path: `/${collegeSlug}/blog`, label: "Blog" },
-    { path: `/${collegeSlug}/books`, label: "Books" },
+    {
+      label: "Our Library",
+      children: [
+        { path: `/${collegeSlug}/books`, label: "Books" },
+        { path: `/${collegeSlug}/rare-books`, label: "Rare Books" },
+      ],
+    },
     { path: `/${collegeSlug}/notes`, label: "Notes" },
-    { path: `/${collegeSlug}/rare-books`, label: "Rare Books" },
     { path: `/${collegeSlug}/events`, label: "Events" },
     { path: `/${collegeSlug}/notifications`, label: "Notifications" },
     { path: `/${collegeSlug}/college-card`, label: "College Card" },
