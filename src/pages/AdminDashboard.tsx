@@ -1983,38 +1983,19 @@ export default function AdminDashboard() {
                             </td>
                             <td className="py-5 px-6">
                               <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {book.status === "borrowed" && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      if (
-                                        confirm("Mark this book as returned?")
-                                      ) {
-                                        fetch(
-                                          `/api/${collegeSlug}/book-borrows/${book.id}/return`,
-                                          {
-                                            method: "PATCH",
-                                            headers: adminHeaders(),
-                                            credentials: "include",
-                                          },
-                                        ).then((res) => {
-                                          if (res.ok) {
-                                            fetchBorrowedBooks();
-                                            toast({
-                                              title: "Success",
-                                              description:
-                                                "Book marked as returned.",
-                                            });
-                                          }
-                                        });
-                                      }
-                                    }}
-                                    className="h-8 rounded-xl border-emerald-200 text-emerald-600 font-bold text-[10px] uppercase hover:bg-emerald-50"
-                                  >
-                                    Return
-                                  </Button>
-                                )}
+                                <Button
+                                  variant={book.status === 'returned' ? "ghost" : "outline"}
+                                  size="sm"
+                                  disabled={book.status === 'returned'}
+                                  onClick={() => handleReturn(book.id)}
+                                  className={`h-8 rounded-xl font-bold text-[10px] uppercase transition-all ${
+                                    book.status === 'returned'
+                                      ? "bg-emerald-50 text-emerald-600 border-emerald-100 cursor-not-allowed"
+                                      : "border-emerald-200 text-emerald-600 hover:bg-emerald-50 shadow-sm hover:shadow-md"
+                                  }`}
+                                >
+                                  {book.status === 'returned' ? "✅ Returned" : "Return"}
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
