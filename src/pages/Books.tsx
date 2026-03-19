@@ -280,7 +280,7 @@ const Books = () => {
               </div>
               <div className="flex flex-col gap-3">
                 <a
-                  href={`/${collegeSlug}/library-card`}
+                  href={`/${collegeSlug}/college-card`}
                   className="w-full py-3 bg-primary text-white rounded-xl text-sm font-bold text-center hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
                 >
                   Apply for College Card

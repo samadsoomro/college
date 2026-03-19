@@ -70,7 +70,8 @@ const App = () => (
               <Route path="events" element={<Events />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="rare-books" element={<RareBooks />} />
-              <Route path="library-card" element={<CollegeCard />} />
+              <Route path="college-card" element={<CollegeCard />} />
+              <Route path="library-card" element={<Navigate to="../college-card" replace />} />
               <Route path="faculty" element={<Faculty />} />
               <Route path="history" element={<History />} />
               <Route path="principal-message" element={<PrincipalMessage />} />

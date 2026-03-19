@@ -142,7 +142,7 @@ export default function Register() {
           </div>
 
           <p className="text-xs text-neutral-400 bg-neutral-50 p-3 rounded-lg">
-            📌 Students can also register here for basic access. For College Card access and Card ID login, apply through the <Link to={`/${collegeSlug}/library-card`} className="text-primary font-semibold">College Card menu</Link>.
+            📌 Students can also register here for basic access. For College Card access and Card ID login, apply through the <Link to={`/${collegeSlug}/college-card`} className="text-primary font-semibold">College Card menu</Link>.
           </p>
 
           <button type="submit" disabled={loading || emailStatus === 'taken'}

@@ -245,7 +245,7 @@ const Login: React.FC = () => {
             <>
               Don't have a college card?{" "}
               <Link
-                to={`/${collegeSlug}/library-card`}
+                to={`/${collegeSlug}/college-card`}
                 className="text-primary font-medium hover:underline"
               >
                 Apply for it

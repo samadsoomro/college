@@ -343,7 +343,7 @@ const CollegeCard = () => {
 
     const qrDestination = settings?.cardQrEnabled
       ? settings?.cardQrUrl
-      : `${window.location.origin}/${collegeSlug}/library-card/${cardNumber}`;
+      : `${window.location.origin}/${collegeSlug}/college-card/${cardNumber}`;
     const qrCodeUrl = getQRCodeUrl(qrDestination, 100);
 
     // Fetch QR Code

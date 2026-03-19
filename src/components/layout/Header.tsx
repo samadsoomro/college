@@ -54,7 +54,7 @@ const Header: React.FC = () => {
     { path: `/${collegeSlug}/rare-books`, label: "Rare Books" },
     { path: `/${collegeSlug}/events`, label: "Events" },
     { path: `/${collegeSlug}/notifications`, label: "Notifications" },
-    { path: `/${collegeSlug}/library-card`, label: "College Card" },
+    { path: `/${collegeSlug}/college-card`, label: "College Card" },
     {
       label: "About",
       children: [
@@ -202,7 +202,7 @@ const Header: React.FC = () => {
           <div className="hidden lg:flex items-center gap-3">
             {!isAdminRoute && !isAdmin && (
               <>
-                <Link to={`/${collegeSlug}/library-card`}>
+                <Link to={`/${collegeSlug}/college-card`}>
                   <Button
                     variant="outline"
                     size="icon"
@@ -273,7 +273,7 @@ const Header: React.FC = () => {
           <div className="lg:hidden flex items-center gap-2">
             {!isAdminRoute && !isAdmin && (
               <>
-                <Link to={`/${collegeSlug}/library-card`}>
+                <Link to={`/${collegeSlug}/college-card`}>
                   <Button
                     variant="outline"
                     size="icon"

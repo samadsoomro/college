@@ -280,6 +280,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data } = await supabase.from('principal').select('*').eq('college_id', col.id).maybeSingle();
       return res.json(data ? { id: data.id, name: data.name, message: data.message, imageUrl: data.image_url } : {});
     }
+
+    // 5. Library Card Fields (for dynamic forms)
+    if (resource === 'library-card-fields') {
+      const { data, error } = await supabase
+        .from('library_card_fields')
+        .select('id, field_label, field_key, field_type, is_required, show_on_form, show_on_card, show_in_admin, display_order, options')
+        .eq('college_id', col.id)
+        .order('display_order', { ascending: true });
+
+      if (error) return res.status(500).json({ error: error.message });
+
+      return res.json((data || []).map((f: any) => ({
+        id: f.id,
+        fieldLabel: f.field_label,
+        fieldKey: f.field_key,
+        fieldType: f.field_type,
+        isRequired: f.is_required,
+        showOnForm: f.show_on_form,
+        showOnCard: f.show_on_card,
+        showInAdmin: f.show_in_admin,
+        displayOrder: f.display_order,
+        options: Array.isArray(f.options) ? f.options : []
+      })));
+    }
   }
 
   // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
