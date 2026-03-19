@@ -2,10 +2,17 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY)!
-);
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '');
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('[INIT] Missing Supabase credentials!',
+    'URL:', supabaseUrl ? 'set' : 'MISSING',
+    'KEY:', supabaseKey ? 'set' : 'MISSING'
+  );
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const ADMIN_TOKEN = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
 
@@ -322,113 +329,119 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // 6. Submit Library Card Application
-  if (resource === 'library-card-applications' && req.method === 'POST') {
-    try {
-      const { data: col } = await supabase
-        .from('colleges').select('id').eq('slug', collegeSlug).maybeSingle();
-      if (!col) {
-        console.error('[CARD POST] College not found for slug:', collegeSlug);
-        return res.status(404).json({ error: 'College not found' });
-      }
+  // ─── POST /api/:slug/library-card-applications ───────────────────────────
+  if (resource === 'library-card-applications' && !subResource && req.method === 'POST') {
+    // 1. Get college (with short_name for student ID prefix)
+    const { data: college, error: colErr } = await supabase
+      .from('colleges')
+      .select('id, short_name')
+      .eq('slug', collegeSlug)
+      .maybeSingle();
 
-      const b = req.body || {};
-      console.log('[CARD POST] Received body keys:', Object.keys(b));
-      console.log('[CARD POST] field:', b.field, 'rollNo:', b.rollNo, 'class:', b.class);
-
-      // Email check — only block active cards
-      const { data: existing } = await supabase
-        .from('library_card_applications')
-        .select('id, status')
-        .eq('email', (b.email || '').trim().toLowerCase())
-        .eq('college_id', col.id)
-        .in('status', ['pending', 'approved'])
-        .maybeSingle();
-
-      if (existing) {
-        return res.status(400).json({ error: 'A college card with this email is already active.' });
-      }
-
-      // Card number generation
-      const fieldCodeMap: Record<string, string> = {
-        'Computer Science': 'CS', 'Pre-Medical': 'PM',
-        'Pre-Engineering': 'PE', 'Humanities': 'HM', 'Commerce': 'COM'
-      };
-      const fieldCode = fieldCodeMap[b.field] || (b.field || 'XX').substring(0, 3).toUpperCase();
-      const rollNo = (b.rollNo || '').trim();
-      const classNum = (b.class || '').replace(/^Class\s*/i, '').trim();
-      let cardNumber = `${fieldCode}-${rollNo}-${classNum}`;
-
-      // Uniqueness check
-      let counter = 1;
-      while (true) {
-        const { data: dup } = await supabase
-          .from('library_card_applications')
-          .select('id').eq('card_number', cardNumber).eq('college_id', col.id).maybeSingle();
-        if (!dup) break;
-        cardNumber = `${fieldCode}-${rollNo}-${classNum}-${counter}`;
-        counter++;
-      }
-
-      const issueDate = new Date().toISOString().split('T')[0];
-      const validThrough = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const studentId = `GCFM-${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`;
-
-      // Hash password using imported bcrypt
-      const hashedPassword = b.password ? await bcrypt.hash(b.password, 10) : null;
-
-      const insertData = {
-        first_name: b.firstName || b.first_name,
-        last_name: b.lastName || b.last_name,
-        father_name: b.fatherName || b.father_name,
-        dob: b.dob,
-        class: b.class,
-        field: b.field,
-        roll_no: b.rollNo || b.roll_no,
-        email: (b.email || '').trim().toLowerCase(),
-        phone: b.phone,
-        address_street: b.addressStreet || b.address_street,
-        address_city: b.addressCity || b.address_city,
-        address_state: b.addressState || b.address_state,
-        address_zip: b.addressZip || b.address_zip,
-        password: hashedPassword,
-        card_number: cardNumber,
-        student_id: studentId,
-        issue_date: issueDate,
-        valid_through: validThrough,
-        status: 'pending',
-        college_id: col.id,
-        dynamic_fields: b.dynamicFields || {}
-      };
-
-      console.log('[CARD POST] Inserting with card_number:', cardNumber);
-
-      const { data, error } = await supabase
-        .from('library_card_applications')
-        .insert(insertData)
-        .select('*')
-        .single();
-
-      if (error) {
-        console.error('[CARD POST] Insert error:', error.message, error.details);
-        return res.status(500).json({ error: error.message });
-      }
-
-      console.log('[CARD POST] Success! ID:', data.id, 'Card:', data.card_number);
-
-      return res.json({
-        id: data.id,
-        cardNumber: data.card_number,
-        studentId: data.student_id,
-        issueDate: data.issue_date,
-        validThrough: data.valid_through,
-        status: data.status
-      });
-
-    } catch (err: any) {
-      console.error('[CARD POST] Unexpected error:', err.message, err.stack);
-      return res.status(500).json({ error: err.message || 'Server error' });
+    if (colErr || !college) {
+      console.error('[CARD POST] College not found for slug:', collegeSlug);
+      return res.status(404).json({ error: 'College not found' });
     }
+
+    // 2. Read body
+    const b = req.body || {};
+    const email = (b.email || '').trim().toLowerCase();
+    console.log('[CARD POST] email:', email, 'field:', b.field, 'rollNo:', b.rollNo, 'class:', b.class);
+
+    // 3. Check for existing ACTIVE card with same email
+    const { data: activeCard } = await supabase
+      .from('library_card_applications')
+      .select('id, status')
+      .eq('email', email)
+      .eq('college_id', college.id)
+      .in('status', ['pending', 'approved'])
+      .maybeSingle();
+
+    if (activeCard) {
+      return res.status(400).json({ error: 'An active college card already exists for this email.' });
+    }
+
+    // 4. Generate card number: CS-E10-12
+    const fieldMap: Record<string, string> = {
+      'Computer Science': 'CS', 'Pre-Medical': 'PM',
+      'Pre-Engineering': 'PE', 'Humanities': 'HM', 'Commerce': 'COM'
+    };
+    const fieldCode = fieldMap[b.field] || (b.field || 'XX').substring(0, 3).toUpperCase();
+    const rollNo = (b.rollNo || b.roll_no || '').trim();
+    const classNum = (b.class || '').replace(/^Class\s*/i, '').trim();
+    let cardNumber = `${fieldCode}-${rollNo}-${classNum}`;
+
+    // 5. Ensure card number is unique
+    for (let i = 1; i <= 10; i++) {
+      const { data: dup } = await supabase
+        .from('library_card_applications')
+        .select('id').eq('card_number', cardNumber).eq('college_id', college.id).maybeSingle();
+      if (!dup) break;
+      cardNumber = `${fieldCode}-${rollNo}-${classNum}-${i}`;
+    }
+
+    // 6. Generate student ID and dates
+    const shortName = college.short_name || 'COL';
+    const studentId = `${shortName}-${Date.now().toString().slice(-6)}`;
+    const issueDate = new Date().toISOString().split('T')[0];
+    const validThrough = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // 7. Hash password
+    let hashedPassword: string | null = null;
+    if (b.password) {
+      hashedPassword = await bcrypt.hash(String(b.password), 10);
+    }
+
+    // 8. Build insert object — explicit column names
+    const insertRow = {
+      college_id:     college.id,
+      first_name:     b.firstName   || b.first_name   || '',
+      last_name:      b.lastName    || b.last_name    || '',
+      father_name:    b.fatherName  || b.father_name  || '',
+      dob:            b.dob         || null,
+      class:          b.class       || '',
+      field:          b.field       || '',
+      roll_no:        rollNo,
+      email:          email,
+      phone:          b.phone       || '',
+      address_street: b.addressStreet || b.address_street || '',
+      address_city:   b.addressCity   || b.address_city   || '',
+      address_state:  b.addressState  || b.address_state  || '',
+      address_zip:    b.addressZip    || b.address_zip    || '',
+      password:       hashedPassword,
+      card_number:    cardNumber,
+      student_id:     studentId,
+      issue_date:     issueDate,
+      valid_through:  validThrough,
+      status:         'pending',
+      dynamic_fields: b.dynamicFields || b.dynamic_fields || {},
+    };
+
+    console.log('[CARD POST] Inserting card_number:', cardNumber, 'student_id:', studentId);
+
+    // 9. Insert
+    const { data: newCard, error: insertErr } = await supabase
+      .from('library_card_applications')
+      .insert(insertRow)
+      .select('id, card_number, student_id, issue_date, valid_through, status')
+      .single();
+
+    if (insertErr) {
+      console.error('[CARD INSERT ERROR]', insertErr.message, insertErr.details, insertErr.hint);
+      return res.status(500).json({ error: insertErr.message });
+    }
+
+    console.log('[CARD POST] Success! id:', newCard.id, 'card:', newCard.card_number);
+
+    // 10. Return success
+    return res.json({
+      id:           newCard.id,
+      cardNumber:   newCard.card_number,
+      studentId:    newCard.student_id,
+      issueDate:    newCard.issue_date,
+      validThrough: newCard.valid_through,
+      status:       newCard.status
+    });
   }
 
   // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
