@@ -101,7 +101,10 @@ const Login: React.FC = () => {
         localStorage.setItem('cardNumber', data.cardNumber || '');
         if (data.collegeSlug) localStorage.setItem('collegeSlug', data.collegeSlug);
         if (data.role === 'admin') localStorage.setItem('isAdmin', 'true');
-        if (data.role === 'superadmin') localStorage.setItem('isSuperAdmin', 'true');
+        if (data.role === 'superadmin') {
+          localStorage.setItem('isSuperAdmin', 'true');
+          localStorage.setItem('isAdmin', 'true');
+        }
         if (data.userId) localStorage.setItem('userId', data.userId);
         
         // Force redirect to homepage if it's a card login

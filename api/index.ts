@@ -175,25 +175,75 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Default Email Login
-    const { data: admin } = await supabase.from('admin_credentials').select('*').eq('admin_email', email).eq('college_id', col.id).eq('is_active', true).maybeSingle();
-    if (admin && (await bcrypt.compare(password, admin.password_hash))) {
-      return res.json({ redirect: `/${collegeSlug}/admin-dashboard`, role: 'admin', userId: admin.id, collegeSlug });
-    }
+    if (email && password && !collegeCardId) {
+      // ── Super Admin Check (FIRST — before any college check) ──────────
+      const { data: superAdmin } = await supabase
+        .from('admin_credentials')
+        .select('id, admin_email, password_hash, role')
+        .eq('admin_email', email.trim().toLowerCase())
+        .eq('role', 'developer')
+        .eq('is_active', true)
+        .maybeSingle();
 
-    // Step 1: Check the 'users' table for the email
-    const { data: userAccount } = await supabase.from('users').select('*').eq('email', email).eq('college_id', col.id).maybeSingle();
-    
-    if (userAccount && (await bcrypt.compare(password, userAccount.password))) {
-      // Step 2: Fetch the profile to get the user's name and role
-      const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', userAccount.id).maybeSingle();
+      if (superAdmin) {
+        const match = await bcrypt.compare(String(password), String(superAdmin.password_hash));
+        if (match) {
+          return res.json({
+            redirect: '/super-admin/dashboard',
+            role: 'superadmin',
+            email: superAdmin.admin_email,
+            userId: superAdmin.id
+          });
+        }
+        return res.status(401).json({ error: 'Invalid credentials.' });
+      }
+
+      // ── College Admin Check ────────────────────────────────────────────
+      const { data: admin } = await supabase
+        .from('admin_credentials')
+        .select('id, admin_email, password_hash, role')
+        .eq('admin_email', email.trim().toLowerCase())
+        .eq('college_id', col.id)
+        .eq('role', 'client_admin')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (admin) {
+        const match = await bcrypt.compare(String(password), String(admin.password_hash));
+        if (match) {
+          return res.json({
+            redirect: `/${collegeSlug}/admin-dashboard`,
+            role: 'admin',
+            userId: admin.id,
+            collegeSlug
+          });
+        }
+        return res.status(401).json({ error: 'Invalid credentials.' });
+      }
+
+      // ── Regular User Check ────────────────────────────────────────────
+      const { data: userAccount } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email.trim().toLowerCase())
+        .eq('college_id', col.id)
+        .maybeSingle();
       
-      return res.json({ 
-        redirect: `/${collegeSlug}`, 
-        role: profile?.role || 'visitor', 
-        name: profile?.full_name || 'User',
-        userId: userAccount.id, 
-        collegeSlug 
-      });
+      if (userAccount && (await bcrypt.compare(String(password), String(userAccount.password)))) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userAccount.id)
+          .maybeSingle();
+        
+        return res.json({ 
+          redirect: `/${collegeSlug}`, 
+          role: profile?.role || 'visitor', 
+          name: profile?.full_name || 'User',
+          userId: userAccount.id, 
+          collegeSlug 
+        });
+      }
     }
 
     return res.status(401).json({ error: 'Invalid credentials' });
