@@ -56,6 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const path = url.pathname;
   const parts = path.split('/').filter(Boolean); // ["api", "slug", "module", ...]
+  const isApi = parts[0] === 'api';
 
   // Disable caching for all API routes to ensure real-time sync
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -936,228 +937,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // 5. Admin POST/PATCH/DELETE Operations
-  if (req.method !== 'GET' && parts[2] === 'admin') {
-    const resrc = parts[3];
-    const sub = parts[4];
-    const id = parts[5];
-    
-    // Admin History
-    if (resrc === 'history') {
-      const tableMap: any = { page: 'college_history_page', sections: 'college_history_sections', gallery: 'college_history_gallery' };
-      const table = tableMap[sub];
-      if (!table) return res.status(400).json({ error: 'Invalid history sub-resource' });
-
-      if (req.method === 'POST' || req.method === 'PATCH') {
-        const payload: any = { ...req.body, college_id: col.id };
-        if (req.body.imageUrl !== undefined) { payload.image_url = req.body.imageUrl; delete payload.imageUrl; }
-        if (req.body.iconName !== undefined) { payload.icon_name = req.body.iconName; delete payload.iconName; }
-        if (req.body.layoutType !== undefined) { payload.layout_type = req.body.layoutType; delete payload.layoutType; }
-        if (req.body.displayOrder !== undefined) { payload.display_order = req.body.displayOrder; delete payload.displayOrder; }
-        
-        const itemId = (sub === 'page') ? null : (id || req.body.id);
-        if (itemId && itemId !== sub) {
-          await supabase.from(table).update(payload).eq('id', itemId);
-        } else if (sub === 'page') {
-          const { data: ex } = await supabase.from(table).select('id').eq('college_id', col.id).maybeSingle();
-          if (ex) await supabase.from(table).update(payload).eq('id', ex.id);
-          else await supabase.from(table).insert(payload);
-        } else {
-          await supabase.from(table).insert(payload);
-        }
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        await supabase.from(table).delete().eq('id', id);
-        return res.json({ success: true });
-      }
-    }
-
-    // Admin Principal
-    if (resrc === 'principal') {
-      const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl, updated_at: new Date().toISOString() };
-      delete payload.imageUrl;
-      const { data: ex } = await supabase.from('principal').select('id').eq('college_id', col.id).maybeSingle();
-      if (ex) await supabase.from('principal').update(payload).eq('id', ex.id);
-      else await supabase.from('principal').insert(payload);
-      return res.json({ success: true });
-    }
-
-    // Admin Faculty
-    if (resrc === 'faculty') {
-      if (req.method === 'POST' || req.method === 'PATCH') {
-        const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
-        delete payload.imageUrl;
-        const itemId = id || req.body.id;
-        if (itemId && itemId !== 'faculty') await supabase.from('faculty_staff').update(payload).eq('id', itemId);
-        else await supabase.from('faculty_staff').insert(payload);
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        const { data: item } = await supabase.from('faculty_staff').select('image_url').eq('id', id).single();
-        if ((item as any)?.image_url) await deleteStorageFile((item as any).image_url);
-        await supabase.from('faculty_staff').delete().eq('id', id);
-        return res.json({ success: true });
-      }
-    }
-
-    // Admin Notes
-    if (resrc === 'notes') {
-      if (id && id.includes('/toggle')) {
-        const actualId = id.split('/')[0];
-        const { data: curr } = await supabase.from('notes').select('status').eq('id', actualId).single();
-        const newStatus = (curr as any)?.status === 'active' ? 'inactive' : 'active';
-        await supabase.from('notes').update({ status: newStatus }).eq('id', actualId);
-        return res.json({ success: true, status: newStatus });
-      }
-      if (req.method === 'POST') {
-        const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath };
-        delete payload.pdfPath;
-        await supabase.from('notes').insert(payload);
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        const { data: item } = await supabase.from('notes').select('pdf_path').eq('id', id).single();
-        if ((item as any)?.pdf_path) await deleteStorageFile((item as any).pdf_path);
-        await supabase.from('notes').delete().eq('id', id);
-        return res.json({ success: true });
-      }
-    }
-
-    // Admin Rare Books
-    if (resrc === 'rare-books') {
-      if (id && id.includes('/toggle')) {
-        const actualId = id.split('/')[0];
-        const { data: curr } = await supabase.from('rare_books').select('status').eq('id', actualId).single();
-        const newStatus = (curr as any)?.status === 'active' ? 'inactive' : 'active';
-        await supabase.from('rare_books').update({ status: newStatus }).eq('id', actualId);
-        return res.json({ success: true, status: newStatus });
-      }
-      if (req.method === 'POST') {
-        const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath, cover_image: req.body.coverImage };
-        delete payload.pdfPath; delete payload.coverImage;
-        const { error } = await supabase.from('rare_books').insert(payload);
-        if (error) return res.status(500).json({ error: error.message });
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        const { data: item } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', id).single();
-        if (item) {
-          if ((item as any).pdf_path) await deleteStorageFile((item as any).pdf_path);
-          if ((item as any).cover_image) await deleteStorageFile((item as any).cover_image);
-        }
-        await supabase.from('rare_books').delete().eq('id', id);
-        return res.json({ success: true });
-      }
-    }
-
-    // Admin Events
-    if (resrc === 'events') {
-      if (req.method === 'POST') {
-        const payload = { ...req.body, college_id: col.id, images: req.body.images || [] };
-        const { data, error } = await supabase.from('events').insert(payload).select().single();
-        if (error) return res.status(500).json({ error: error.message });
-        return res.json(data);
-      }
-      if (req.method === 'PATCH') {
-        await supabase.from('events').update(req.body).eq('id', id);
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        const { data: item } = await supabase.from('events').select('images').eq('id', id).single();
-        if ((item as any)?.images?.length > 0) {
-          for (const url of (item as any).images) {
-            await deleteStorageFile(url);
-          }
-        }
-        await supabase.from('events').delete().eq('id', id);
-        return res.json({ success: true });
-      }
-    }
-
-    // Admin Notifications
-    if (resrc === 'notifications') {
-      const subAction = parts[5]; 
-      if (req.method === 'POST') {
-        const payload = { ...req.body, college_id: col.id, pin: req.body.pin || false, status: req.body.status || 'active' };
-        const { data, error } = await supabase.from('notifications').insert(payload).select().single();
-        if (error) return res.status(500).json({ error: error.message });
-        return res.json(data);
-      }
-      if (req.method === 'PATCH') {
-        if (subAction === 'status') {
-          const { data: curr } = await supabase.from('notifications').select('status').eq('id', id).single();
-          const newStatus = (curr as any)?.status === 'active' ? 'inactive' : 'active';
-          await supabase.from('notifications').update({ status: newStatus }).eq('id', id);
-          return res.json({ success: true, status: newStatus });
-        }
-        if (subAction === 'pin') {
-          const { data: curr } = await supabase.from('notifications').select('pin').eq('id', id).single();
-          const newPin = !(curr as any)?.pin;
-          await supabase.from('notifications').update({ pin: newPin }).eq('id', id);
-          return res.json({ success: true, pin: newPin });
-        }
-        await supabase.from('notifications').update(req.body).eq('id', id);
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        const { data: item } = await supabase.from('notifications').select('image').eq('id', id).single();
-        if ((item as any)?.image) await deleteStorageFile((item as any).image);
-        await supabase.from('notifications').delete().eq('id', id);
-        return res.json({ success: true });
-      }
-    }
-
-    // Admin Books
-    if (resrc === 'books') {
-      if (req.method === 'POST' || req.method === 'PATCH') {
-        const payload = { 
-          ...req.body, college_id: col.id, 
-          book_name: req.body.bookName, author_name: req.body.authorName, 
-          short_intro: req.body.shortIntro, book_image: req.body.bookImage, 
-          total_copies: req.body.totalCopies, available_copies: req.body.availableCopies 
-        };
-        delete payload.bookName; delete payload.authorName; delete payload.shortIntro; delete payload.bookImage; delete payload.totalCopies; delete payload.availableCopies;
-        if (id && id !== 'books') await supabase.from('books').update(payload).eq('id', id);
-        else await supabase.from('books').insert(payload);
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        const { data: item } = await supabase.from('books').select('book_image').eq('id', id).single();
-        if ((item as any)?.book_image) await deleteStorageFile((item as any).book_image);
-        await supabase.from('books').delete().eq('id', id);
-        return res.json({ success: true });
-      }
-    }
-
-    // Admin Blog
-    if (resrc === 'blog') {
-      if (req.method === 'POST' || req.method === 'PATCH') {
-        const payload: any = {
-          college_id: col.id,
-          title: req.body.title,
-          content: req.body.content,
-          featured_image: req.body.featuredImage,
-          short_description: req.body.shortDescription,
-          slug: req.body.slug,
-          is_pinned: req.body.isPinned || false,
-          status: req.body.status || 'published',
-          updated_at: new Date().toISOString()
-        };
-        if (id && id !== 'blog') {
-          await supabase.from('blog_posts').update(payload).eq('id', id);
-        } else {
-          await supabase.from('blog_posts').insert(payload);
-        }
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        const { data: item } = await supabase.from('blog_posts').select('featured_image').eq('id', id).single();
-        if ((item as any)?.featured_image) await deleteStorageFile((item as any).featured_image);
-        await supabase.from('blog_posts').delete().eq('id', id);
-        return res.json({ success: true });
-      }
-    }
+  // 5. Admin POST/PATCH/DELETE Operations — Consolidating below at unified handlers.
+  if (req.method !== 'GET' && resource === 'admin') {
+    // This block is now handled by the unified section at the end of the file.
+    // Proceeding to specific resource handlers...
+  }
 
     // Admin Library Cards Status & Suspend
     // PATCH /api/:slug/admin/library-card-applications/:id/status
@@ -1283,160 +1067,246 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true });
     }
 
-    // ── BOOKS DELETE ─────────────────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'books' && sub2 && !sub3) {
-      console.log('[DELETE BOOKS] id:', sub2, 'slug:', slug);
-      if (!isAdmin) {
-        console.log('[DELETE BOOKS] Unauthorized. Token snippet:', req.headers['x-admin-token']?.toString().substring(0,5));
-        return res.status(403).json({ error: 'Unauthorized' });
+    // ── BOOKS (POST, PATCH, DELETE) ────────────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'books' && isApi) {
+      if (req.method === 'DELETE' && sub2 && !sub3) {
+        console.log('[DELETE BOOKS] id:', sub2);
+        if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+        const { data: item } = await supabase.from('books').select('book_image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        if (item?.book_image) await deleteFile(item.book_image);
+        const { error } = await supabase.from('books').delete().eq('id', sub2).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        console.log('[DELETE BOOKS] Success:', sub2);
+        return res.json({ success: true });
       }
-      const colId = await getCollegeId(slug);
-      if (!colId) {
-        console.log('[DELETE BOOKS] College not found:', slug);
-        return res.status(404).json({ error: 'College not found' });
+      if (req.method === 'POST' || req.method === 'PATCH') {
+        console.log('[UPSERT BOOKS] method:', req.method, 'id:', sub2);
+        if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+        const payload = { 
+          ...req.body, college_id: col.id, 
+          book_name: req.body.bookName, author_name: req.body.authorName, 
+          short_intro: req.body.shortIntro, book_image: req.body.bookImage, 
+          total_copies: req.body.totalCopies, available_copies: req.body.availableCopies 
+        };
+        delete payload.bookName; delete payload.authorName; delete payload.shortIntro; delete payload.bookImage; delete payload.totalCopies; delete payload.availableCopies;
+        if (req.method === 'PATCH' && sub2) {
+          const { error } = await supabase.from('books').update(payload).eq('id', sub2).eq('college_id', col.id);
+          if (error) return res.status(500).json({ error: error.message });
+        } else {
+          const { error } = await supabase.from('books').insert(payload);
+          if (error) return res.status(500).json({ error: error.message });
+        }
+        return res.json({ success: true });
       }
-      const { data: item } = await supabase.from('books').select('book_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      if (item?.book_image) {
-        console.log('[DELETE BOOKS] Cleaning up storage:', item.book_image);
-        await deleteFile(item.book_image);
+    }
+
+    // ── NOTES (POST, PATCH, DELETE) ────────────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'notes' && isApi) {
+      if (req.method === 'DELETE' && sub2 && !sub3) {
+        console.log('[DELETE NOTES] id:', sub2);
+        if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+        const { data: item } = await supabase.from('notes').select('pdf_path').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        if (item?.pdf_path) await deleteFile(item.pdf_path);
+        const { error } = await supabase.from('notes').delete().eq('id', sub2).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        console.log('[DELETE NOTES] Success:', sub2);
+        return res.json({ success: true });
       }
-      const { error } = await supabase.from('books').delete().eq('id', sub2).eq('college_id', colId);
-      if (error) {
-        console.error('[DELETE BOOKS] DB error:', error.message);
-        return res.status(500).json({ error: error.message });
+      if (req.method === 'PATCH' && sub2 && sub3 === 'toggle') {
+        const { data: curr } = await supabase.from('notes').select('status').eq('id', sub2).eq('college_id', col.id).single();
+        const newStatus = curr?.status === 'active' ? 'inactive' : 'active';
+        await supabase.from('notes').update({ status: newStatus }).eq('id', sub2).eq('college_id', col.id);
+        return res.json({ success: true, status: newStatus });
       }
-      console.log('[DELETE BOOKS] Success:', sub2);
-      return res.json({ success: true });
-    }
-
-    // ── NOTES DELETE ─────────────────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'notes' && sub2 && !sub3) {
-      console.log('[DELETE NOTES] id:', sub2, 'slug:', slug);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { data: item } = await supabase.from('notes').select('pdf_path').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      if (item?.pdf_path) await deleteFile(item.pdf_path);
-      const { error } = await supabase.from('notes').delete().eq('id', sub2).eq('college_id', colId);
-      if (error) {
-        console.error('[DELETE NOTES] DB error:', error.message);
-        return res.status(500).json({ error: error.message });
+      if (req.method === 'POST') {
+        const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath };
+        delete payload.pdfPath;
+        const { error } = await supabase.from('notes').insert(payload);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
       }
-      console.log('[DELETE NOTES] Success:', sub2);
-      return res.json({ success: true });
     }
 
-    // ── RARE BOOKS DELETE ─────────────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'rare-books' && sub2 && !sub3) {
-      console.log('[DELETE RARE BOOKS] id:', sub2);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { data: item } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      if (item?.pdf_path) await deleteFile(item.pdf_path);
-      if (item?.cover_image) await deleteFile(item.cover_image);
-      const { error } = await supabase.from('rare_books').delete().eq('id', sub2).eq('college_id', colId);
+    // ── RARE BOOKS (POST, PATCH, DELETE) ───────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'rare-books' && isApi) {
+      if (req.method === 'DELETE' && sub2 && !sub3) {
+        if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+        const { data: item } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        if (item?.pdf_path) await deleteFile(item.pdf_path);
+        if (item?.cover_image) await deleteFile(item.cover_image);
+        const { error } = await supabase.from('rare_books').delete().eq('id', sub2).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
+      }
+      if (req.method === 'PATCH' && sub2 && sub3 === 'toggle') {
+        const { data: curr } = await supabase.from('rare_books').select('status').eq('id', sub2).eq('college_id', col.id).single();
+        const newStatus = curr?.status === 'active' ? 'inactive' : 'active';
+        await supabase.from('rare_books').update({ status: newStatus }).eq('id', sub2).eq('college_id', col.id);
+        return res.json({ success: true, status: newStatus });
+      }
+      if (req.method === 'POST') {
+        const payload = { ...req.body, college_id: col.id, pdf_path: req.body.pdfPath, cover_image: req.body.coverImage };
+        delete payload.pdfPath; delete payload.coverImage;
+        const { error } = await supabase.from('rare_books').insert(payload);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
+      }
+    }
+
+    // ── EVENTS (POST, PATCH, DELETE) ────────────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'events' && isApi) {
+      if (req.method === 'DELETE' && sub2 && !sub3) {
+        if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+        const { data: item } = await supabase.from('events').select('images').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        for (const img of (item?.images || [])) await deleteFile(img);
+        const { error } = await supabase.from('events').delete().eq('id', sub2).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
+      }
+      if (req.method === 'POST') {
+        const payload = { ...req.body, college_id: col.id, images: req.body.images || [] };
+        const { data, error } = await supabase.from('events').insert(payload).select().single();
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json(data);
+      }
+      if (req.method === 'PATCH' && sub2) {
+        const { error } = await supabase.from('events').update(req.body).eq('id', sub2).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
+      }
+    }
+
+    // ── NOTIFICATIONS (POST, PATCH, DELETE) ─────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'notifications' && isApi) {
+      if (req.method === 'DELETE' && sub2 && !sub3) {
+        if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+        const { data: item } = await supabase.from('notifications').select('image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        if (item?.image) await deleteFile(item.image);
+        const { error } = await supabase.from('notifications').delete().eq('id', sub2).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
+      }
+      if (req.method === 'POST') {
+        const payload = { ...req.body, college_id: col.id, pin: req.body.pin || false, status: req.body.status || 'published' };
+        const { data, error } = await supabase.from('notifications').insert(payload).select().single();
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json(data);
+      }
+      if (req.method === 'PATCH' && sub2) {
+        if (sub3 === 'status') {
+          const { data: curr } = await supabase.from('notifications').select('status').eq('id', sub2).eq('college_id', col.id).single();
+          const newStatus = curr?.status === 'published' ? 'inactive' : 'published';
+          await supabase.from('notifications').update({ status: newStatus }).eq('id', sub2).eq('college_id', col.id);
+          return res.json({ success: true, status: newStatus });
+        }
+        if (sub3 === 'pin') {
+          const { data: curr } = await supabase.from('notifications').select('pin').eq('id', sub2).eq('college_id', col.id).single();
+          await supabase.from('notifications').update({ pin: !curr?.pin }).eq('id', sub2).eq('college_id', col.id);
+          return res.json({ success: true, pin: !curr?.pin });
+        }
+        const { error } = await supabase.from('notifications').update(req.body).eq('id', sub2).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
+      }
+    }
+
+    // ── BLOG (POST, PATCH, DELETE) ──────────────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'blog' && isApi) {
+      if (req.method === 'DELETE' && sub2 && !sub3) {
+        if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+        const { data: item } = await supabase.from('blog_posts').select('featured_image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        if (item?.featured_image) await deleteFile(item.featured_image);
+        const { error } = await supabase.from('blog_posts').delete().eq('id', sub2).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
+      }
+      if (req.method === 'POST' || req.method === 'PATCH') {
+        const payload: any = {
+          college_id: col.id, title: req.body.title, content: req.body.content,
+          featured_image: req.body.featuredImage, short_description: req.body.shortDescription,
+          slug: req.body.slug, is_pinned: req.body.isPinned || false,
+          status: req.body.status || 'published', updated_at: new Date().toISOString()
+        };
+        if (req.method === 'PATCH' && sub2) {
+          const { error } = await supabase.from('blog_posts').update(payload).eq('id', sub2).eq('college_id', col.id);
+          if (error) return res.status(500).json({ error: error.message });
+        } else {
+          const { error } = await supabase.from('blog_posts').insert(payload);
+          if (error) return res.status(500).json({ error: error.message });
+        }
+        return res.json({ success: true });
+      }
+    }
+
+    // ── FACULTY (POST, PATCH, DELETE) ───────────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'faculty' && isApi) {
+      if (req.method === 'DELETE' && sub2 && !sub3) {
+        if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+        const { data: item } = await supabase.from('faculty_staff').select('image_url').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+        if (item?.image_url) await deleteFile(item.image_url);
+        const { error } = await supabase.from('faculty_staff').delete().eq('id', sub2).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
+      }
+      if (req.method === 'POST' || req.method === 'PATCH') {
+        const payload = { ...req.body, college_id: col.id, image_url: req.body.imageUrl };
+        delete payload.imageUrl;
+        if (req.method === 'PATCH' && sub2) {
+          const { error } = await supabase.from('faculty_staff').update(payload).eq('id', sub2).eq('college_id', col.id);
+          if (error) return res.status(500).json({ error: error.message });
+        } else {
+          const { error } = await supabase.from('faculty_staff').insert(payload);
+          if (error) return res.status(500).json({ error: error.message });
+        }
+        return res.json({ success: true });
+      }
+    }
+
+    // ── BORROWED BOOKS (DELETE) ─────────────────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'borrowed-books' && isApi && req.method === 'DELETE' && sub2 && !sub3) {
+      const { error } = await supabase.from('book_borrows').delete().eq('id', sub2).eq('college_id', col.id);
       if (error) return res.status(500).json({ error: error.message });
-      console.log('[DELETE RARE BOOKS] Success');
       return res.json({ success: true });
     }
 
-    // ── EVENTS DELETE ─────────────────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'events' && sub2 && !sub3) {
-      console.log('[DELETE EVENTS] id:', sub2);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { data: item } = await supabase.from('events').select('images').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      for (const img of (item?.images || [])) await deleteFile(img);
-      const { error } = await supabase.from('events').delete().eq('id', sub2).eq('college_id', colId);
+    // ── CONTACT MESSAGES (DELETE) ───────────────────────────────────────────────────
+    if (resource === 'contact-messages' && isApi && req.method === 'DELETE' && sub1 && !sub2) {
+      const { error } = await supabase.from('contact_messages').delete().eq('id', sub1).eq('college_id', col.id);
       if (error) return res.status(500).json({ error: error.message });
-      console.log('[DELETE EVENTS] Success');
       return res.json({ success: true });
     }
 
-    // ── NOTIFICATIONS DELETE ──────────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'notifications' && sub2 && !sub3) {
-      console.log('[DELETE NOTIFICATIONS] id:', sub2);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { data: item } = await supabase.from('notifications').select('image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      if (item?.image) await deleteFile(item.image);
-      const { error } = await supabase.from('notifications').delete().eq('id', sub2).eq('college_id', colId);
-      if (error) return res.status(500).json({ error: error.message });
-      console.log('[DELETE NOTIFICATIONS] Success');
-      return res.json({ success: true });
-    }
+    // ── HISTORY CMS (Special Case) ──────────────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'history' && isApi) {
+      const sub = sub2; // sections, gallery, page
+      const id = sub3;
+      const tableMap: any = { page: 'college_history_page', sections: 'college_history_sections', gallery: 'college_history_gallery' };
+      const table = tableMap[sub];
+      if (!table) return res.status(404).json({ error: 'History sub-resource not found' });
 
-    // ── BLOG DELETE ───────────────────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'blog' && sub2 && !sub3) {
-      console.log('[DELETE BLOG] id:', sub2);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { data: item } = await supabase.from('blog_posts').select('featured_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      if (item?.featured_image) await deleteFile(item.featured_image);
-      const { error } = await supabase.from('blog_posts').delete().eq('id', sub2).eq('college_id', colId);
-      if (error) return res.status(500).json({ error: error.message });
-      console.log('[DELETE BLOG] Success');
-      return res.json({ success: true });
+      if (req.method === 'DELETE' && id) {
+        const { data: item } = await supabase.from(table).select('*').eq('id', id).eq('college_id', col.id).maybeSingle();
+        if ((item as any)?.image_url) await deleteFile((item as any).image_url);
+        const { error } = await supabase.from(table).delete().eq('id', id).eq('college_id', col.id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ success: true });
+      }
+      if (req.method === 'POST' || req.method === 'PATCH') {
+        const payload: any = { ...req.body, college_id: col.id };
+        if (req.body.imageUrl !== undefined) { payload.image_url = req.body.imageUrl; delete payload.imageUrl; }
+        if (req.body.iconName !== undefined) { payload.icon_name = req.body.iconName; delete payload.iconName; }
+        if (req.body.layoutType !== undefined) { payload.layout_type = req.body.layoutType; delete payload.layoutType; }
+        if (req.body.displayOrder !== undefined) { payload.display_order = req.body.displayOrder; delete payload.displayOrder; }
+        if (sub === 'page') {
+          const { data: ex } = await supabase.from(table).select('id').eq('college_id', col.id).maybeSingle();
+          if (ex) await supabase.from(table).update(payload).eq('id', ex.id);
+          else await supabase.from(table).insert(payload);
+        } else {
+          const itemId = id || req.body.id;
+          if (itemId) await supabase.from(table).update(payload).eq('id', itemId).eq('college_id', col.id);
+          else await supabase.from(table).insert(payload);
+        }
     }
-
-    // ── FACULTY DELETE ────────────────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'faculty' && sub2 && !sub3) {
-      console.log('[DELETE FACULTY] id:', sub2);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { data: item } = await supabase.from('faculty_staff').select('image_url').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      if (item?.image_url) await deleteFile(item.image_url);
-      const { error } = await supabase.from('faculty_staff').delete().eq('id', sub2).eq('college_id', colId);
-      if (error) return res.status(500).json({ error: error.message });
-      console.log('[DELETE FACULTY] Success');
-      return res.json({ success: true });
-    }
-
-    // ── BORROWED BOOKS DELETE ─────────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'borrowed-books' && sub2 && !sub3) {
-      console.log('[DELETE BORROWED] id:', sub2);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { error } = await supabase.from('book_borrows').delete().eq('id', sub2).eq('college_id', colId);
-      if (error) return res.status(500).json({ error: error.message });
-      console.log('[DELETE BORROWED] Success');
-      return res.json({ success: true });
-    }
-
-    // ── CONTACT MESSAGES DELETE ───────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'contact-messages' && sub1 && !sub2) {
-      console.log('[DELETE CONTACT] id:', sub1);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { error } = await supabase.from('contact_messages').delete().eq('id', sub1).eq('college_id', colId);
-      if (error) return res.status(500).json({ error: error.message });
-      console.log('[DELETE CONTACT] Success');
-      return res.json({ success: true });
-    }
-
-    // ── HISTORY GALLERY DELETE ────────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'history' && sub2 === 'gallery' && sub3) {
-      console.log('[DELETE HISTORY GALLERY] id:', sub3);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { data: item } = await supabase.from('college_history_gallery').select('image_url').eq('id', sub3).eq('college_id', colId).maybeSingle();
-      if (item?.image_url) await deleteFile(item.image_url);
-      const { error } = await supabase.from('college_history_gallery').delete().eq('id', sub3).eq('college_id', colId);
-      if (error) return res.status(500).json({ error: error.message });
-      console.log('[DELETE HISTORY GALLERY] Success');
-      return res.json({ success: true });
-    }
-
-    // ── HISTORY SECTIONS DELETE ───────────────────────────────────────────
-    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'history' && sub2 === 'sections' && sub3) {
-      console.log('[DELETE HISTORY SECTION] id:', sub3);
-      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-      const colId = await getCollegeId(slug);
-      const { error } = await supabase.from('college_history_sections').delete().eq('id', sub3).eq('college_id', colId);
-      if (error) return res.status(500).json({ error: error.message });
-      console.log('[DELETE HISTORY SECTION] Success');
-      return res.json({ success: true });
-    }
-
   }
 
   return res.status(404).json({ error: 'Endpoint not found', path });
