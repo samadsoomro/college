@@ -679,10 +679,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json((data || []).map(b => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
     }
     if (subResource === 'library-cards') {
+      const token = req.headers['x-admin-token'];
+      const validToken = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
+      if (token !== validToken) return res.status(403).json({ error: 'Unauthorized' });
+
       const { data, error } = await supabase
         .from('library_card_applications')
         .select('*')
         .eq('college_id', col.id)
+        .in('status', ['pending', 'approved'])
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -692,25 +697,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       return res.json((data || []).map((c: any) => ({
         id: c.id,
-        firstName: c.first_name,
-        lastName: c.last_name,
-        fatherName: c.father_name,
-        email: c.email,
-        phone: c.phone,
-        class: c.class,
-        field: c.field,
-        rollNo: c.roll_no,
-        cardNumber: c.card_number,
-        studentId: c.student_id,
-        issueDate: c.issue_date,
-        validThrough: c.valid_through,
-        addressStreet: c.address_street,
-        addressCity: c.address_city,
-        addressState: c.address_state,
-        addressZip: c.address_zip,
-        status: c.status,
-        dynamicFields: c.dynamic_fields,
-        createdAt: c.created_at
+        firstName: c.first_name, lastName: c.last_name,
+        fatherName: c.father_name, email: c.email, phone: c.phone,
+        class: c.class, field: c.field, rollNo: c.roll_no,
+        cardNumber: c.card_number, studentId: c.student_id,
+        issueDate: c.issue_date, validThrough: c.valid_through,
+        addressStreet: c.address_street, addressCity: c.address_city,
+        addressState: c.address_state, addressZip: c.address_zip,
+        status: c.status, createdAt: c.created_at
       })));
     }
     if (subResource === 'student-addresses') {

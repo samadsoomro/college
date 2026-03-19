@@ -228,13 +228,18 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
 
-      // Fetch cards
+      // Fetch cards with admin auth token (same pattern as other admin fetches)
       const res = await fetch(`/api/${collegeSlug}/admin/library-cards`, {
-        credentials: "include",
+        headers: adminHeaders(),
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
+        console.log('[CARDS FETCH] Got', data.length, 'cards');
         setLibraryCards(data);
+      } else {
+        const errText = await res.text();
+        console.error('[CARDS FETCH] Failed:', res.status, errText);
       }
 
       // Fetch dynamic field definitions
@@ -244,7 +249,7 @@ export default function AdminDashboard() {
         setCustomFields(fields.filter((f: any) => f.showInAdmin));
       }
     } catch (error) {
-      console.error("Error fetching college cards or fields:", error);
+      console.error('Error fetching college cards or fields:', error);
     } finally {
       setLoading(false);
     }
@@ -1035,6 +1040,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${id}`, {
         method: "DELETE",
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
