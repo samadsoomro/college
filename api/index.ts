@@ -157,13 +157,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json(mapped);
       }
       if (req.method === 'POST') {
-        const { name, shortName, slug: newSlug } = req.body || {};
+        const { name, shortName, slug: newSlug, adminEmail, adminPassword } = req.body || {};
+
+        if (!name || !shortName || !newSlug) {
+          return res.status(400).json({ error: 'Missing required college fields' });
+        }
+
+        const bucketName = `college-${newSlug}`;
+
         const { data, error } = await supabase
           .from('colleges')
           .insert({ 
             name, 
             short_name: shortName, 
             slug: newSlug, 
+            storage_bucket: bucketName,
             is_active: true 
           })
           .select()
@@ -171,6 +179,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           
         if (error) return res.status(500).json({ error: error.message });
         
+        if (adminEmail && adminPassword) {
+          const hashedPassword = await bcrypt.hash(adminPassword, 10);
+          const { error: adminError } = await supabase
+            .from('admin_credentials')
+            .insert({
+              college_id: data.id,
+              admin_email: adminEmail.trim().toLowerCase(),
+              password_hash: hashedPassword,
+              secret_key: '',
+              is_active: true,
+              role: 'client_admin'
+            });
+
+          if (adminError) {
+            console.error("Failed to create admin auth for new college:", adminError);
+          }
+        }
+
         return res.json({
           id: data.id,
           name: data.name,
