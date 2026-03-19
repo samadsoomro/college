@@ -80,7 +80,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const isAdmin = isAdminRequest(req);
   const resource = parts[2];
   const subResource = parts[3];
-  const itemId = parts[parts.length - 1]; // Fallback for DELETE/PATCH ids
+  const sub2 = parts[4];
+  const sub3 = parts[5];
+  
+  // itemId is usually the last part, but if we have /status or similar, it's the second to last
+  let itemId = parts[parts.length - 1]; 
+  if (sub3 === 'status') itemId = sub2;
 
   // ── AUTH ──────────────────────────────────────────────────────────────────
   // Handle Student/Visitor Login via Email OR Library Card

@@ -526,25 +526,53 @@ export default function AdminDashboard() {
   // deleteBook logic handled in component
 
   const approveCard = async (cardId: string) => {
-    const res = await fetch(
-      `/api/${collegeSlug}/admin/library-card-applications/${cardId}/status`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
-        },
-        body: JSON.stringify({ status: 'approved' })
+    try {
+      const res = await fetch(
+        `/api/${collegeSlug}/admin/library-card-applications/${cardId}/status`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+          },
+          body: JSON.stringify({ status: 'approved' })
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error, variant: 'destructive' });
+        return;
       }
-    );
-    if (!res.ok) {
-      const err = await res.json();
-      console.error('[APPROVE ERROR]', err);
-      toast({ title: 'Error', description: err.error, variant: 'destructive' });
-      return;
+      toast({ title: 'Approved!', description: 'Card has been approved.' });
+      fetchLibraryCards();
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to approve card.', variant: 'destructive' });
     }
-    toast({ title: 'Approved!', description: 'Card has been approved.' });
-    fetchLibraryCards(); // refresh list
+  };
+
+  const rejectCard = async (cardId: string) => {
+    try {
+      const res = await fetch(
+        `/api/${collegeSlug}/admin/library-card-applications/${cardId}/status`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+          },
+          body: JSON.stringify({ status: 'suspended' })
+        }
+      );
+      if (res.ok) {
+        toast({ title: 'Card Rejected' });
+        fetchLibraryCards();
+      } else {
+        const data = await res.json();
+        toast({ title: 'Error', description: data.error || 'Failed to reject card', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to reject card.', variant: 'destructive' });
+    }
   };
 
   const suspendCard = async (cardId: string) => {
@@ -2209,7 +2237,7 @@ export default function AdminDashboard() {
                                         ✅ Approve
                                       </Button>
                                       <Button 
-                                        onClick={() => suspendCard(card.id)}
+                                        onClick={() => rejectCard(card.id)}
                                         className="h-8 text-xs bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl"
                                       >
                                         ❌ Reject
