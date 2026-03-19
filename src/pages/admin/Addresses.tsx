@@ -150,19 +150,30 @@ const Addresses = () => {
     toast({ title: "Success", description: "Excel file downloaded." });
   };
 
-  const handleDeleteAddress = async (id: string) => {
-    if (!confirm("Permanently delete this student address record? This cannot be undone.")) return;
+  const handleDeleteAddress = async (cardId: string) => {
+    if (!confirm('Permanently delete this student record? This cannot be undone.')) return;
+
     try {
-      const res = await fetch(`/api/${collegeSlug}/admin/student-addresses/${id}`, {
-        method: "DELETE",
-        headers: { ...adminHeaders() },
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to delete record");
-      toast({ title: "Deleted", description: "Address record removed permanently." });
-      fetchAddresses();
-    } catch (err: any) {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      const res = await fetch(
+        `/api/${collegeSlug}/admin/student-addresses/${cardId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+          }
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        toast({ title: 'Error', description: err.error || 'Failed to delete', variant: 'destructive' });
+        return;
+      }
+
+      toast({ title: 'Deleted', description: 'Student record permanently removed.' });
+      fetchAddresses(); // refresh list — record should be gone
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to delete record.', variant: 'destructive' });
     }
   };
 

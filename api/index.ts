@@ -1222,13 +1222,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true });
     }
 
-    if (resrc === 'student-addresses' && req.method === 'DELETE') {
+    // DELETE /api/:slug/admin/student-addresses/:id
+    if (resource === 'admin' && subResource === 'student-addresses' && sub2 && !sub3 && req.method === 'DELETE') {
+      const token = req.headers['x-admin-token'];
+      const validToken = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
+      if (token !== validToken) return res.status(403).json({ error: 'Unauthorized' });
+
+      // Get card details before deleting to clean up related data
+      const { data: card } = await supabase
+        .from('library_card_applications')
+        .select('card_number, email')
+        .eq('id', sub2)
+        .eq('college_id', col.id)
+        .maybeSingle();
+
+      if (!card) return res.status(404).json({ error: 'Card not found' });
+
       // Hard delete from library_card_applications
-      await supabase.from('library_card_applications').delete()
-        .eq('id', id).eq('college_id', col.id);
-      // Also delete linked student record if exists
-      await supabase.from('students').delete()
-        .eq('user_id', id).eq('college_id', col.id);
+      const { error: delErr } = await supabase
+        .from('library_card_applications')
+        .delete()
+        .eq('id', sub2)
+        .eq('college_id', col.id);
+
+      if (delErr) {
+        console.error('[DELETE ADDRESS]', delErr.message);
+        return res.status(500).json({ error: delErr.message });
+      }
+
+      // Also delete from students table
+      await supabase.from('students')
+        .delete()
+        .eq('card_id', card.card_number)
+        .eq('college_id', col.id);
+
       return res.json({ success: true });
     }
 
