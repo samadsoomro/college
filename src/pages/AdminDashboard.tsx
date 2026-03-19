@@ -273,6 +273,26 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleReturn = async (borrowId: string) => {
+    try {
+      const res = await fetch(`/api/${collegeSlug}/admin/borrowed-books/${borrowId}/return`, {
+        method: 'PATCH',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast({ title: 'Error', description: err.error, variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Book Returned!', description: 'Available copies updated.' });
+      fetchBorrowedBooks();
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to return book.', variant: 'destructive' });
+    }
+  };
+
   const fetchDonations = async () => {
     try {
       setLoading(true);

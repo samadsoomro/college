@@ -83,9 +83,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sub2 = parts[4];
   const sub3 = parts[5];
   
-  // itemId is usually the last part, but if we have /status or similar, it's the second to last
+  // itemId is usually the last part, but if we have /status, /return or similar, it's the second to last
   let itemId = parts[parts.length - 1]; 
-  if (sub3 === 'status') itemId = sub2;
+  if (sub3 === 'status' || sub3 === 'return') itemId = sub2;
 
   // GET /api/:slug/library-card-applications/by-card/:cardNumber
   if (resource === 'library-card-applications' && subResource === 'by-card' && sub2 && req.method === 'GET') {
@@ -1166,6 +1166,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error) return res.status(500).json({ error: error.message });
       return res.json({ success: true, card: data });
+    }
+
+    // PATCH /api/:slug/admin/borrowed-books/:id/return
+    if (resource === 'admin' && subResource === 'borrowed-books' && sub2 && sub3 === 'return' && req.method === 'PATCH') {
+      const token = req.headers['x-admin-token'];
+      const validToken = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
+      if (token !== validToken) return res.status(403).json({ error: 'Unauthorized' });
+
+      // Get the borrow record to find the book
+      const { data: borrow } = await supabase
+        .from('book_borrows').select('book_id, status')
+        .eq('id', sub2).eq('college_id', col.id).maybeSingle();
+
+      if (!borrow) return res.status(404).json({ error: 'Borrow record not found' });
+      if (borrow.status === 'returned') return res.status(400).json({ error: 'Book already returned' });
+
+      // Mark as returned
+      const returnDate = new Date().toISOString().split('T')[0];
+      const { error: updateErr } = await supabase
+        .from('book_borrows')
+        .update({ status: 'returned', return_date: returnDate, updated_at: new Date().toISOString() })
+        .eq('id', sub2).eq('college_id', col.id);
+
+      if (updateErr) return res.status(500).json({ error: updateErr.message });
+
+      // Increment available copies back
+      if (borrow.book_id) {
+        const { data: book } = await supabase.from('books')
+          .select('available_copies').eq('id', borrow.book_id).maybeSingle();
+        if (book) {
+          await supabase.from('books')
+            .update({ available_copies: book.available_copies + 1 })
+            .eq('id', borrow.book_id);
+        }
+      }
+
+      return res.json({ success: true, returnDate });
     }
 
     // DELETE /api/:slug/admin/library-card-applications/:id (Soft Suspend)
