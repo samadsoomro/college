@@ -150,25 +150,23 @@ const AdminHistory: React.FC = () => {
   };
 
   const handleDeleteSection = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this section?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/history/sections/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders()
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        toast({
-          title: "Deleted",
-          description: "Section removed successfully",
-        });
-        fetchData();
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete section",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchData();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 
@@ -214,22 +212,23 @@ const AdminHistory: React.FC = () => {
   };
 
   const handleDeleteGallery = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this image?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/history/gallery/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders()
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        toast({ title: "Deleted", description: "Image removed from gallery" });
-        fetchData();
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete image",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchData();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 

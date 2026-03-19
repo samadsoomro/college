@@ -355,33 +355,23 @@ export default function AdminDashboard() {
   // Blog handling is self-contained in AdminBlog component
 
   const deleteRareBook = async (id: string) => {
-    if (!confirm("Delete this rare book?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/rare-books/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-        credentials: "include",
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setRareBooks(rareBooks.filter((b: any) => b.id !== id));
-        toast({
-          title: "Deleted",
-          description: "Rare book deleted successfully.",
-        });
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to delete rare book",
-          variant: "destructive",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete rare book.",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchRareBooks();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 
@@ -516,30 +506,23 @@ export default function AdminDashboard() {
   };
 
   const deleteEvent = async (id: string) => {
-    if (!confirm("Delete this event?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/events/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-        credentials: "include",
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setEvents(events.filter((e: any) => e.id !== id));
-        toast({ title: "Deleted", description: "Event deleted successfully." });
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to delete event",
-          variant: "destructive",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete event.",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchEvents();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 
@@ -1067,189 +1050,130 @@ export default function AdminDashboard() {
   };
 
   const deleteMessage = async (id: string) => {
-    if (!confirm("Delete this message?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/contact-messages/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-        credentials: "include",
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setMessages(messages.filter((m) => m.id !== id));
-        toast({
-          title: "Deleted",
-          description: "Message deleted successfully.",
-        });
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to delete message",
-          variant: "destructive",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete message.",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchMessages();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 
   const deleteLibraryCard = async (id: string) => {
-    if (!confirm("Delete this college card?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-        credentials: "include",
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setLibraryCards(libraryCards.filter((c) => c.id !== id));
-        toast({
-          title: "Deleted",
-          description: "College card deleted successfully.",
-        });
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to delete college card",
-          variant: "destructive",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete college card.",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchLibraryCards();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 
   const deleteBorrowedBook = async (id: string) => {
-    if (!confirm("Delete this record?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/borrowed-books/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-        credentials: "include",
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setBorrowedBooks(borrowedBooks.filter((b) => b.id !== id));
-        toast({
-          title: "Deleted",
-          description: "Book record deleted successfully.",
-        });
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to delete book record",
-          variant: "destructive",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete book record.",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchBorrowedBooks();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 
   const approveLibraryCard = approveCard; // Alias for any existing references if any outside this file (unlikely)
 
   const deleteDonation = async (id: string) => {
-    if (!confirm("Delete this donation?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/donations/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-        credentials: "include",
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setDonations(donations.filter((d) => d.id !== id));
-        toast({
-          title: "Deleted",
-          description: "Donation deleted successfully.",
-        });
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to delete donation",
-          variant: "destructive",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete donation.",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchDonations();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 
   const deleteUser = async (id: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this user? This will also remove their profile.",
-      )
-    )
-      return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/users/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-        credentials: "include",
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setUsers(users.filter((u: any) => u.id !== id));
-        toast({ title: "Deleted", description: "User deleted successfully." });
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to delete user",
-          variant: "destructive",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete user.",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchUsers();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 
   const deleteNote = async (id: string) => {
-    if (!confirm("Delete this note?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/notes/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-        credentials: "include",
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setNotes(notes.filter((n: any) => n.id !== id));
-        toast({ title: "Deleted", description: "Note deleted successfully." });
-      } else {
-        const err = await res.json();
-        toast({
-          title: "Error",
-          description: err.error || "Failed to delete note",
-          variant: "destructive",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete note.",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchNotes();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 

@@ -156,23 +156,23 @@ const Books: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this book?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/books/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders(),
-        credentials: "include"
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        toast({ title: "Success", description: "Book deleted successfully" });
-        fetchBooks();
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete book",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchBooks();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
   

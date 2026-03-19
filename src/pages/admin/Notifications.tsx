@@ -105,25 +105,23 @@ const Notifications: React.FC = () => {
   };
 
   const deleteNotification = async (id: string) => {
-    if (!confirm("Delete this notification?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/notifications/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders()
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setNotifications(notifications.filter((n: any) => n.id !== id));
-        toast({
-          title: "Deleted",
-          description: "Notification deleted successfully",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete notification",
-        variant: "destructive",
-      });
+      toast({ title: 'Deleted successfully' });
+      await fetchNotifications();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 

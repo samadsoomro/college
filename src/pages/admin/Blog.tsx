@@ -222,28 +222,23 @@ const AdminBlog: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this post?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/blog/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders()
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        setPosts(posts.filter((p) => p.id !== id));
-        toast({ title: "Deleted", description: "Post deleted" });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete",
-          variant: "destructive",
-        });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
+      toast({ title: 'Deleted successfully' });
+      await fetchPosts();
     } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to delete",
-        variant: "destructive",
-      });
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 

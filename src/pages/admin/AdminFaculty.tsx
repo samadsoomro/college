@@ -63,22 +63,23 @@ const AdminFaculty: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this member?")) return;
+    if (!window.confirm('Are you sure? This cannot be undone.')) return;
     try {
-      const res = await fetch(`/api/${collegeSlug}/admin/faculty/${id}`, { 
-        method: "DELETE", 
-        headers: adminHeaders(), 
-        credentials: "include" 
+      const res = await fetch(`/api/${collegeSlug}/admin/faculty/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
       });
-      if (res.ok) {
-        toast({ title: "Deleted", description: "Faculty member removed." });
-        fetchFaculty();
-      } else {
-        const err = await res.json();
-        toast({ title: "Error", description: err.error || "Failed to delete", variant: "destructive" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Error', description: data.error || 'Delete failed', variant: 'destructive' });
+        return;
       }
-    } catch (e) { 
-      toast({ title: "Error", description: "Failed to delete", variant: "destructive" }); 
+      toast({ title: 'Deleted successfully' });
+      await fetchFaculty();
+    } catch (err) {
+      toast({ title: 'Network Error', description: 'Could not connect to server', variant: 'destructive' });
     }
   };
 
