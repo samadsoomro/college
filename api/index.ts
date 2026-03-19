@@ -471,7 +471,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const { data: borrow, error: borrowErr } = await supabase
-      .from('borrowed_books')
+      .from('book_borrows')
       .insert({
         college_id: col.id,
         book_id: subResource,
@@ -792,8 +792,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         createdAt: c.created_at, dynamicFields: c.dynamic_fields 
       })));
     }
-    if (subResource === 'borrowed-books') {
-      const { data: borrows } = await supabase.from('borrowed_books')
+    if (subResource === 'borrowed-books' || subResource === 'book-borrows') {
+      const { data: borrows } = await supabase.from('book_borrows')
         .select('*')
         .eq('college_id', col.id)
         .order('borrow_date', { ascending: false });
@@ -1143,9 +1143,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true });
     }
 
-    if (resrc === 'borrowed-books') {
+    if (resrc === 'borrowed-books' || resrc === 'book-borrows') {
       if (req.method === 'DELETE') {
-        await supabase.from('borrowed_books').delete().eq('id', id);
+        await supabase.from('book_borrows').delete().eq('id', id);
         return res.json({ success: true });
       }
     }
