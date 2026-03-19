@@ -72,6 +72,7 @@ const App = () => (
               <Route path="rare-books" element={<RareBooks />} />
               <Route path="college-card" element={<CollegeCard />} />
               <Route path="library-card" element={<Navigate to="../college-card" replace />} />
+              <Route path="library-dashboard" element={<Navigate to=".." replace />} />
               <Route path="faculty" element={<Faculty />} />
               <Route path="history" element={<History />} />
               <Route path="principal-message" element={<PrincipalMessage />} />

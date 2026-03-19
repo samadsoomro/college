@@ -59,7 +59,11 @@ const Login: React.FC = () => {
         }
 
         if (result.redirect) {
-          window.location.href = result.redirect;
+          localStorage.setItem('userRole', 'user');
+          localStorage.setItem('isLibraryCard', 'true');
+          // For card login, we might not get all data back from the simplified 'login' helper
+          // but if we do, we store it. Otherwise it defaults in AuthContext.
+          window.location.href = `/${collegeSlug}`;
         }
         return;
       }
@@ -92,11 +96,17 @@ const Login: React.FC = () => {
       // Success - Use window.location.href to force a full reload and clear state
       if (data.redirect) {
         localStorage.setItem('userRole', data.role);
+        localStorage.setItem('isLibraryCard', data.isLibraryCard ? 'true' : 'false');
+        localStorage.setItem('userName', data.name || data.firstName || 'User');
+        localStorage.setItem('cardNumber', data.cardNumber || '');
         if (data.collegeSlug) localStorage.setItem('collegeSlug', data.collegeSlug);
         if (data.role === 'admin') localStorage.setItem('isAdmin', 'true');
         if (data.role === 'superadmin') localStorage.setItem('isSuperAdmin', 'true');
         if (data.userId) localStorage.setItem('userId', data.userId);
-        window.location.href = data.redirect;
+        
+        // Force redirect to homepage if it's a card login
+        const target = data.isLibraryCard ? `/${collegeSlug}` : data.redirect;
+        window.location.href = target;
       }
     } catch (err: any) {
       setError(

@@ -124,12 +124,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!match) return res.status(401).json({ error: 'Incorrect password.' });
 
       return res.json({
-        redirect: `/${collegeSlug}/library-dashboard`,
+        redirect: `/${collegeSlug}`,
         role: 'user',
         isLibraryCard: true,
         cardNumber: approved.card_number,
-        userId: approved.id,
-        name: `${approved.first_name} ${approved.last_name}`
+        firstName: approved.first_name,
+        lastName: approved.last_name,
+        name: `${approved.first_name} ${approved.last_name}`,
+        userId: approved.id
       });
     }
 

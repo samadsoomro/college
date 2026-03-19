@@ -92,6 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const isS = localStorage.getItem('isSuperAdmin') === 'true';
       const isA = localStorage.getItem('isAdmin') === 'true' || isS;
       const isL = localStorage.getItem('isLibraryCard') === 'true';
+      const userName = localStorage.getItem('userName') || 'User';
       
       setIsAdmin(isA);
       setIsSuperAdmin(isS);
@@ -99,10 +100,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setUser({ 
         role, 
+        name: userName,
+        isLibraryCard: isL,
+        cardNumber: localStorage.getItem('cardNumber'),
         collegeSlug: localStorage.getItem('collegeSlug'), 
         id: localStorage.getItem('userId'),
-        email: localStorage.getItem('userEmail'),
-        name: localStorage.getItem('userName')
+        email: localStorage.getItem('userEmail')
       });
     }
     setLoading(false);
@@ -120,12 +123,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       localStorage.setItem('userRole', data.role);
       localStorage.setItem('userEmail', email || '');
+      localStorage.setItem('isLibraryCard', data.isLibraryCard ? 'true' : 'false');
+      localStorage.setItem('userName', data.name || data.firstName || 'User');
+      localStorage.setItem('cardNumber', data.cardNumber || '');
+      
       if (data.collegeSlug) localStorage.setItem('collegeSlug', data.collegeSlug);
       if (data.role === 'admin') localStorage.setItem('isAdmin', 'true');
       if (data.role === 'superadmin') localStorage.setItem('isSuperAdmin', 'true');
       if (data.userId) localStorage.setItem('userId', data.userId);
       
-      window.location.href = data.redirect;
+      const target = data.isLibraryCard ? `/${routeSlug}` : data.redirect;
+      window.location.href = target;
       return { success: true };
     } catch (e: any) { return { success: false, error: e.message }; }
   };
