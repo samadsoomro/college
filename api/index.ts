@@ -97,6 +97,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sub2 = parts[4];
   const sub3 = parts[5] || '';
   
+  console.log('[DEBUG]', req.method, path, '→ parts:', JSON.stringify(parts), 'resource:', resource, 'sub1:', sub1, 'sub2:', sub2, 'sub3:', sub3);
+  
   // itemId is usually the last part, but if we have /status, /return or similar, it's the second to last
   let itemId = parts[parts.length - 1]; 
   if (sub3 === 'status' || sub3 === 'return') itemId = sub2;
@@ -1219,9 +1221,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // DELETE /api/:slug/admin/library-card-applications/:id (Soft Suspend)
     if (resource === 'admin' && subResource === 'library-card-applications' && itemId && !parts[5] && req.method === 'DELETE') {
-      const token = req.headers['x-admin-token'];
-      const validToken = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
-      if (token !== validToken) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE LIBRARY-CARD-APP] soft-suspend id:', itemId);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
 
       // Soft delete — set to suspended
       const { error } = await supabase
@@ -1230,15 +1231,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .eq('id', itemId)
         .eq('college_id', col.id);
 
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) {
+        console.error('[DELETE LIBRARY-CARD-APP] DB error:', error.message);
+        return res.status(500).json({ error: error.message });
+      }
+      console.log('[DELETE LIBRARY-CARD-APP] Success: suspended %s', itemId);
       return res.json({ success: true });
     }
 
     // DELETE /api/:slug/admin/student-addresses/:id
     if (resource === 'admin' && subResource === 'student-addresses' && sub2 && !sub3 && req.method === 'DELETE') {
-      const token = req.headers['x-admin-token'];
-      const validToken = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
-      if (token !== validToken) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE STUDENT-ADDRESS] id:', sub2);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
 
       // Get card details before deleting to clean up related data
       const { data: card } = await supabase
@@ -1248,7 +1252,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .eq('college_id', col.id)
         .maybeSingle();
 
-      if (!card) return res.status(404).json({ error: 'Card not found' });
+      if (!card) {
+        console.log('[DELETE STUDENT-ADDRESS] Card not found for id:', sub2);
+        return res.status(404).json({ error: 'Card not found' });
+      }
 
       // Hard delete from library_card_applications
       const { error: delErr } = await supabase
@@ -1258,141 +1265,175 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .eq('college_id', col.id);
 
       if (delErr) {
-        console.error('[DELETE ADDRESS]', delErr.message);
+        console.error('[DELETE STUDENT-ADDRESS] Card delete error:', delErr.message);
         return res.status(500).json({ error: delErr.message });
       }
 
       // Also delete from students table
-      await supabase.from('students')
+      const { error: stuErr } = await supabase.from('students')
         .delete()
         .eq('card_id', card.card_number)
         .eq('college_id', col.id);
+      
+      if (stuErr) {
+        console.error('[DELETE STUDENT-ADDRESS] Student delete error:', stuErr.message);
+      }
 
+      console.log('[DELETE STUDENT-ADDRESS] Success for id: %s, card_number: %s', sub2, card.card_number);
       return res.json({ success: true });
     }
 
     // ── BOOKS DELETE ─────────────────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'books' && sub2 && !sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE BOOKS] id:', sub2, 'slug:', slug);
+      if (!isAdmin) {
+        console.log('[DELETE BOOKS] Unauthorized. Token snippet:', req.headers['x-admin-token']?.toString().substring(0,5));
+        return res.status(403).json({ error: 'Unauthorized' });
+      }
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
+      if (!colId) {
+        console.log('[DELETE BOOKS] College not found:', slug);
+        return res.status(404).json({ error: 'College not found' });
+      }
       const { data: item } = await supabase.from('books').select('book_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      await deleteFile(item?.book_image);
+      if (item?.book_image) {
+        console.log('[DELETE BOOKS] Cleaning up storage:', item.book_image);
+        await deleteFile(item.book_image);
+      }
       const { error } = await supabase.from('books').delete().eq('id', sub2).eq('college_id', colId);
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) {
+        console.error('[DELETE BOOKS] DB error:', error.message);
+        return res.status(500).json({ error: error.message });
+      }
+      console.log('[DELETE BOOKS] Success:', sub2);
       return res.json({ success: true });
     }
 
     // ── NOTES DELETE ─────────────────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'notes' && sub2 && !sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE NOTES] id:', sub2, 'slug:', slug);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
       const { data: item } = await supabase.from('notes').select('pdf_path').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      await deleteFile(item?.pdf_path);
+      if (item?.pdf_path) await deleteFile(item.pdf_path);
       const { error } = await supabase.from('notes').delete().eq('id', sub2).eq('college_id', colId);
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) {
+        console.error('[DELETE NOTES] DB error:', error.message);
+        return res.status(500).json({ error: error.message });
+      }
+      console.log('[DELETE NOTES] Success:', sub2);
       return res.json({ success: true });
     }
 
     // ── RARE BOOKS DELETE ─────────────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'rare-books' && sub2 && !sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE RARE BOOKS] id:', sub2);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
       const { data: item } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      await deleteFile(item?.pdf_path);
-      await deleteFile(item?.cover_image);
+      if (item?.pdf_path) await deleteFile(item.pdf_path);
+      if (item?.cover_image) await deleteFile(item.cover_image);
       const { error } = await supabase.from('rare_books').delete().eq('id', sub2).eq('college_id', colId);
       if (error) return res.status(500).json({ error: error.message });
+      console.log('[DELETE RARE BOOKS] Success');
       return res.json({ success: true });
     }
 
     // ── EVENTS DELETE ─────────────────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'events' && sub2 && !sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE EVENTS] id:', sub2);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
       const { data: item } = await supabase.from('events').select('images').eq('id', sub2).eq('college_id', colId).maybeSingle();
       for (const img of (item?.images || [])) await deleteFile(img);
       const { error } = await supabase.from('events').delete().eq('id', sub2).eq('college_id', colId);
       if (error) return res.status(500).json({ error: error.message });
+      console.log('[DELETE EVENTS] Success');
       return res.json({ success: true });
     }
 
     // ── NOTIFICATIONS DELETE ──────────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'notifications' && sub2 && !sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE NOTIFICATIONS] id:', sub2);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
       const { data: item } = await supabase.from('notifications').select('image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      await deleteFile(item?.image);
+      if (item?.image) await deleteFile(item.image);
       const { error } = await supabase.from('notifications').delete().eq('id', sub2).eq('college_id', colId);
       if (error) return res.status(500).json({ error: error.message });
+      console.log('[DELETE NOTIFICATIONS] Success');
       return res.json({ success: true });
     }
 
     // ── BLOG DELETE ───────────────────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'blog' && sub2 && !sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE BLOG] id:', sub2);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
       const { data: item } = await supabase.from('blog_posts').select('featured_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      await deleteFile(item?.featured_image);
+      if (item?.featured_image) await deleteFile(item.featured_image);
       const { error } = await supabase.from('blog_posts').delete().eq('id', sub2).eq('college_id', colId);
       if (error) return res.status(500).json({ error: error.message });
+      console.log('[DELETE BLOG] Success');
       return res.json({ success: true });
     }
 
     // ── FACULTY DELETE ────────────────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'faculty' && sub2 && !sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE FACULTY] id:', sub2);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
       const { data: item } = await supabase.from('faculty_staff').select('image_url').eq('id', sub2).eq('college_id', colId).maybeSingle();
-      await deleteFile(item?.image_url);
+      if (item?.image_url) await deleteFile(item.image_url);
       const { error } = await supabase.from('faculty_staff').delete().eq('id', sub2).eq('college_id', colId);
       if (error) return res.status(500).json({ error: error.message });
+      console.log('[DELETE FACULTY] Success');
       return res.json({ success: true });
     }
 
     // ── BORROWED BOOKS DELETE ─────────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'borrowed-books' && sub2 && !sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE BORROWED] id:', sub2);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
       const { error } = await supabase.from('book_borrows').delete().eq('id', sub2).eq('college_id', colId);
       if (error) return res.status(500).json({ error: error.message });
+      console.log('[DELETE BORROWED] Success');
       return res.json({ success: true });
     }
 
     // ── CONTACT MESSAGES DELETE ───────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'contact-messages' && sub1 && !sub2) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE CONTACT] id:', sub1);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
       const { error } = await supabase.from('contact_messages').delete().eq('id', sub1).eq('college_id', colId);
       if (error) return res.status(500).json({ error: error.message });
+      console.log('[DELETE CONTACT] Success');
       return res.json({ success: true });
     }
 
     // ── HISTORY GALLERY DELETE ────────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'history' && sub2 === 'gallery' && sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE HISTORY GALLERY] id:', sub3);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
       const { data: item } = await supabase.from('college_history_gallery').select('image_url').eq('id', sub3).eq('college_id', colId).maybeSingle();
-      await deleteFile(item?.image_url);
-      await supabase.from('college_history_gallery').delete().eq('id', sub3).eq('college_id', colId);
+      if (item?.image_url) await deleteFile(item.image_url);
+      const { error } = await supabase.from('college_history_gallery').delete().eq('id', sub3).eq('college_id', colId);
+      if (error) return res.status(500).json({ error: error.message });
+      console.log('[DELETE HISTORY GALLERY] Success');
       return res.json({ success: true });
     }
 
     // ── HISTORY SECTIONS DELETE ───────────────────────────────────────────
     if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'history' && sub2 === 'sections' && sub3) {
-      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      console.log('[DELETE HISTORY SECTION] id:', sub3);
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'College not found' });
-      await supabase.from('college_history_sections').delete().eq('id', sub3).eq('college_id', colId);
+      const { error } = await supabase.from('college_history_sections').delete().eq('id', sub3).eq('college_id', colId);
+      if (error) return res.status(500).json({ error: error.message });
+      console.log('[DELETE HISTORY SECTION] Success');
       return res.json({ success: true });
     }
 
