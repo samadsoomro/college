@@ -214,51 +214,56 @@ const Addresses = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredAddresses.map((app) => (
-                      <TableRow key={app.id}>
-                        <TableCell className="align-top py-3">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-foreground">
+                      <TableRow 
+                        key={app.id}
+                        className={app.status === 'suspended' ? 'bg-red-50/80 hover:bg-red-100/90 transition-colors border-l-4 border-l-red-500' : ''}
+                      >
+                        <TableCell className="align-top py-4">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex flex-col gap-1">
+                              <span className={`font-bold text-base ${app.status === 'suspended' ? 'text-red-700' : 'text-foreground'}`}>
                                 {app.firstName} {app.lastName}
                               </span>
                               {app.status === "suspended" && (
-                                <span className="text-[9px] bg-rose-600 text-white px-2.5 py-1 rounded-lg font-black uppercase tracking-widest shadow-md ring-2 ring-rose-100 flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
-                                  College Card Deleted/Suspended (Access Removed)
-                                </span>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black uppercase tracking-tight shadow-sm flex items-center gap-1 w-fit">
+                                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                                    College Card Deleted
+                                  </span>
+                                </div>
                               )}
                             </div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground font-medium">
                               S/O: {app.fatherName || "-"}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="align-top py-3">
+                        <TableCell className="align-top py-4">
                           <div className="flex flex-col gap-1">
-                            <span className="font-mono font-medium text-emerald-600">
+                            <span className={`font-mono font-bold ${app.status === 'suspended' ? 'text-red-600' : 'text-emerald-600'}`}>
                               {app.cardNumber}
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              SN #1
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
+                              Library ID
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="align-top py-3">
+                        <TableCell className="align-top py-4">
                           <div className="flex flex-col gap-1 text-sm">
-                            <span>{app.email}</span>
-                            <span className="text-muted-foreground">
+                            <span className={app.status === 'suspended' ? 'text-red-800' : ''}>{app.email}</span>
+                            <span className={app.status === 'suspended' ? 'text-red-600/70 font-medium' : 'text-muted-foreground'}>
                               {app.phone}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="align-top py-3">
+                        <TableCell className="align-top py-4">
                           {app.fullAddress ? (
-                            <div className="text-sm bg-muted/50 p-2 rounded border border-border">
+                            <div className={`text-sm p-3 rounded-xl border ${app.status === 'suspended' ? 'bg-white/80 border-red-200 text-red-900 shadow-inner' : 'bg-muted/50 border-border'}`}>
                               {app.fullAddress}
                             </div>
                           ) : (
-                            <span className="text-xs text-destructive font-medium">
-                              Address missing
+                            <span className="text-xs text-destructive font-bold uppercase tracking-wide">
+                              Address not found
                             </span>
                           )}
                         </TableCell>

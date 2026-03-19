@@ -158,9 +158,9 @@ const Notes: React.FC = () => {
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-foreground">{selectedClass || selectedSubject ? "Filtered Notes" : "All Available Notes"}</h3>
             {loading ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="bg-card p-6 rounded-xl border border-border shadow-sm space-y-4">
+                  <div key={i} className="bg-card p-4 sm:p-6 rounded-xl border border-border shadow-sm space-y-4">
                     <div className="flex gap-4">
                       <Skeleton className="h-12 w-12 rounded-lg" />
                       <div className="flex-1 space-y-2">
@@ -172,9 +172,9 @@ const Notes: React.FC = () => {
                 ))}
               </div>
             ) : filteredNotes.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {filteredNotes.map((note, index) => (
-                  <motion.div key={note.id} className="bg-card p-6 rounded-xl border border-border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }}>
+                  <motion.div key={note.id} className="bg-card p-4 sm:p-6 rounded-xl border border-border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all overflow-hidden" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * index }}>
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 flex items-center justify-center rounded-lg bg-primary/10 text-primary flex-shrink-0"><FileText size={24} /></div>
                       <div className="flex-1 min-w-0">

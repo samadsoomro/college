@@ -70,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (collegeCardId) {
       const { data: card } = await supabase.from('library_card_applications').select('*').eq('card_number', collegeCardId).eq('college_id', col.id).maybeSingle();
       if (!card) return res.status(401).json({ error: 'Invalid College Card ID' });
-      if (card.status === 'suspended') return res.status(403).json({ error: 'Your card has been suspended by college. Please contact the college library for assistance.' });
+      if (card.status === 'suspended') return res.status(403).json({ error: 'your card is rejected plz visit college' });
       if (card.status !== 'approved') return res.status(401).json({ error: 'Your card application is still pending approval.' });
       
       // Check password (matching the plain text password stored in DB for library cards)
@@ -322,6 +322,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (req.method === 'DELETE') {
         const id = parts[5];
+        // Cleanup storage if needed (Slider images, Affiliation logos)
+        if (sub === 'slider' || sub === 'affiliations') {
+          const { data: item } = await supabase.from(table).select('*').eq('id', id).single();
+          const fileUrl = sub === 'slider' ? (item as any)?.image_url : (item as any)?.logo_url;
+          if (fileUrl) {
+            const bucket = fileUrl.includes('/slider/') ? 'slider' : (fileUrl.includes('/affiliations/') ? 'affiliations' : 'colleges');
+            const fileName = fileUrl.split('/').pop()?.split('?')[0];
+            if (fileName) await supabase.storage.from(bucket).remove([fileName]);
+          }
+        }
         await supabase.from(table).delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -384,7 +394,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
       if (req.method === 'DELETE') {
-        await supabase.from(table).delete().eq('id', parts[5]);
+        const itemId = parts[5];
+        const { data: item } = await supabase.from(table).select('*').eq('id', itemId).single();
+        if ((item as any)?.image_url) {
+          const fileName = (item as any).image_url.split('/').pop()?.split('?')[0];
+          if (fileName) await supabase.storage.from('history').remove([fileName]);
+        }
+        await supabase.from(table).delete().eq('id', itemId);
         return res.json({ success: true });
       }
     }
@@ -600,6 +616,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
+        const { data: item } = await supabase.from('faculty_staff').select('image_url').eq('id', id).single();
+        if ((item as any)?.image_url) {
+          const fileName = (item as any).image_url.split('/').pop()?.split('?')[0];
+          if (fileName) await supabase.storage.from('faculty').remove([fileName]);
+        }
         await supabase.from('faculty_staff').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -621,6 +642,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
+        const { data: item } = await supabase.from('notes').select('pdf_path').eq('id', id).single();
+        if ((item as any)?.pdf_path) {
+          const fileName = (item as any).pdf_path.split('/').pop()?.split('?')[0];
+          if (fileName) await supabase.storage.from('study-notes').remove([fileName]);
+        }
         await supabase.from('notes').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -643,6 +669,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
+        const { data: item } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', id).single();
+        if (item) {
+          const pdfName = (item as any).pdf_path?.split('/').pop()?.split('?')[0];
+          const coverName = (item as any).cover_image?.split('/').pop()?.split('?')[0];
+          if (pdfName) await supabase.storage.from('rare-books').remove([pdfName]);
+          if (coverName) await supabase.storage.from('rare-books').remove([coverName]);
+        }
         await supabase.from('rare_books').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -661,6 +694,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
+        const { data: item } = await supabase.from('events').select('images').eq('id', id).single();
+        if ((item as any)?.images?.length > 0) {
+          const fileNames = (item as any).images.map((url: string) => url.split('/').pop()?.split('?')[0]).filter(Boolean);
+          if (fileNames.length > 0) await supabase.storage.from('event-images').remove(fileNames);
+        }
         await supabase.from('events').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -692,6 +730,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
+        const { data: item } = await supabase.from('notifications').select('image').eq('id', id).single();
+        if ((item as any)?.image) {
+          const fileName = (item as any).image.split('/').pop()?.split('?')[0];
+          if (fileName) await supabase.storage.from('notifications').remove([fileName]);
+        }
         await supabase.from('notifications').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -712,6 +755,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
+        const { data: item } = await supabase.from('books').select('book_image').eq('id', id).single();
+        if ((item as any)?.book_image) {
+          const fileName = (item as any).book_image.split('/').pop()?.split('?')[0];
+          if (fileName) await supabase.storage.from('books').remove([fileName]);
+        }
         await supabase.from('books').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -739,6 +787,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
+        const { data: item } = await supabase.from('blog_posts').select('featured_image').eq('id', id).single();
+        if ((item as any)?.featured_image) {
+          const fileName = (item as any).featured_image.split('/').pop()?.split('?')[0];
+          if (fileName) await supabase.storage.from('blog').remove([fileName]);
+        }
         await supabase.from('blog_posts').delete().eq('id', id);
         return res.json({ success: true });
       }

@@ -1302,9 +1302,9 @@ export default function AdminDashboard() {
   const modules = [...libraryModules, ...peopleModules, ...contentModules, ...aboutModules, ...cardsModules, ...contactModules];
 
   return (
-    <div className="min-h-screen bg-neutral-50/50 pt-16 flex">
+    <div className="min-h-screen bg-neutral-50/50 dark:bg-black pt-16 flex transition-colors duration-300">
       {/* Sticky Sidebar */}
-      <aside className="w-64 bg-white border-r border-neutral-200 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto hidden lg:block z-30">
+      <aside className="w-64 bg-white dark:bg-black border-r border-neutral-200 dark:border-neutral-800 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto hidden lg:block z-30">
         <div className="p-6">
           <div className="flex items-center gap-2 mb-8 px-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -1448,7 +1448,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0">
+      <main className="flex-1 min-w-0 dark:bg-black transition-colors duration-300">
         {/* Mobile Navigation */}
         <div className="lg:hidden bg-white border-b border-neutral-200 sticky top-16 z-30 p-4 flex gap-2 overflow-x-auto scrollbar-hide">
           {modules.map((module) => {
@@ -1530,7 +1530,7 @@ export default function AdminDashboard() {
           key={activeModule}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 md:p-10 max-w-7xl mx-auto pt-24 md:pt-10"
+          className="p-4 md:p-10 max-w-7xl mx-auto pt-24 md:pt-10 dark:bg-black"
         >
           {/* Messages Module */}
           {activeModule === "messages" && (
@@ -1587,7 +1587,7 @@ export default function AdminDashboard() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
               ) : messages.length === 0 ? (
-                <Card className="p-20 text-center border-dashed bg-neutral-50/50">
+                <Card className="p-20 text-center border-dashed bg-neutral-50/50 dark:bg-neutral-900/50">
                   <Mail className="mx-auto h-12 w-12 text-neutral-300 mb-4" />
                   <h3 className="text-xl font-bold text-neutral-900">
                     No Messages Yet
@@ -1601,7 +1601,7 @@ export default function AdminDashboard() {
                   {messages.map((msg: any) => (
                     <Card
                       key={msg.id}
-                      className="group p-6 rounded-3xl border-none bg-white shadow-sm hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300 ring-1 ring-neutral-200/60 hover:ring-primary/20"
+                      className="group p-6 rounded-3xl border-none bg-white dark:bg-neutral-900 shadow-sm hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300 ring-1 ring-neutral-200/60 dark:ring-neutral-800 hover:ring-primary/20"
                     >
                       <div className="flex flex-col h-full">
                         <div className="flex justify-between items-start mb-6">
@@ -1780,7 +1780,7 @@ export default function AdminDashboard() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
               ) : borrowedBooks.length === 0 ? (
-                <Card className="p-20 text-center border-dashed bg-neutral-50/50">
+                <Card className="p-20 text-center border-dashed bg-neutral-50/50 dark:bg-neutral-900/50">
                   <BookOpen className="mx-auto h-12 w-12 text-neutral-300 mb-4" />
                   <h3 className="text-xl font-bold text-neutral-900">
                     No Borrowed Records
@@ -1820,18 +1820,18 @@ export default function AdminDashboard() {
                         {borrowedBooks.map((book: any, idx: number) => (
                           <tr
                             key={book.id}
-                            className="group hover:bg-neutral-50/50 transition-colors"
+                            className={`group transition-colors ${book.cardDeleted || book.cardSuspended ? 'bg-red-50/80 hover:bg-red-100/90 border-l-4 border-l-red-500' : 'hover:bg-neutral-50/50'}`}
                           >
                             <td className="py-5 px-6">
-                                <div className="font-bold text-neutral-900 flex items-center gap-2">
+                                <div className={`font-bold flex items-center gap-2 ${book.cardDeleted || book.cardSuspended ? 'text-red-700' : 'text-neutral-900'}`}>
                                   {book.borrowerName || "-"}
                                   {book.cardDeleted && (
-                                    <span className="text-[8px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-rose-200">
+                                    <span className="text-[8px] bg-red-600 text-white px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-red-200 animate-pulse">
                                       Card Deleted
                                     </span>
                                   )}
                                   {book.cardSuspended && (
-                                    <span className="text-[8px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-amber-200">
+                                    <span className="text-[8px] bg-amber-600 text-white px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-amber-200 animate-pulse">
                                       Card Suspended
                                     </span>
                                   )}
@@ -2067,7 +2067,7 @@ export default function AdminDashboard() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
               ) : libraryCards.length === 0 ? (
-                <Card className="p-20 text-center border-dashed bg-neutral-50/50">
+                <Card className="p-20 text-center border-dashed bg-neutral-50/50 dark:bg-neutral-900/50">
                   <CreditCard className="mx-auto h-12 w-12 text-neutral-300 mb-4" />
                   <h3 className="text-xl font-bold text-neutral-900">
                     No Applications
@@ -2321,7 +2321,7 @@ export default function AdminDashboard() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
               ) : users.length === 0 ? (
-                <Card className="p-20 text-center border-dashed bg-neutral-50/50">
+                <Card className="p-20 text-center border-dashed bg-neutral-50/50 dark:bg-neutral-900/50">
                   <Users className="mx-auto h-12 w-12 text-neutral-300 mb-4" />
                   <h3 className="text-xl font-bold text-neutral-900">
                     No Users Registered
