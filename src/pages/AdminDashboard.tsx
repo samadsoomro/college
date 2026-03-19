@@ -1071,6 +1071,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/${collegeSlug}/contact-messages/${id}`, {
         method: "DELETE",
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -1130,8 +1131,9 @@ export default function AdminDashboard() {
   const deleteBorrowedBook = async (id: string) => {
     if (!confirm("Delete this record?")) return;
     try {
-      const res = await fetch(`/api/${collegeSlug}/book-borrows/${id}`, {
+      const res = await fetch(`/api/${collegeSlug}/admin/borrowed-books/${id}`, {
         method: "DELETE",
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -1164,6 +1166,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/donations/${id}`, {
         method: "DELETE",
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -1199,6 +1202,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/users/${id}`, {
         method: "DELETE",
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -1226,6 +1230,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/notes/${id}`, {
         method: "DELETE",
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {

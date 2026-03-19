@@ -65,10 +65,21 @@ const AdminFaculty: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this member?")) return;
     try {
-      await fetch(`/api/${collegeSlug}/admin/faculty/${id}`, { method: "DELETE", headers: adminHeaders(), credentials: "include" });
-      toast({ title: "Deleted", description: "Faculty member removed." });
-      fetchFaculty();
-    } catch (e) { toast({ title: "Error", description: "Failed to delete", variant: "destructive" }); }
+      const res = await fetch(`/api/${collegeSlug}/admin/faculty/${id}`, { 
+        method: "DELETE", 
+        headers: adminHeaders(), 
+        credentials: "include" 
+      });
+      if (res.ok) {
+        toast({ title: "Deleted", description: "Faculty member removed." });
+        fetchFaculty();
+      } else {
+        const err = await res.json();
+        toast({ title: "Error", description: err.error || "Failed to delete", variant: "destructive" });
+      }
+    } catch (e) { 
+      toast({ title: "Error", description: "Failed to delete", variant: "destructive" }); 
+    }
   };
 
   return (

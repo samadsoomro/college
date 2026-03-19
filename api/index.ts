@@ -559,6 +559,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 1b. Admin Home CMS
   if (parts[2] === 'admin' && parts[3] === 'home') {
+    if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
     const sub = parts[4]; // content, slider, stats, affiliations
     if (sub === 'content') {
       if (req.method === 'GET') {
@@ -608,11 +609,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (sub === 'slider' || sub === 'affiliations') {
           const { data: item } = await supabase.from(table).select('*').eq('id', id).single();
           const fileUrl = sub === 'slider' ? (item as any)?.image_url : (item as any)?.logo_url;
-          if (fileUrl) {
-            const bucket = fileUrl.includes('/slider/') ? 'slider' : (fileUrl.includes('/affiliations/') ? 'affiliations' : 'colleges');
-            const fileName = fileUrl.split('/').pop()?.split('?')[0];
-            if (fileName) await supabase.storage.from(bucket).remove([fileName]);
-          }
+          if (fileUrl) await deleteStorageFile(fileUrl);
         }
         await supabase.from(table).delete().eq('id', id);
         return res.json({ success: true });
@@ -622,6 +619,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 2. Admin History CMS
   if (parts[2] === 'admin' && parts[3] === 'history') {
+    if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
     const sub = parts[4];
     const tableMap: any = { page: 'college_history_page', sections: 'college_history_sections', gallery: 'college_history_gallery' };
     const table = tableMap[sub];
@@ -1259,23 +1257,88 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true });
     }
 
-    if (resrc === 'borrowed-books' || resrc === 'book-borrows') {
-      if (req.method === 'DELETE') {
-        await supabase.from('book_borrows').delete().eq('id', id);
-        return res.json({ success: true });
-      }
+    // ── Common Admin DELETE Handlers ──────────────────────────────────────────
+    
+    // Notes DELETE
+    if (resource === 'admin' && subResource === 'notes' && sub2 && !sub3 && req.method === 'DELETE') {
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+      const { data: note } = await supabase.from('notes').select('pdf_path').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+      if (note?.pdf_path) await deleteStorageFile(note.pdf_path);
+      await supabase.from('notes').delete().eq('id', sub2).eq('college_id', col.id);
+      return res.json({ success: true });
     }
 
-    if (resrc === 'users') {
-      if (req.method === 'PATCH') {
-        await supabase.from('profiles').update(req.body).eq('id', id);
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        await supabase.from('profiles').delete().eq('id', id);
-        return res.json({ success: true });
-      }
+    // Rare Books DELETE
+    if (resource === 'admin' && subResource === 'rare-books' && sub2 && !sub3 && req.method === 'DELETE') {
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+      const { data: rb } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+      if (rb?.pdf_path) await deleteStorageFile(rb.pdf_path);
+      if (rb?.cover_image) await deleteStorageFile(rb.cover_image);
+      await supabase.from('rare_books').delete().eq('id', sub2).eq('college_id', col.id);
+      return res.json({ success: true });
     }
+
+    // Blog DELETE
+    if (resource === 'admin' && subResource === 'blog' && sub2 && !sub3 && req.method === 'DELETE') {
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+      const { data: post } = await supabase.from('blog_posts').select('featured_image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+      if (post?.featured_image) await deleteStorageFile(post.featured_image);
+      await supabase.from('blog_posts').delete().eq('id', sub2).eq('college_id', col.id);
+      return res.json({ success: true });
+    }
+
+    // Notifications DELETE
+    if (resource === 'admin' && subResource === 'notifications' && sub2 && !sub3 && req.method === 'DELETE') {
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+      const { data: n } = await supabase.from('notifications').select('image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+      if (n?.image) await deleteStorageFile(n.image);
+      await supabase.from('notifications').delete().eq('id', sub2).eq('college_id', col.id);
+      return res.json({ success: true });
+    }
+
+    // Events DELETE
+    if (resource === 'admin' && subResource === 'events' && sub2 && !sub3 && req.method === 'DELETE') {
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+      const { data: ev } = await supabase.from('events').select('images').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+      if (ev?.images && Array.isArray(ev.images)) {
+        for (const img of ev.images) await deleteStorageFile(img);
+      }
+      await supabase.from('events').delete().eq('id', sub2).eq('college_id', col.id);
+      return res.json({ success: true });
+    }
+
+    // Books DELETE
+    if (resource === 'admin' && subResource === 'books' && sub2 && !sub3 && req.method === 'DELETE') {
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+      const { data: bk } = await supabase.from('books').select('book_image').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+      if (bk?.book_image) await deleteStorageFile(bk.book_image);
+      await supabase.from('books').delete().eq('id', sub2).eq('college_id', col.id);
+      return res.json({ success: true });
+    }
+
+    // Faculty DELETE
+    if (resource === 'admin' && subResource === 'faculty' && sub2 && !sub3 && req.method === 'DELETE') {
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+      const { data: f } = await supabase.from('faculty_staff').select('image_url').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+      if (f?.image_url) await deleteStorageFile(f.image_url);
+      await supabase.from('faculty_staff').delete().eq('id', sub2).eq('college_id', col.id);
+      return res.json({ success: true });
+    }
+
+    // Borrowed Books DELETE
+    if (resource === 'admin' && subResource === 'borrowed-books' && sub2 && !sub3 && req.method === 'DELETE') {
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+      await supabase.from('book_borrows').delete().eq('id', sub2).eq('college_id', col.id);
+      return res.json({ success: true });
+    }
+
+    // Contact Messages DELETE (Note: resource is NOT admin for this one in frontend)
+    if (resource === 'contact-messages' && subResource && !sub2 && req.method === 'DELETE') {
+       if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+       await supabase.from('contact_messages').delete().eq('id', subResource).eq('college_id', col.id);
+       return res.json({ success: true });
+    }
+
   }
 
   return res.status(404).json({ error: 'Endpoint not found', path });
