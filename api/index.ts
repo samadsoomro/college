@@ -451,6 +451,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  // ── BOOK BORROWING (CARD USERS & ADMINS) ──────────────────────────────────
+  // POST /api/:slug/books/:bookId/borrow
+  if (resource === 'books' && sub2 === 'borrow' && req.method === 'POST') {
+    const b = req.body || {};
+    const token = req.headers['x-admin-token'] as string;
+    const isAdminToken = token === (process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026');
+    const isCardUser = !!(b.libraryCardId || b.cardNumber);
+
+    if (!isAdminToken && !isCardUser) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { data: book } = await supabase.from('books').select('*')
+      .eq('id', subResource).eq('college_id', col.id).maybeSingle();
+    
+    if (!book) return res.status(404).json({ error: 'Book not found' });
+    if (book.available_copies < 1) return res.status(400).json({ error: 'No copies available' });
+
+    const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const { data: borrow, error: borrowErr } = await supabase
+      .from('borrowed_books')
+      .insert({
+        college_id: col.id,
+        book_id: subResource,
+        book_title: book.book_name,
+        borrower_name: b.borrowerName || b.name || 'Student',
+        borrower_email: b.borrowerEmail || b.email || '',
+        borrower_phone: b.borrowerPhone || b.phone || '',
+        library_card_id: b.libraryCardId || b.cardNumber || null,
+        user_id: b.userId || null,
+        borrow_date: new Date().toISOString().split('T')[0],
+        due_date: dueDate,
+        status: 'borrowed'
+      })
+      .select('*').single();
+
+    if (borrowErr) return res.status(500).json({ error: borrowErr.message });
+
+    await supabase.from('books')
+      .update({ available_copies: book.available_copies - 1 })
+      .eq('id', subResource);
+
+    return res.json({
+      id: borrow.id,
+      bookTitle: borrow.book_title,
+      dueDate: borrow.due_date,
+      status: borrow.status
+    });
+  }
+
   // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
   if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
 

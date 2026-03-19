@@ -74,10 +74,28 @@ const Books = () => {
   const proceedWithBorrow = async (book: any) => {
     setBorrowingId(book.id);
     try {
-      const res = await apiRequest("POST", `/api/${collegeSlug}/book-borrows`, {
+      const isCardUser = localStorage.getItem('isLibraryCard') === 'true';
+      const cardNumber = localStorage.getItem('cardNumber');
+      const userName = localStorage.getItem('userName');
+      const userId = localStorage.getItem('userId');
+      const userEmail = localStorage.getItem('userEmail');
+
+      const body: any = {
         bookId: String(book.id),
         bookTitle: book.bookName,
-        isbn: book.isbn || "",
+        borrowerName: userName || 'Student',
+        borrowerEmail: userEmail || '',
+        userId: userId || null,
+      };
+
+      if (isCardUser && cardNumber) {
+        body.libraryCardId = cardNumber;
+      }
+
+      const res = await fetch(`/api/${collegeSlug}/books/${book.id}/borrow`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
 
       if (res.ok) {
@@ -86,6 +104,9 @@ const Books = () => {
           description: `You have borrowed the book: "${book.bookName}". Please visit the library and return it within 14 days. We may contact you via phone or email if required.`,
         });
         fetchBooks();
+      } else {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to borrow book");
       }
     } catch (error: any) {
       toast({
