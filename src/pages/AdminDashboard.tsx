@@ -525,35 +525,46 @@ export default function AdminDashboard() {
 
   // deleteBook logic handled in component
 
-  const approveLibraryCardHandler = async (id: string) => {
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${id}/status`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { ...adminHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
-      });
-      if (res.ok) {
-        setLibraryCards(
-          libraryCards.map((c) =>
-            c.id === id ? { ...c, status: "approved" } : c,
-          ),
-        );
-        toast({
-          title: "Approved",
-          description: "College card approved successfully.",
-        });
-      } else {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to approve");
+  const approveCard = async (cardId: string) => {
+    const res = await fetch(
+      `/api/${collegeSlug}/admin/library-card-applications/${cardId}/status`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        },
+        body: JSON.stringify({ status: 'approved' })
       }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to approve college card.",
-        variant: "destructive",
-      });
+    );
+    if (!res.ok) {
+      const err = await res.json();
+      console.error('[APPROVE ERROR]', err);
+      toast({ title: 'Error', description: err.error, variant: 'destructive' });
+      return;
     }
+    toast({ title: 'Approved!', description: 'Card has been approved.' });
+    fetchLibraryCards(); // refresh list
+  };
+
+  const suspendCard = async (cardId: string) => {
+    if (!confirm("Suspending card will prevent user login. Continue?")) return;
+    const res = await fetch(
+      `/api/${collegeSlug}/admin/library-card-applications/${cardId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+        }
+      }
+    );
+    if (!res.ok) {
+      const err = await res.json();
+      toast({ title: "Error", description: err.error || "Failed to suspend card", variant: "destructive" });
+      return;
+    }
+    toast({ title: 'Card Suspended' });
+    fetchLibraryCards();
   };
 
   const handleModuleChange = async (module: string) => {
@@ -1096,28 +1107,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const approveLibraryCard = async (id: string) => {
-    try {
-      await fetch(`/api/${collegeSlug}/admin/library-card-applications/${id}/status`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
-      });
-      setLibraryCards(
-        libraryCards.map((c) =>
-          c.id === id ? { ...c, status: "approved" } : c,
-        ),
-      );
-      toast({ title: "Approved", description: "College card approved." });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve.",
-        variant: "destructive",
-      });
-    }
-  };
+  const approveLibraryCard = approveCard; // Alias for any existing references if any outside this file (unlikely)
 
   const deleteDonation = async (id: string) => {
     if (!confirm("Delete this donation?")) return;
@@ -2210,54 +2200,30 @@ export default function AdminDashboard() {
                             </td>
                             <td className="py-5 px-6">
                               <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {card.status === 'pending' && (
-                                  <>
+                                  {card.status === 'pending' && (
+                                    <>
+                                      <Button 
+                                        onClick={() => approveCard(card.id)}
+                                        className="h-8 text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl"
+                                      >
+                                        ✅ Approve
+                                      </Button>
+                                      <Button 
+                                        onClick={() => suspendCard(card.id)}
+                                        className="h-8 text-xs bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl"
+                                      >
+                                        ❌ Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                  {card.status === 'approved' && (
                                     <Button 
-                                      onClick={() => approveLibraryCardHandler(card.id)}
-                                      className="h-8 text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl"
+                                      onClick={() => suspendCard(card.id)}
+                                      className="h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
                                     >
-                                      ✅ Approve
+                                      🚫 Suspend Card
                                     </Button>
-                                    <Button 
-                                      onClick={async () => {
-                                        if (confirm("Reject this application?")) {
-                                          const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${card.id}`, {
-                                            method: "DELETE",
-                                            headers: adminHeaders(),
-                                            credentials: "include"
-                                          });
-                                          if (res.ok) {
-                                            fetchLibraryCards();
-                                            toast({ title: "Rejected", description: "Application has been rejected." });
-                                          }
-                                        }
-                                      }}
-                                      className="h-8 text-xs bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl"
-                                    >
-                                      ❌ Reject
-                                    </Button>
-                                  </>
-                                )}
-                                {card.status === 'approved' && (
-                                  <Button 
-                                    onClick={async () => {
-                                      if (confirm("Suspending card will prevent user login. Continue?")) {
-                                        const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${card.id}`, {
-                                          method: "DELETE",
-                                          headers: adminHeaders(),
-                                          credentials: "include"
-                                        });
-                                        if (res.ok) {
-                                          fetchLibraryCards();
-                                          toast({ title: "Suspended", description: "Card has been suspended." });
-                                        }
-                                      }
-                                    }}
-                                    className="h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
-                                  >
-                                    🚫 Suspend Card
-                                  </Button>
-                                )}
+                                  )}
                               </div>
                             </td>
                           </tr>

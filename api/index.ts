@@ -1036,22 +1036,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Admin Library Cards
-    if (resrc === 'library-cards' || resrc === 'library-card-applications') {
-      if (req.method === 'PATCH') {
-        const { status } = req.body;
-        await supabase.from('library_card_applications')
-          .update({ status, updated_at: new Date().toISOString() })
-          .eq('id', id).eq('college_id', col.id);
-        return res.json({ success: true });
-      }
-      if (req.method === 'DELETE') {
-        // Soft suspend
-        await supabase.from('library_card_applications')
-          .update({ status: 'suspended', updated_at: new Date().toISOString() })
-          .eq('id', id).eq('college_id', col.id);
-        return res.json({ success: true });
-      }
+    // Admin Library Cards Status & Suspend
+    // PATCH /api/:slug/admin/library-card-applications/:id/status
+    if (resource === 'admin' && subResource === 'library-card-applications' && itemId && parts[5] === 'status' && req.method === 'PATCH') {
+      const token = req.headers['x-admin-token'];
+      const validToken = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
+      if (token !== validToken) return res.status(403).json({ error: 'Unauthorized' });
+
+      const { status } = req.body || {};
+      if (!['approved', 'pending', 'suspended'].includes(status))
+        return res.status(400).json({ error: 'Invalid status' });
+
+      const { data, error } = await supabase
+        .from('library_card_applications')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', itemId)
+        .eq('college_id', col.id)
+        .select('id, card_number, status')
+        .single();
+
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ success: true, card: data });
+    }
+
+    // DELETE /api/:slug/admin/library-card-applications/:id (Soft Suspend)
+    if (resource === 'admin' && subResource === 'library-card-applications' && itemId && !parts[5] && req.method === 'DELETE') {
+      const token = req.headers['x-admin-token'];
+      const validToken = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
+      if (token !== validToken) return res.status(403).json({ error: 'Unauthorized' });
+
+      // Soft delete — set to suspended
+      const { error } = await supabase
+        .from('library_card_applications')
+        .update({ status: 'suspended', updated_at: new Date().toISOString() })
+        .eq('id', itemId)
+        .eq('college_id', col.id);
+
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ success: true });
     }
 
     if (resrc === 'student-addresses' && req.method === 'DELETE') {
