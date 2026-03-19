@@ -341,9 +341,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Generate Card Number
-    const code = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const num = Math.floor(1000 + Math.random() * 9000);
-    const cardNumber = `CS-${code}-${num}`;
+    const fieldCodeMap: Record<string, string> = {
+      'Computer Science': 'CS',
+      'Pre-Medical': 'PM',
+      'Pre-Engineering': 'PE',
+      'Humanities': 'HM',
+      'Commerce': 'COM'
+    };
+
+    const fieldCode = fieldCodeMap[b.field] || b.field?.substring(0, 3).toUpperCase() || 'XX';
+
+    // Roll number EXACTLY as entered — no change, no encoding:
+    const rollNo = (b.rollNo || '').trim();
+
+    // Extract just the number from "Class 12" → "12":
+    const classNum = (b.class || '').replace(/^Class\s*/i, '').trim();
+
+    // Card number = CS-E-10-12
+    const cardNumber = `${fieldCode}-${rollNo}-${classNum}`;
+
+    // Uniqueness check:
+    let finalCardNumber = cardNumber;
+    let counter = 1;
+    while (true) {
+      const { data: dup } = await supabase
+        .from('library_card_applications')
+        .select('id')
+        .eq('card_number', finalCardNumber)
+        .eq('college_id', col.id)
+        .maybeSingle();
+      if (!dup) break;
+      finalCardNumber = `${cardNumber}-${counter}`;
+      counter++;
+    }
 
     const { data, error } = await supabase
       .from('library_card_applications')
@@ -363,7 +393,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         address_state: b.addressState,
         address_zip: b.addressZip,
         password: b.password,
-        card_number: cardNumber,
+        card_number: finalCardNumber,
         status: 'pending',
         dynamic_fields: b.dynamicFields,
         updated_at: new Date().toISOString()
@@ -621,17 +651,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('library_card_applications')
         .select('*')
         .eq('college_id', col.id)
-        .in('status', ['pending', 'approved'])
+        .in('status', ['pending', 'approved'])  // exclude suspended
         .order('created_at', { ascending: false });
 
-      return res.json((data || []).map(c => ({ 
-        id: c.id, firstName: c.first_name, lastName: c.last_name, 
-        fatherName: c.father_name, email: c.email, phone: c.phone, 
-        class: c.class, field: c.field, rollNo: c.roll_no, 
-        addressStreet: c.address_street, addressCity: c.address_city,
-        addressState: c.address_state, addressZip: c.address_zip,
-        dob: c.dob, cardNumber: c.card_number, status: c.status, 
-        createdAt: c.created_at, dynamicFields: c.dynamic_fields 
+      return res.json((data || []).map((c: any) => ({
+        id: c.id,
+        firstName: c.first_name,
+        lastName: c.last_name,
+        fatherName: c.father_name,
+        email: c.email,
+        phone: c.phone,
+        class: c.class,
+        field: c.field,
+        rollNo: c.roll_no,
+        cardNumber: c.card_number,
+        studentId: c.student_id,
+        issueDate: c.issue_date,
+        validThrough: c.valid_through,
+        addressStreet: c.address_street,
+        addressCity: c.address_city,
+        addressState: c.address_state,
+        addressZip: c.address_zip,
+        status: c.status,
+        dynamicFields: c.dynamic_fields,
+        createdAt: c.created_at
       })));
     }
     if (subResource === 'student-addresses') {

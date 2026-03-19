@@ -62,7 +62,7 @@ const Addresses = () => {
       // Reuse existing endpoint but filter for 'approved'
       // Note: We are mocking a specialized endpoint behavior by filtering client-side for now
       // per implementation plan to minimize backend churn unless massive data volume.
-      const res = await fetch(`/api/${collegeSlug}/admin/library-cards?includeSuspended=true&_t=` + Date.now(), {
+      const res = await fetch(`/api/${collegeSlug}/admin/student-addresses`, {
         headers: { ...adminHeaders() },
         credentials: "include",
       });
