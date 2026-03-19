@@ -265,7 +265,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // We don't rollback 'users' to keep it simple, but log it
     }
 
-    return res.json({ success: true, message: 'Registration successful' });
+    return res.json({ 
+      success: true, 
+      message: 'Registration successful',
+      userId: newUser.id,
+      name: fullName,
+      email: email,
+      role: classification || 'visitor'
+    });
   }
 
   // ── PUBLIC DATA ROUTES ────────────────────────────────────────────────────

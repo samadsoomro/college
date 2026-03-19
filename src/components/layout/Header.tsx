@@ -230,13 +230,15 @@ const Header: React.FC = () => {
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary">
                   <User size={18} className="text-primary" />
                   <span className="text-sm font-medium">
-                    {isSuperAdmin 
-                      ? "Super Admin" 
-                      : isLibraryCard
-                        ? user.name || user.email?.split("@")[0]
-                        : profile?.full_name ||
-                          user.email?.split("@")[0] ||
-                          "User"}
+                {isSuperAdmin 
+                ? "Super Admin" 
+                : isLibraryCard
+                  ? user.name || user.email?.split("@")[0]
+                  : profile?.fullName ||
+                    profile?.full_name ||
+                    user.name || 
+                    user.email?.split("@")[0] ||
+                    "User"}
                   </span>
                   {isSuperAdmin ? (
                     <span className="text-xs px-1.5 py-0.5 bg-indigo-600 text-white rounded font-bold">
@@ -394,7 +396,9 @@ const Header: React.FC = () => {
                           <span className="font-medium">
                             {isLibraryCard
                               ? user.name || user.email?.split("@")[0]
-                              : profile?.full_name ||
+                              : profile?.fullName ||
+                                profile?.full_name ||
+                                user.name ||
                                 user.email?.split("@")[0] ||
                                 "User"}
                           </span>

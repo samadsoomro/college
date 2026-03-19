@@ -1005,7 +1005,10 @@ class DbStorage {
           type: isAdmin ? "admin" : "registered people",
         };
       });
-      return results.filter((u: any) => u.role !== "Student");
+      return results.filter((u: any) => {
+        const r = (u.role || "").toLowerCase();
+        return r !== "student";
+      });
     } catch (error) {
       console.error("[ERROR] getNonStudents manual join failed:", error);
       return [];

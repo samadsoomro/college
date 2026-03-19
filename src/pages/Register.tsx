@@ -59,6 +59,14 @@ export default function Register() {
       });
       const data = await res.json();
       if (res.ok) {
+        // PERSTIST SESSION LOCALLY
+        localStorage.setItem('userRole', data.role || 'user');
+        localStorage.setItem('userEmail', data.email || form.email);
+        localStorage.setItem('userName', data.name || form.fullName);
+        localStorage.setItem('userId', data.userId || '');
+        localStorage.setItem('collegeSlug', collegeSlug || '');
+        localStorage.setItem('isAdmin', 'false');
+        
         window.location.href = `/${collegeSlug}`;
       } else {
         setError(data.error || 'Registration failed');

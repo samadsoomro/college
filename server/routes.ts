@@ -288,7 +288,15 @@ export function registerRoutes(app: Express): void {
       req.session.isAdmin = false;
       req.session.collegeId = req.collegeId;
 
-      res.json({ success: true, message: 'Registration successful', user: { id: user.id, email: user.email } });
+      res.json({ 
+        success: true, 
+        message: 'Registration successful', 
+        user: { id: user.id, email: user.email },
+        userId: user.id,
+        name: fullName,
+        email: email,
+        role: classification || 'visitor'
+      });
     } catch (error: any) {
       console.error('[REGISTRATION] Error:', error);
       res.status(500).json({ error: error.message || 'Registration failed' });
@@ -415,12 +423,16 @@ export function registerRoutes(app: Express): void {
         const match = await bcrypt.compare(password, user.password);
         console.log('[LOGIN] user password match:', match);
         if (match) {
+          const { data: profile } = await supabase.from('profiles').select('full_name').eq('user_id', user.id).maybeSingle();
           req.session.userId = user.id;
           req.session.collegeId = college.id;
           req.session.collegeSlug = collegeSlug;
           return res.json({
             redirect: `/${collegeSlug}`,
-            role: 'user'
+            role: 'user',
+            userId: user.id,
+            name: profile?.full_name || user.email.split('@')[0],
+            email: user.email
           });
         }
       }
