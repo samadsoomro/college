@@ -1186,7 +1186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const returnDate = new Date().toISOString().split('T')[0];
       const { error: updateErr } = await supabase
         .from('book_borrows')
-        .update({ status: 'returned', return_date: returnDate, updated_at: new Date().toISOString() })
+        .update({ status: 'returned', return_date: returnDate })
         .eq('id', sub2).eq('college_id', col.id);
 
       if (updateErr) return res.status(500).json({ error: updateErr.message });
