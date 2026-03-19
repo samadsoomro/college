@@ -179,10 +179,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (admin && (await bcrypt.compare(password, admin.password_hash))) {
       return res.json({ redirect: `/${collegeSlug}/admin-dashboard`, role: 'admin', userId: admin.id, collegeSlug });
     }
-    const { data: user } = await supabase.from('registered_people').select('*').eq('email', email).eq('college_id', col.id).maybeSingle();
-    if (user && (await bcrypt.compare(password, user.password_hash))) {
-      return res.json({ redirect: `/${collegeSlug}`, role: user.role, userId: user.id, collegeSlug });
+
+    // Step 1: Check the 'users' table for the email
+    const { data: userAccount } = await supabase.from('users').select('*').eq('email', email).eq('college_id', col.id).maybeSingle();
+    
+    if (userAccount && (await bcrypt.compare(password, userAccount.password))) {
+      // Step 2: Fetch the profile to get the user's name and role
+      const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', userAccount.id).maybeSingle();
+      
+      return res.json({ 
+        redirect: `/${collegeSlug}`, 
+        role: profile?.role || 'visitor', 
+        name: profile?.full_name || 'User',
+        userId: userAccount.id, 
+        collegeSlug 
+      });
     }
+
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
@@ -201,6 +214,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .maybeSingle();
 
     return res.json({ available: !existing });
+  }
+
+  // Route: POST /api/:slug/auth/register
+  if (resource === 'auth' && subResource === 'register' && req.method === 'POST') {
+    const { fullName, email, password, phone, classification } = req.body || {};
+    
+    if (!email || !password || !fullName) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // 1. Check if email exists in 'users'
+    const { data: existingUser } = await supabase.from('users').select('id').eq('email', email).eq('college_id', col.id).maybeSingle();
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already registered' });
+    }
+
+    // 2. Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 3. Insert into 'users'
+    const { data: newUser, error: userError } = await supabase
+      .from('users')
+      .insert({
+        email,
+        password: hashedPassword,
+        college_id: col.id
+      })
+      .select('id')
+      .single();
+
+    if (userError || !newUser) {
+      console.error('[REGISTRATION] Error creating user account:', userError);
+      return res.status(500).json({ error: 'Registration failed during account creation' });
+    }
+
+    // 4. Insert into 'profiles'
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        user_id: newUser.id,
+        full_name: fullName,
+        phone,
+        role: classification || 'visitor',
+        college_id: col.id
+      });
+
+    if (profileError) {
+      console.error('[REGISTRATION] Error creating profile:', profileError);
+      // We don't rollback 'users' to keep it simple, but log it
+    }
+
+    return res.json({ success: true, message: 'Registration successful' });
   }
 
   // ── PUBLIC DATA ROUTES ────────────────────────────────────────────────────
@@ -923,9 +988,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
     if (subResource === 'users') {
-      const { data } = await supabase.from('profiles').select('*').eq('college_id', col.id);
-      // Filter for non-admin profiles if needed, or return all
-      return res.json({ nonStudents: (data || []).map(u => ({ id: u.id, name: u.full_name, role: u.role, email: u.email, phone: u.phone_number, createdAt: u.created_at })) });
+      // Step 1: Fetch all profiles for this college
+      const { data: profiles } = await supabase.from('profiles').select('*').eq('college_id', col.id);
+      
+      if (!profiles || profiles.length === 0) {
+        return res.json({ nonStudents: [] });
+      }
+
+      // Step 2: Fetch corresponding emails from 'users' table
+      const userIds = profiles.map(p => p.user_id).filter(Boolean);
+      const { data: userAccounts } = await supabase.from('users').select('id, email').in('id', userIds);
+      
+      const emailMap: Record<string, string> = {};
+      (userAccounts || []).forEach(ua => {
+        emailMap[ua.id] = ua.email;
+      });
+
+      // Step 3: Merge and return
+      const merged = (profiles || []).map(p => ({
+        id: p.id,
+        userId: p.user_id,
+        name: p.full_name,
+        role: p.role,
+        email: emailMap[p.user_id] || '-',
+        phone: p.phone,
+        createdAt: p.created_at
+      }));
+
+      return res.json({ nonStudents: merged });
     }
     if (subResource === 'notes') {
       const { data } = await supabase.from('notes').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
@@ -1306,8 +1396,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (itemId) await supabase.from(table).update(payload).eq('id', itemId).eq('college_id', col.id);
           else await supabase.from(table).insert(payload);
         }
+        return res.json({ success: true });
+      }
     }
-  }
+
+    // ── REGISTERED PEOPLE (DELETE) ──────────────────────────────────────────────────
+    if (resource === 'admin' && sub1 === 'users' && isApi && req.method === 'DELETE' && sub2 && !sub3) {
+      if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+      
+      const { data: profile } = await supabase.from('profiles').select('user_id').eq('id', sub2).eq('college_id', col.id).maybeSingle();
+      if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+      const { error: profErr } = await supabase.from('profiles').delete().eq('id', sub2);
+      if (profErr) return res.status(500).json({ error: profErr.message });
+
+      if (profile.user_id) {
+        const { error: userErr } = await supabase.from('users').delete().eq('id', profile.user_id).eq('college_id', col.id);
+        if (userErr) console.error('[DELETE USER] Error deleting account:', userErr);
+      }
+      return res.json({ success: true });
+    }
 
   return res.status(404).json({ error: 'Endpoint not found', path });
 }

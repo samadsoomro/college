@@ -288,9 +288,10 @@ export function registerRoutes(app: Express): void {
       req.session.isAdmin = false;
       req.session.collegeId = req.collegeId;
 
-      res.json({ user: { id: user.id, email: user.email } });
+      res.json({ success: true, message: 'Registration successful', user: { id: user.id, email: user.email } });
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      console.error('[REGISTRATION] Error:', error);
+      res.status(500).json({ error: error.message || 'Registration failed' });
     }
   });
 
