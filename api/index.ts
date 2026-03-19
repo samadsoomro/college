@@ -87,7 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const { data: col } = await supabase.from('colleges').select('id').eq('slug', collegeSlug).maybeSingle();
+  const { data: col } = await supabase.from('colleges').select('id').eq('slug', collegeSlug.toLowerCase()).maybeSingle();
   if (!col) return res.status(404).json({ error: 'College not found' });
 
   const isAdmin = isAdminRequest(req);
@@ -1043,8 +1043,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ...(profiles || []).map(p => p.user_id)
       ].filter(Boolean);
 
-      if (userIds.length > 0) {
-        const { data: userAccounts } = await supabase.from('users').select('id, email').in('id', userIds);
+      // Step 3: Fetch Approved Library Card Applications (as fallback students)
+      const { data: cardApps } = await supabase
+        .from('library_card_applications')
+        .select('*')
+        .eq('college_id', col.id)
+        .eq('status', 'approved');
+
+      (cardApps || []).forEach(app => {
+        if (app.user_id) userIds.push(app.user_id);
+      });
+
+      const uniqueUserIds = [...new Set(userIds)];
+      if (uniqueUserIds.length > 0) {
+        const { data: userAccounts } = await supabase.from('users').select('id, email').in('id', uniqueUserIds);
         (userAccounts || []).forEach(ua => {
           emailMap[ua.id] = ua.email;
         });
@@ -1063,6 +1075,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         type: 'student',
         role: 'Student'
       }));
+
+      // Add students from approved apps if not already in students list
+      const existingUserIds = new Set(students.map(s => s.userId));
+      (cardApps || []).forEach(app => {
+        if (!existingUserIds.has(app.user_id)) {
+          students.push({
+            id: app.id,
+            userId: app.user_id,
+            cardId: app.card_number,
+            name: `${app.first_name} ${app.last_name}`,
+            class: app.class,
+            field: app.field,
+            rollNo: app.roll_no,
+            createdAt: app.created_at,
+            email: emailMap[app.user_id] || app.email || '-',
+            type: 'student',
+            role: 'Student'
+          });
+          existingUserIds.add(app.user_id);
+        }
+      });
 
       const nonStudents = (profiles || [])
         .filter(p => (p.role || '').toLowerCase() !== 'student')
