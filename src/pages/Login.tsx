@@ -133,9 +133,9 @@ const Login: React.FC = () => {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 border border-destructive rounded-lg text-destructive text-sm">
-            <AlertCircle size={16} />
-            {error}
+          <div className="bg-red-50 border border-red-300 text-red-700 rounded-xl p-4 text-sm font-medium flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+            <span className="text-lg">⚠️</span>
+            <span>{error}</span>
           </div>
         )}
 

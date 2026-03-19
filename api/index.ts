@@ -9,6 +9,20 @@ const supabase = createClient(
 
 const ADMIN_TOKEN = process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026';
 
+async function deleteStorageFile(url: string | null) {
+  if (!url || !url.includes('supabase')) return;
+  try {
+    const parts = url.split('/storage/v1/object/public/');
+    if (parts.length < 2) return;
+    const rest = parts[1];
+    const bucket = rest.split('/')[0];
+    const filePath = rest.substring(bucket.length + 1);
+    await supabase.storage.from(bucket).remove([filePath]);
+  } catch (e) {
+    console.error('[STORAGE DELETE]', e);
+  }
+}
+
 function isAdminRequest(req: VercelRequest): boolean {
   return req.headers['x-admin-token'] === ADMIN_TOKEN;
 }
@@ -71,26 +85,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: cards } = await supabase
         .from('library_card_applications')
         .select('*')
-        .eq('card_number', collegeCardId)
-        .eq('college_id', col.id);
-      
-      if (!cards || cards.length === 0) return res.status(401).json({ error: 'Invalid College Card ID' });
-      
-      // Prioritize 'approved' cards
-      const approvedCard = cards.find(c => c.status === 'approved');
-      const suspendedCard = cards.find(c => c.status === 'suspended');
-      const card = approvedCard || suspendedCard || cards[0];
+        .ilike('card_number', collegeCardId)
+        .eq('college_id', col.id)
+        .order('created_at', { ascending: false });
 
-      if (card.status === 'suspended' && !approvedCard) {
-        return res.status(403).json({ error: 'your card is rejected plz visit college' });
+      if (!cards || cards.length === 0)
+        return res.status(401).json({ error: 'Card ID not found.' });
+
+      const approved = cards.find((c: any) => c.status === 'approved');
+      const suspended = cards.find((c: any) => c.status === 'suspended');
+      const pending = cards.find((c: any) => c.status === 'pending');
+
+      // Priority checks:
+      if (!approved && suspended)
+        return res.status(403).json({ error: 'Your card has been suspended. Please visit the college.' });
+
+      if (!approved && pending)
+        return res.status(403).json({ error: 'Your card is pending approval. Please wait for admin.' });
+
+      if (!approved)
+        return res.status(401).json({ error: 'Card not found.' });
+
+      // Verify password (plain text as requested/existing)
+      if (approved.password !== password) {
+        return res.status(401).json({ error: 'Incorrect password.' });
       }
-      if (card.status !== 'approved') return res.status(401).json({ error: 'Your card application is still pending approval.' });
-      
-      // Check password (matching the plain text password stored in DB for library cards)
-      if (card.password === password) {
-        return res.json({ redirect: `/${collegeSlug}/library-dashboard`, role: 'user', userId: card.id, collegeSlug, isLibraryCard: true });
-      }
-      return res.status(401).json({ error: 'Invalid password' });
+
+      return res.json({
+        redirect: `/${collegeSlug}/library-dashboard`,
+        role: 'user',
+        isLibraryCard: true,
+        cardNumber: approved.card_number,
+        userId: approved.id,
+        name: `${approved.first_name} ${approved.last_name}`
+      });
     }
 
     // Default Email Login
@@ -409,10 +437,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.method === 'DELETE') {
         const itemId = parts[5];
         const { data: item } = await supabase.from(table).select('*').eq('id', itemId).single();
-        if ((item as any)?.image_url) {
-          const fileName = (item as any).image_url.split('/').pop()?.split('?')[0];
-          if (fileName) await supabase.storage.from('history').remove([fileName]);
-        }
+        if ((item as any)?.image_url) await deleteStorageFile((item as any).image_url);
         await supabase.from(table).delete().eq('id', itemId);
         return res.json({ success: true });
       }
@@ -492,7 +517,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json((data || []).map(b => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
     }
     if (subResource === 'library-cards') {
-      const { data } = await supabase.from('library_card_applications').select('*').eq('college_id', col.id).order('created_at', { ascending: false });
+      const { data } = await supabase
+        .from('library_card_applications')
+        .select('*')
+        .eq('college_id', col.id)
+        .in('status', ['pending', 'approved'])
+        .order('created_at', { ascending: false });
+
       return res.json((data || []).map(c => ({ 
         id: c.id, firstName: c.first_name, lastName: c.last_name, 
         fatherName: c.father_name, email: c.email, phone: c.phone, 
@@ -503,22 +534,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         createdAt: c.created_at, dynamicFields: c.dynamic_fields 
       })));
     }
+    if (subResource === 'student-addresses') {
+      const { data } = await supabase
+        .from('library_card_applications')
+        .select('*')
+        .eq('college_id', col.id)
+        .order('created_at', { ascending: false });
+
+      // De-duplicate by email — keep approved over suspended
+      const emailMap = new Map();
+      for (const card of (data || [])) {
+        const existing = emailMap.get(card.email);
+        if (!existing) {
+          emailMap.set(card.email, card);
+        } else if (card.status === 'approved') {
+          emailMap.set(card.email, card); // approved always wins
+        }
+      }
+      const list = Array.from(emailMap.values());
+      return res.json(list.map(c => ({ 
+        id: c.id, firstName: c.first_name, lastName: c.last_name, 
+        fatherName: c.father_name, email: c.email, phone: c.phone, 
+        class: c.class, field: c.field, rollNo: c.roll_no, 
+        addressStreet: c.address_street, addressCity: c.address_city,
+        addressState: c.address_state, addressZip: c.address_zip,
+        dob: c.dob, cardNumber: c.card_number, status: c.status, 
+        createdAt: c.created_at, dynamicFields: c.dynamic_fields 
+      })));
+    }
     if (subResource === 'borrowed-books') {
-      const { data } = await supabase.from('borrowed_books').select(`
-        *,
-        library_card_applications (first_name, last_name, card_number, status)
-      `).eq('college_id', col.id).order('borrow_date', { ascending: false });
-      
-      return res.json((data || []).map((b: any) => ({
-        id: b.id,
-        bookTitle: b.book_title,
-        borrowerName: b.library_card_applications ? `${b.library_card_applications.first_name} ${b.library_card_applications.last_name}` : 'Card Deleted',
-        cardNumber: b.library_card_applications?.card_number || 'N/A',
-        cardDeleted: !b.library_card_applications,
-        cardSuspended: b.library_card_applications?.status === 'suspended',
-        borrowDate: b.borrow_date,
-        dueDate: b.due_date,
-        status: b.status
+      const { data: borrows } = await supabase.from('borrowed_books')
+        .select('*')
+        .eq('college_id', col.id)
+        .order('borrow_date', { ascending: false });
+
+      const cardIds = [...new Set((borrows || [])
+        .map((b: any) => b.library_card_id).filter(Boolean))];
+
+      let suspendedSet = new Set<string>();
+      if (cardIds.length > 0) {
+        const { data: cards } = await supabase
+          .from('library_card_applications')
+          .select('card_number, status')
+          .in('card_number', cardIds)
+          .eq('college_id', col.id)
+          .eq('status', 'suspended');
+        suspendedSet = new Set((cards || []).map((c: any) => c.card_number));
+      }
+
+      return res.json((borrows || []).map((b: any) => ({
+        id: b.id, bookTitle: b.book_title, borrowerName: b.borrower_name,
+        borrowerEmail: b.borrower_email, borrowerPhone: b.borrower_phone,
+        libraryCardId: b.library_card_id, borrowDate: b.borrow_date,
+        dueDate: b.due_date, returnDate: b.return_date, status: b.status,
+        cardSuspended: suspendedSet.has(b.library_card_id)
       })));
     }
     if (subResource === 'donations') {
@@ -630,10 +699,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (req.method === 'DELETE') {
         const { data: item } = await supabase.from('faculty_staff').select('image_url').eq('id', id).single();
-        if ((item as any)?.image_url) {
-          const fileName = (item as any).image_url.split('/').pop()?.split('?')[0];
-          if (fileName) await supabase.storage.from('faculty').remove([fileName]);
-        }
+        if ((item as any)?.image_url) await deleteStorageFile((item as any).image_url);
         await supabase.from('faculty_staff').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -656,10 +722,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (req.method === 'DELETE') {
         const { data: item } = await supabase.from('notes').select('pdf_path').eq('id', id).single();
-        if ((item as any)?.pdf_path) {
-          const fileName = (item as any).pdf_path.split('/').pop()?.split('?')[0];
-          if (fileName) await supabase.storage.from('study-notes').remove([fileName]);
-        }
+        if ((item as any)?.pdf_path) await deleteStorageFile((item as any).pdf_path);
         await supabase.from('notes').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -684,10 +747,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.method === 'DELETE') {
         const { data: item } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', id).single();
         if (item) {
-          const pdfName = (item as any).pdf_path?.split('/').pop()?.split('?')[0];
-          const coverName = (item as any).cover_image?.split('/').pop()?.split('?')[0];
-          if (pdfName) await supabase.storage.from('rare-books').remove([pdfName]);
-          if (coverName) await supabase.storage.from('rare-books').remove([coverName]);
+          if ((item as any).pdf_path) await deleteStorageFile((item as any).pdf_path);
+          if ((item as any).cover_image) await deleteStorageFile((item as any).cover_image);
         }
         await supabase.from('rare_books').delete().eq('id', id);
         return res.json({ success: true });
@@ -709,8 +770,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.method === 'DELETE') {
         const { data: item } = await supabase.from('events').select('images').eq('id', id).single();
         if ((item as any)?.images?.length > 0) {
-          const fileNames = (item as any).images.map((url: string) => url.split('/').pop()?.split('?')[0]).filter(Boolean);
-          if (fileNames.length > 0) await supabase.storage.from('event-images').remove(fileNames);
+          for (const url of (item as any).images) {
+            await deleteStorageFile(url);
+          }
         }
         await supabase.from('events').delete().eq('id', id);
         return res.json({ success: true });
@@ -744,10 +806,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (req.method === 'DELETE') {
         const { data: item } = await supabase.from('notifications').select('image').eq('id', id).single();
-        if ((item as any)?.image) {
-          const fileName = (item as any).image.split('/').pop()?.split('?')[0];
-          if (fileName) await supabase.storage.from('notifications').remove([fileName]);
-        }
+        if ((item as any)?.image) await deleteStorageFile((item as any).image);
         await supabase.from('notifications').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -769,10 +828,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (req.method === 'DELETE') {
         const { data: item } = await supabase.from('books').select('book_image').eq('id', id).single();
-        if ((item as any)?.book_image) {
-          const fileName = (item as any).book_image.split('/').pop()?.split('?')[0];
-          if (fileName) await supabase.storage.from('books').remove([fileName]);
-        }
+        if ((item as any)?.book_image) await deleteStorageFile((item as any).book_image);
         await supabase.from('books').delete().eq('id', id);
         return res.json({ success: true });
       }
@@ -801,31 +857,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       if (req.method === 'DELETE') {
         const { data: item } = await supabase.from('blog_posts').select('featured_image').eq('id', id).single();
-        if ((item as any)?.featured_image) {
-          const fileName = (item as any).featured_image.split('/').pop()?.split('?')[0];
-          if (fileName) await supabase.storage.from('blog').remove([fileName]);
-        }
+        if ((item as any)?.featured_image) await deleteStorageFile((item as any).featured_image);
         await supabase.from('blog_posts').delete().eq('id', id);
         return res.json({ success: true });
       }
     }
 
     // Admin Library Cards
-    if (resrc === 'library-cards') {
+    if (resrc === 'library-cards' || resrc === 'library-card-applications') {
       if (req.method === 'PATCH') {
-        if (id && id.includes('/status')) {
-          const actualId = id.split('/')[0];
-          await supabase.from('library_card_applications').update(req.body).eq('id', actualId);
-          return res.json({ success: true });
-        }
-        await supabase.from('library_card_applications').update(req.body).eq('id', id);
+        const { status } = req.body;
+        await supabase.from('library_card_applications')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', id).eq('college_id', col.id);
         return res.json({ success: true });
       }
       if (req.method === 'DELETE') {
-        // Soft delete/Suspend instead of hard delete to preserve history and show suspension message
-        await supabase.from('library_card_applications').update({ status: 'suspended' }).eq('id', id);
+        // Soft suspend
+        await supabase.from('library_card_applications')
+          .update({ status: 'suspended', updated_at: new Date().toISOString() })
+          .eq('id', id).eq('college_id', col.id);
         return res.json({ success: true });
       }
+    }
+
+    if (resrc === 'student-addresses' && req.method === 'DELETE') {
+      // Hard delete from library_card_applications
+      await supabase.from('library_card_applications').delete()
+        .eq('id', id).eq('college_id', col.id);
+      // Also delete linked student record if exists
+      await supabase.from('students').delete()
+        .eq('user_id', id).eq('college_id', col.id);
+      return res.json({ success: true });
     }
 
     if (resrc === 'borrowed-books') {

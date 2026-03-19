@@ -62,7 +62,7 @@ const Addresses = () => {
       // Reuse existing endpoint but filter for 'approved'
       // Note: We are mocking a specialized endpoint behavior by filtering client-side for now
       // per implementation plan to minimize backend churn unless massive data volume.
-      const res = await fetch(`/api/${collegeSlug}/admin/library-cards?_t=` + Date.now(), {
+      const res = await fetch(`/api/${collegeSlug}/admin/library-cards?includeSuspended=true&_t=` + Date.now(), {
         headers: { ...adminHeaders() },
         credentials: "include",
       });
@@ -150,6 +150,22 @@ const Addresses = () => {
     toast({ title: "Success", description: "Excel file downloaded." });
   };
 
+  const handleDeleteAddress = async (id: string) => {
+    if (!confirm("Permanently delete this student address record? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/${collegeSlug}/admin/student-addresses/${id}`, {
+        method: "DELETE",
+        headers: { ...adminHeaders() },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete record");
+      toast({ title: "Deleted", description: "Address record removed permanently." });
+      fetchAddresses();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -164,7 +180,7 @@ const Addresses = () => {
                 Student Addresses
               </h1>
               <p className="text-muted-foreground">
-                Contact & Address details for approved members
+                Contact & Address details for all application states
               </p>
             </div>
           </div>
@@ -193,97 +209,107 @@ const Addresses = () => {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Approved Members List ({filteredAddresses.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading...
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-foreground">
+            Student Records ({filteredAddresses.length})
+          </h2>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground bg-white rounded-xl border">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 opacity-20" />
+            Loading records...
+          </div>
+        ) : filteredAddresses.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground bg-white rounded-xl border">
+            No records found.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filteredAddresses.map((app) => (
+              <div 
+                key={app.id}
+                className={`rounded-xl p-5 border-2 transition-all shadow-sm relative group ${
+                  app.status === 'suspended'
+                    ? 'bg-red-50 border-red-400'
+                    : app.status === 'pending'
+                    ? 'bg-amber-50 border-amber-300'
+                    : 'bg-white border-neutral-200 hover:border-primary/30'
+                }`}
+              >
+                {/* Status Warning Banner */}
+                {app.status === 'suspended' && (
+                  <div className="bg-red-500 text-white text-xs font-black px-3 py-2 rounded-lg mb-4 flex items-center gap-2 uppercase tracking-wide">
+                    <span>🚫</span>
+                    College Card Suspended by Admin — Login Disabled
+                  </div>
+                )}
+                {app.status === 'pending' && (
+                  <div className="bg-amber-500 text-white text-xs font-black px-3 py-2 rounded-lg mb-4 flex items-center gap-2 uppercase tracking-wide">
+                    <span>⏳</span>
+                    Awaiting Admin Approval — Pending Review
+                  </div>
+                )}
+
+                <div className="flex justify-between items-start gap-4 mb-4">
+                  <div className="flex flex-col gap-1">
+                    <h3 className={`text-xl font-black ${app.status === 'suspended' ? 'text-red-900' : 'text-foreground'}`}>
+                      {app.firstName} {app.lastName}
+                    </h3>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                      S/O: {app.fatherName || "N/A"}
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      app.status === 'approved' 
+                        ? 'bg-emerald-100 text-emerald-700' 
+                        : app.status === 'suspended'
+                        ? 'bg-red-200 text-red-800'
+                        : 'bg-amber-200 text-amber-800'
+                    }`}>
+                      {app.status}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteAddress(app.id)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-100/50 p-2 h-auto"
+                      title="Permanently Delete Record"
+                    >
+                      <RefreshCw className="w-4 h-4 rotate-45" />
+                      <span className="sr-only">Delete</span>
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Library ID</label>
+                    <p className={`font-mono font-black ${app.status === 'suspended' ? 'text-red-700' : 'text-primary'}`}>
+                      {app.cardNumber}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase opacity-50">Contact info</label>
+                    <p className="text-xs font-bold text-foreground truncate">{app.email}</p>
+                    <p className="text-xs font-medium text-muted-foreground">{app.phone}</p>
+                  </div>
+                </div>
+
+                <div className={`p-3 rounded-lg border text-sm font-medium ${
+                  app.status === 'suspended'
+                    ? 'bg-white border-red-200 text-red-900'
+                    : 'bg-muted/30 border-neutral-100'
+                }`}>
+                  <label className="text-[9px] font-black text-muted-foreground uppercase block mb-1 opacity-50">Permanent Address</label>
+                  {app.fullAddress || "Address not provided"}
+                </div>
               </div>
-            ) : filteredAddresses.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No approved members found.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[250px]">
-                        Student Details
-                      </TableHead>
-                      <TableHead>Card ID</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead className="w-[300px]">Full Address</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAddresses.map((app) => (
-                      <TableRow 
-                        key={app.id}
-                        className={app.status === 'suspended' ? 'bg-red-50/80 hover:bg-red-100/90 transition-colors border-l-4 border-l-red-500' : ''}
-                      >
-                        <TableCell className="align-top py-4">
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex flex-col gap-1">
-                              <span className={`font-bold text-base ${app.status === 'suspended' ? 'text-red-700' : 'text-foreground'}`}>
-                                {app.firstName} {app.lastName}
-                              </span>
-                              {app.status === "suspended" && (
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black uppercase tracking-tight shadow-sm flex items-center gap-1 w-fit">
-                                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                                    College Card Deleted
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground font-medium">
-                              S/O: {app.fatherName || "-"}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="align-top py-4">
-                          <div className="flex flex-col gap-1">
-                            <span className={`font-mono font-bold ${app.status === 'suspended' ? 'text-red-600' : 'text-emerald-600'}`}>
-                              {app.cardNumber}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
-                              Library ID
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="align-top py-4">
-                          <div className="flex flex-col gap-1 text-sm">
-                            <span className={app.status === 'suspended' ? 'text-red-800' : ''}>{app.email}</span>
-                            <span className={app.status === 'suspended' ? 'text-red-600/70 font-medium' : 'text-muted-foreground'}>
-                              {app.phone}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="align-top py-4">
-                          {app.fullAddress ? (
-                            <div className={`text-sm p-3 rounded-xl border ${app.status === 'suspended' ? 'bg-white/80 border-red-200 text-red-900 shadow-inner' : 'bg-muted/50 border-border'}`}>
-                              {app.fullAddress}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-destructive font-bold uppercase tracking-wide">
-                              Address not found
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        )}
       </motion.div>
     </div>
   );

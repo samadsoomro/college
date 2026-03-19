@@ -30,6 +30,8 @@ import {
   Phone,
   Palette,
   History,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
@@ -56,7 +58,7 @@ import InstituteAddress from "./admin/InstituteAddress";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 
-const SidebarItem = ({ module, activeModule, onClick }: { module: any; activeModule: string; onClick: () => void }) => {
+const SidebarItem = ({ module, activeModule, onClick, isDark }: { module: any; activeModule: string; onClick: () => void; isDark: boolean }) => {
   const Icon = module.icon;
   const isActive = activeModule === module.id;
   return (
@@ -65,7 +67,9 @@ const SidebarItem = ({ module, activeModule, onClick }: { module: any; activeMod
       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 group ${
         isActive
           ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20"
-          : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
+          : isDark 
+            ? "text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100" 
+            : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
       }`}
     >
       <div className="flex items-center gap-3">
@@ -74,7 +78,9 @@ const SidebarItem = ({ module, activeModule, onClick }: { module: any; activeMod
           className={
             isActive
               ? "text-primary"
-              : "text-neutral-400 group-hover:text-neutral-600"
+              : isDark 
+                ? "text-neutral-500 group-hover:text-neutral-300" 
+                : "text-neutral-400 group-hover:text-neutral-600"
           }
         />
         <span className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}>
@@ -99,6 +105,7 @@ const SidebarItem = ({ module, activeModule, onClick }: { module: any; activeMod
 export default function AdminDashboard() {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [activeModule, setActiveModule] = useState("messages");
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('admin-dark-mode') === 'true');
   // ... other states ...
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
@@ -1302,15 +1309,31 @@ export default function AdminDashboard() {
   const modules = [...libraryModules, ...peopleModules, ...contentModules, ...aboutModules, ...cardsModules, ...contactModules];
 
   return (
-    <div className="min-h-screen bg-neutral-50/50 dark:bg-black pt-16 flex transition-colors duration-300">
+    <div className={`min-h-screen ${isDark ? 'bg-neutral-950 text-neutral-100' : 'bg-neutral-50/50'} pt-16 flex transition-colors duration-300`}>
+      {/* Dark Mode Toggle Floating */}
+      <div className="fixed top-20 right-8 z-50">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            const newVal = !isDark;
+            setIsDark(newVal);
+            localStorage.setItem('admin-dark-mode', String(newVal));
+          }}
+          className={`rounded-full shadow-lg ${isDark ? 'bg-neutral-900 border-neutral-700 text-yellow-400' : 'bg-white border-neutral-200 text-neutral-600'}`}
+        >
+          {isDark ? <Sun size={20} /> : <Moon size={20} />}
+        </Button>
+      </div>
+
       {/* Sticky Sidebar */}
-      <aside className="w-64 bg-white dark:bg-black border-r border-neutral-200 dark:border-neutral-800 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto hidden lg:block z-30">
+      <aside className={`w-64 ${isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'} border-r sticky top-16 h-[calc(100vh-64px)] overflow-y-auto hidden lg:block z-30`}>
         <div className="p-6">
           <div className="flex items-center gap-2 mb-8 px-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Shield className="text-white" size={18} />
             </div>
-            <h2 className="font-bold text-neutral-900 tracking-tight">
+            <h2 className={`font-bold ${isDark ? 'text-neutral-100' : 'text-neutral-900'} tracking-tight`}>
               Admin Panel
             </h2>
           </div>
@@ -1326,6 +1349,7 @@ export default function AdminDashboard() {
                 module={module} 
                 activeModule={activeModule} 
                 onClick={() => handleModuleChange(module.id)} 
+                isDark={isDark}
               />
             ))}
           </nav>
@@ -1341,6 +1365,7 @@ export default function AdminDashboard() {
                 module={module} 
                 activeModule={activeModule} 
                 onClick={() => handleModuleChange(module.id)} 
+                isDark={isDark}
               />
             ))}
           </nav>
@@ -1356,6 +1381,7 @@ export default function AdminDashboard() {
                 module={module} 
                 activeModule={activeModule} 
                 onClick={() => handleModuleChange(module.id)} 
+                isDark={isDark}
               />
             ))}
           </nav>
@@ -1371,6 +1397,7 @@ export default function AdminDashboard() {
                 module={module} 
                 activeModule={activeModule} 
                 onClick={() => handleModuleChange(module.id)} 
+                isDark={isDark}
               />
             ))}
           </nav>
@@ -1386,6 +1413,7 @@ export default function AdminDashboard() {
                 module={module} 
                 activeModule={activeModule} 
                 onClick={() => handleModuleChange(module.id)} 
+                isDark={isDark}
               />
             ))}
           </nav>
@@ -1401,6 +1429,7 @@ export default function AdminDashboard() {
                 module={module} 
                 activeModule={activeModule} 
                 onClick={() => handleModuleChange(module.id)} 
+                isDark={isDark}
               />
             ))}
           </nav>
@@ -1448,9 +1477,9 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 dark:bg-black transition-colors duration-300">
+      <main className={`flex-1 min-w-0 ${isDark ? 'bg-neutral-950' : ''} transition-colors duration-300`}>
         {/* Mobile Navigation */}
-        <div className="lg:hidden bg-white border-b border-neutral-200 sticky top-16 z-30 p-4 flex gap-2 overflow-x-auto scrollbar-hide">
+        <div className={`lg:hidden ${isDark ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'} border-b sticky top-16 z-30 p-4 flex gap-2 overflow-x-auto scrollbar-hide`}>
           {modules.map((module) => {
             const Icon = module.icon;
             const isActive = activeModule === module.id;
@@ -1461,7 +1490,9 @@ export default function AdminDashboard() {
                 className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${
                   isActive
                     ? "bg-primary text-white shadow-md"
-                    : "bg-white text-neutral-500 border border-neutral-200"
+                    : isDark 
+                      ? "bg-neutral-800 text-neutral-300 border border-neutral-700"
+                      : "bg-white text-neutral-500 border border-neutral-200"
                 }`}
               >
                 <Icon size={14} />
@@ -1480,7 +1511,9 @@ export default function AdminDashboard() {
                 className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${
                   isActive
                     ? "bg-primary text-white shadow-md"
-                    : "bg-white text-neutral-500 border border-neutral-200"
+                    : isDark 
+                      ? "bg-neutral-800 text-neutral-300 border border-neutral-700"
+                      : "bg-white text-neutral-500 border border-neutral-200"
                 }`}
               >
                 <Icon size={14} />
@@ -1499,7 +1532,9 @@ export default function AdminDashboard() {
                 className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${
                   isActive
                     ? "bg-primary text-white shadow-md"
-                    : "bg-white text-neutral-500 border border-neutral-200"
+                    : isDark 
+                      ? "bg-neutral-800 text-neutral-300 border border-neutral-700"
+                      : "bg-white text-neutral-500 border border-neutral-200"
                 }`}
               >
                 <Icon size={14} />
@@ -1510,7 +1545,7 @@ export default function AdminDashboard() {
 
           <button
             onClick={() => handleModuleChange("branding")}
-            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${activeModule === "branding" ? "bg-primary text-white shadow-md" : "bg-white text-neutral-500 border border-neutral-200"}`}
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${activeModule === "branding" ? "bg-primary text-white shadow-md" : isDark ? "bg-neutral-800 text-neutral-300 border border-neutral-700" : "bg-white text-neutral-500 border border-neutral-200"}`}
           >
             <Palette size={14} />
             Theme & Branding
@@ -1518,7 +1553,7 @@ export default function AdminDashboard() {
 
           <button
             onClick={() => handleModuleChange("home-cms")}
-            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${activeModule === "home-cms" ? "bg-primary text-white shadow-md" : "bg-white text-neutral-500 border border-neutral-200"}`}
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${activeModule === "home-cms" ? "bg-primary text-white shadow-md" : isDark ? "bg-neutral-800 text-neutral-300 border border-neutral-700" : "bg-white text-neutral-500 border border-neutral-200"}`}
           >
             <PenTool size={14} />
             Home CMS
@@ -1530,7 +1565,7 @@ export default function AdminDashboard() {
           key={activeModule}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 md:p-10 max-w-7xl mx-auto pt-24 md:pt-10 dark:bg-black"
+          className={`p-4 md:p-10 max-w-7xl mx-auto pt-24 md:pt-10 ${isDark ? 'bg-neutral-950' : ''}`}
         >
           {/* Messages Module */}
           {activeModule === "messages" && (
@@ -1538,10 +1573,10 @@ export default function AdminDashboard() {
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                  <h2 className="text-4xl font-black text-neutral-900 tracking-tight">
+                  <h2 className={`text-4xl font-black ${isDark ? 'text-neutral-100' : 'text-neutral-900'} tracking-tight`}>
                     Contact Messages
                   </h2>
-                  <p className="text-neutral-500 mt-2 font-medium">
+                  <p className={`${isDark ? 'text-neutral-400' : 'text-neutral-500'} mt-2 font-medium`}>
                     Manage inquiries and feedback from website visitors.
                   </p>
                 </div>
@@ -1601,7 +1636,7 @@ export default function AdminDashboard() {
                   {messages.map((msg: any) => (
                     <Card
                       key={msg.id}
-                      className="group p-6 rounded-3xl border-none bg-white dark:bg-neutral-900 shadow-sm hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300 ring-1 ring-neutral-200/60 dark:ring-neutral-800 hover:ring-primary/20"
+                      className={`group p-6 rounded-3xl border-none ${isDark ? 'bg-neutral-900 ring-neutral-800' : 'bg-white ring-neutral-200/60'} shadow-sm hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300 ring-1 hover:ring-primary/20`}
                     >
                       <div className="flex flex-col h-full">
                         <div className="flex justify-between items-start mb-6">
@@ -1636,10 +1671,10 @@ export default function AdminDashboard() {
                             </span>
                             <span className="h-[1px] flex-1 bg-neutral-200"></span>
                           </div>
-                          <h5 className="font-black text-neutral-800 mb-3 text-base leading-snug">
+                          <h5 className={`font-black ${isDark ? 'text-neutral-100' : 'text-neutral-800'} mb-3 text-base leading-snug`}>
                             {msg.subject}
                           </h5>
-                          <p className="text-neutral-600 text-sm leading-relaxed font-medium line-clamp-4 group-hover:line-clamp-none transition-all duration-300">
+                          <p className={`${isDark ? 'text-neutral-400' : 'text-neutral-600'} text-sm leading-relaxed font-medium line-clamp-4 group-hover:line-clamp-none transition-all duration-300`}>
                             {msg.message}
                           </p>
                         </div>
@@ -1674,10 +1709,10 @@ export default function AdminDashboard() {
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                  <h2 className="text-4xl font-black text-neutral-900 tracking-tight">
+                  <h2 className={`text-4xl font-black ${isDark ? 'text-neutral-100' : 'text-neutral-900'} tracking-tight`}>
                     Borrowed Books
                   </h2>
-                  <p className="text-neutral-500 mt-2 font-medium">
+                  <p className={`${isDark ? 'text-neutral-400' : 'text-neutral-500'} mt-2 font-medium`}>
                     Monitor and manage book circulation across the college system.
                   </p>
                 </div>
@@ -1754,7 +1789,7 @@ export default function AdminDashboard() {
                 ].map((stat, i) => (
                   <Card
                     key={i}
-                    className="p-6 rounded-3xl border-none bg-white shadow-sm ring-1 ring-neutral-200/60 transition-all hover:shadow-md group"
+                    className={`p-6 rounded-3xl border-none ${isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-100' : 'bg-white border-neutral-200 text-neutral-900'} shadow-sm border transition-all hover:shadow-md group`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -1791,11 +1826,11 @@ export default function AdminDashboard() {
                   </p>
                 </Card>
               ) : (
-                <Card className="rounded-3xl border-none bg-white shadow-xl shadow-neutral-200/40 overflow-hidden ring-1 ring-neutral-200/60">
+                <Card className={`rounded-3xl border-none ${isDark ? 'bg-neutral-900 ring-neutral-800' : 'bg-white ring-neutral-200/60'} shadow-xl shadow-neutral-200/40 overflow-hidden ring-1`}>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="bg-neutral-50 border-b border-neutral-100">
+                        <tr className={`${isDark ? 'bg-neutral-800 border-neutral-700' : 'bg-neutral-50 border-neutral-100'} border-b`}>
                           <th className="text-left py-5 px-6 text-[11px] font-black uppercase tracking-widest text-neutral-400">
                             Borrower Info
                           </th>
@@ -1820,20 +1855,21 @@ export default function AdminDashboard() {
                         {borrowedBooks.map((book: any, idx: number) => (
                           <tr
                             key={book.id}
-                            className={`group transition-colors ${book.cardDeleted || book.cardSuspended ? 'bg-red-50/80 hover:bg-red-100/90 border-l-4 border-l-red-500' : 'hover:bg-neutral-50/50'}`}
+                            className={`group transition-colors ${
+                              book.cardSuspended
+                                ? 'bg-red-50 border-l-4 border-red-500'
+                                : isDark ? 'hover:bg-neutral-800/50 border-b border-neutral-800' : 'hover:bg-neutral-50/50 border-b border-neutral-50'
+                            }`}
                           >
                             <td className="py-5 px-6">
-                                <div className={`font-bold flex items-center gap-2 ${book.cardDeleted || book.cardSuspended ? 'text-red-700' : 'text-neutral-900'}`}>
+                                <div className={`font-bold flex items-center gap-2 ${book.cardSuspended ? 'text-red-700' : isDark ? 'text-neutral-100' : 'text-neutral-900'}`}>
                                   {book.borrowerName || "-"}
-                                  {book.cardDeleted && (
-                                    <span className="text-[8px] bg-red-600 text-white px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-red-200 animate-pulse">
-                                      Card Deleted
-                                    </span>
-                                  )}
                                   {book.cardSuspended && (
-                                    <span className="text-[8px] bg-amber-600 text-white px-2 py-0.5 rounded font-black uppercase tracking-widest shadow-sm ring-1 ring-amber-200 animate-pulse">
-                                      Card Suspended
-                                    </span>
+                                    <div className="mt-1 flex items-center gap-1">
+                                      <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded font-black uppercase tracking-tight">
+                                        🚫 CARD SUSPENDED
+                                      </span>
+                                    </div>
                                   )}
                                 </div>
                                 <div className="text-xs text-neutral-500 font-medium">
@@ -1966,10 +2002,10 @@ export default function AdminDashboard() {
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                  <h2 className="text-4xl font-black text-neutral-900 tracking-tight">
+                  <h2 className={`text-4xl font-black ${isDark ? 'text-neutral-100' : 'text-neutral-900'} tracking-tight`}>
                     Cards
                   </h2>
-                  <p className="text-neutral-500 mt-2 font-medium">
+                  <p className={`${isDark ? 'text-neutral-400' : 'text-neutral-500'} mt-2 font-medium`}>
                     Manage student Card applications and issuance.
                   </p>
                 </div>
@@ -2041,7 +2077,7 @@ export default function AdminDashboard() {
                 ].map((stat, i) => (
                   <Card
                     key={i}
-                    className="p-6 rounded-3xl border-none bg-white shadow-sm ring-1 ring-neutral-200/60 transition-all hover:shadow-md group"
+                    className={`p-6 rounded-3xl border-none ${isDark ? 'bg-neutral-900 ring-neutral-800' : 'bg-white ring-neutral-200/60'} shadow-sm ring-1 transition-all hover:shadow-md group`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -2112,7 +2148,7 @@ export default function AdminDashboard() {
                         {libraryCards.map((card: any, idx: number) => (
                           <tr
                             key={card.id}
-                            className="group hover:bg-neutral-50/50 transition-colors"
+                            className={`group ${isDark ? 'hover:bg-neutral-800/50 border-neutral-800' : 'hover:bg-neutral-50/50 border-neutral-50'} transition-colors border-b`}
                           >
                             <td className="py-5 px-6">
                               <div className="flex items-center gap-3">
@@ -2168,39 +2204,54 @@ export default function AdminDashboard() {
                             </td>
                             <td className="py-5 px-6">
                               <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {card.status?.toLowerCase() === "pending" && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      approveLibraryCardHandler(card.id)
-                                    }
-                                    className="h-8 rounded-xl border-primary/20 text-primary font-bold text-[10px] uppercase hover:bg-primary/5"
+                                {card.status === 'pending' && (
+                                  <>
+                                    <Button 
+                                      onClick={() => approveLibraryCardHandler(card.id)}
+                                      className="h-8 text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl"
+                                    >
+                                      ✅ Approve
+                                    </Button>
+                                    <Button 
+                                      onClick={async () => {
+                                        if (confirm("Reject this application?")) {
+                                          const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${card.id}`, {
+                                            method: "DELETE",
+                                            headers: adminHeaders(),
+                                            credentials: "include"
+                                          });
+                                          if (res.ok) {
+                                            fetchLibraryCards();
+                                            toast({ title: "Rejected", description: "Application has been rejected." });
+                                          }
+                                        }
+                                      }}
+                                      className="h-8 text-xs bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl"
+                                    >
+                                      ❌ Reject
+                                    </Button>
+                                  </>
+                                )}
+                                {card.status === 'approved' && (
+                                  <Button 
+                                    onClick={async () => {
+                                      if (confirm("Suspending card will prevent user login. Continue?")) {
+                                        const res = await fetch(`/api/${collegeSlug}/admin/library-card-applications/${card.id}`, {
+                                          method: "DELETE",
+                                          headers: adminHeaders(),
+                                          credentials: "include"
+                                        });
+                                        if (res.ok) {
+                                          fetchLibraryCards();
+                                          toast({ title: "Suspended", description: "Card has been suspended." });
+                                        }
+                                      }
+                                    }}
+                                    className="h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
                                   >
-                                    Approve
+                                    🚫 Suspend Card
                                   </Button>
                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={async () => {
-                                    if (confirm("Suspending card will prevent user login. Continue?")) {
-                                      const res = await fetch(`/api/${collegeSlug}/admin/library-cards/${card.id}`, {
-                                        method: "DELETE",
-                                        headers: adminHeaders(),
-                                        credentials: "include"
-                                      });
-                                      if (res.ok) {
-                                        fetchLibraryCards();
-                                        toast({ title: "Suspended", description: "Card has been suspended." });
-                                      }
-                                    }
-                                  }}
-                                  className="h-8 w-8 text-neutral-300 hover:text-rose-600 rounded-lg hover:bg-rose-50"
-                                  title="Suspend Card"
-                                >
-                                  <Trash2 size={16} />
-                                </Button>
                               </div>
                             </td>
                           </tr>
@@ -2295,7 +2346,7 @@ export default function AdminDashboard() {
                 ].map((stat, i) => (
                   <Card
                     key={i}
-                    className="p-6 rounded-3xl border-none bg-white shadow-sm ring-1 ring-neutral-200/60 transition-all hover:shadow-md group"
+                    className={`p-6 rounded-3xl border-none ${isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-100' : 'bg-white border-neutral-200 text-neutral-900'} shadow-sm border transition-all hover:shadow-md group`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
