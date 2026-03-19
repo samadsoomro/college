@@ -1065,12 +1065,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .eq('status', 'approved');
 
       const phoneMap: Record<string, string> = {};
+      const cardEmailMap: Record<string, string> = {}; // Secondary email map from apps
+
       (cardApps || []).forEach(app => {
-        if (app.user_id) phoneMap[app.user_id] = app.phone;
-        else if (app.email) phoneMap[app.email.toLowerCase()] = app.phone;
+        const appPhone = app.phone;
+        const appEmail = (app.email || '').toLowerCase();
+        const appRoll = (app.roll_no || '').trim();
+        const appName = `${app.first_name} ${app.last_name}`.trim();
+
+        if (app.user_id) {
+          phoneMap[app.user_id] = appPhone;
+          cardEmailMap[app.user_id] = appEmail;
+        }
+        if (appEmail) phoneMap[appEmail] = appPhone;
+        if (appRoll) phoneMap[appRoll] = appPhone;
+        if (appName) phoneMap[appName.toLowerCase()] = appPhone;
       });
+
       (profiles || []).forEach(p => {
         if (p.user_id) phoneMap[p.user_id] = p.phone || phoneMap[p.user_id];
+        const pName = (p.full_name || '').trim().toLowerCase();
+        if (pName) phoneMap[pName] = p.phone || phoneMap[pName];
       });
       
       const emailMap: Record<string, string> = {};
@@ -1089,8 +1104,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const students = (studentsData || []).map(s => {
-        const studentEmail = emailMap[s.user_id] || '-';
-        const studentPhone = phoneMap[s.user_id] || phoneMap[studentEmail.toLowerCase()] || '-';
+        const studentEmail = emailMap[s.user_id] || cardEmailMap[s.user_id] || '-';
+        const sRoll = (s.roll_no || '').trim();
+        const sName = (s.name || '').trim().toLowerCase();
+
+        const studentPhone = phoneMap[s.user_id] || 
+                             phoneMap[studentEmail.toLowerCase()] || 
+                             (sRoll ? phoneMap[sRoll] : null) ||
+                             (sName ? phoneMap[sName] : null) ||
+                             '-';
         
         return {
           id: s.id,
