@@ -1056,23 +1056,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Step 2: Fetch all profiles for this college
       const { data: profiles } = await supabase.from('profiles').select('*').eq('college_id', col.id);
-      
-      const emailMap: Record<string, string> = {};
-      const userIds = [
-        ...(studentsData || []).map(s => s.user_id),
-        ...(profiles || []).map(p => p.user_id)
-      ].filter(Boolean);
 
-      // Step 3: Fetch Approved Library Card Applications (as fallback students)
+      // Step 3: Fetch Approved Library Card Applications (as fallback students and main data source for phone/cardId)
       const { data: cardApps } = await supabase
         .from('library_card_applications')
         .select('*')
         .eq('college_id', col.id)
         .eq('status', 'approved');
 
+      const phoneMap: Record<string, string> = {};
       (cardApps || []).forEach(app => {
-        if (app.user_id) userIds.push(app.user_id);
+        if (app.user_id) phoneMap[app.user_id] = app.phone;
+        else if (app.email) phoneMap[app.email.toLowerCase()] = app.phone;
       });
+      (profiles || []).forEach(p => {
+        if (p.user_id) phoneMap[p.user_id] = p.phone || phoneMap[p.user_id];
+      });
+      
+      const emailMap: Record<string, string> = {};
+      const userIds = [
+        ...(studentsData || []).map(s => s.user_id),
+        ...(profiles || []).map(p => p.user_id),
+        ...(cardApps || []).map(a => a.user_id)
+      ].filter(Boolean);
 
       const uniqueUserIds = [...new Set(userIds)];
       if (uniqueUserIds.length > 0) {
@@ -1082,25 +1088,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      const students = (studentsData || []).map(s => ({
-        id: s.id,
-        userId: s.user_id,
-        cardId: s.card_id,
-        name: s.name,
-        class: s.class,
-        field: s.field,
-        rollNo: s.roll_no,
-        createdAt: s.created_at,
-        email: emailMap[s.user_id] || '-',
-        phone: s.phone || '-',
-        type: 'student',
-        role: 'Student'
-      }));
+      const students = (studentsData || []).map(s => {
+        const studentEmail = emailMap[s.user_id] || '-';
+        const studentPhone = phoneMap[s.user_id] || phoneMap[studentEmail.toLowerCase()] || '-';
+        
+        return {
+          id: s.id,
+          userId: s.user_id,
+          cardId: s.card_id,
+          name: s.name,
+          class: s.class,
+          field: s.field,
+          rollNo: s.roll_no,
+          createdAt: s.created_at,
+          email: studentEmail,
+          phone: studentPhone,
+          type: 'student',
+          role: 'Student'
+        };
+      });
 
       // Add students from approved apps if not already in students list
       const existingUserIds = new Set(students.map(s => s.userId));
       (cardApps || []).forEach(app => {
         if (!existingUserIds.has(app.user_id)) {
+          const appEmail = emailMap[app.user_id] || app.email || '-';
           students.push({
             id: app.id,
             userId: app.user_id,
@@ -1110,8 +1122,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             field: app.field,
             rollNo: app.roll_no,
             createdAt: app.created_at,
-            email: emailMap[app.user_id] || app.email || '-',
-            phone: app.phone || '-',
+            email: appEmail,
+            phone: app.phone || phoneMap[appEmail.toLowerCase()] || '-',
             type: 'student',
             role: 'Student'
           });
