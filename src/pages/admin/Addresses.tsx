@@ -67,25 +67,34 @@ const Addresses = () => {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch addresses");
-      const data: LibraryCardApplication[] = await res.json();
+      const allData: LibraryCardApplication[] = await res.json();
 
+      // De-duplicate by email, prioritizing 'approved' over 'suspended'
+      const studentMap = new Map<string, LibraryCardApplication>();
+      
+      allData.forEach((app) => {
+        const email = (app.email || "").toLowerCase();
+        const status = (app.status || "").toLowerCase();
+        
+        if (status === "approved" || status === "suspended") {
+          const existing = studentMap.get(email);
+          if (!existing || (existing.status === "suspended" && status === "approved")) {
+            studentMap.set(email, app);
+          }
+        }
+      });
 
-      const approvedOnly = data
-        .filter((app) => {
-          const s = (app.status || "").toLowerCase();
-          return s === "approved" || s === "suspended";
-        })
-        .map((app) => ({
-          ...app,
-          fullAddress: [
-            app.addressStreet,
-            app.addressCity,
-            app.addressState,
-            app.addressZip,
-          ]
-            .filter((p) => p && p.trim().length > 0)
-            .join(", "),
-        }));
+      const approvedOnly = Array.from(studentMap.values()).map((app) => ({
+        ...app,
+        fullAddress: [
+          app.addressStreet,
+          app.addressCity,
+          app.addressState,
+          app.addressZip,
+        ]
+          .filter((p) => p && p.trim().length > 0)
+          .join(", "),
+      }));
 
       setAddresses(approvedOnly);
     } catch (error: any) {

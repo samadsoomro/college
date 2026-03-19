@@ -68,9 +68,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // College Card Login
     if (collegeCardId) {
-      const { data: card } = await supabase.from('library_card_applications').select('*').eq('card_number', collegeCardId).eq('college_id', col.id).maybeSingle();
-      if (!card) return res.status(401).json({ error: 'Invalid College Card ID' });
-      if (card.status === 'suspended') return res.status(403).json({ error: 'your card is rejected plz visit college' });
+      const { data: cards } = await supabase
+        .from('library_card_applications')
+        .select('*')
+        .eq('card_number', collegeCardId)
+        .eq('college_id', col.id);
+      
+      if (!cards || cards.length === 0) return res.status(401).json({ error: 'Invalid College Card ID' });
+      
+      // Prioritize 'approved' cards
+      const approvedCard = cards.find(c => c.status === 'approved');
+      const suspendedCard = cards.find(c => c.status === 'suspended');
+      const card = approvedCard || suspendedCard || cards[0];
+
+      if (card.status === 'suspended' && !approvedCard) {
+        return res.status(403).json({ error: 'your card is rejected plz visit college' });
+      }
       if (card.status !== 'approved') return res.status(401).json({ error: 'Your card application is still pending approval.' });
       
       // Check password (matching the plain text password stored in DB for library cards)
