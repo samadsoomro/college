@@ -137,19 +137,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ authenticated: true, role: 'superadmin' });
   }
 
-  // ── SUPER ADMIN COLLEGES ──────────────────────────────────────────────────
+  // ── SUPER ADMIN COLLEGES (GET, POST, DELETE) ──────────────────────────────
   if (collegeSlug === 'super-admin' && resource === 'colleges') {
-    if (req.method === 'GET') {
-      const { data, error } = await supabase.from('colleges').select('*').order('created_at', { ascending: false });
-      if (error) return res.status(500).json({ error: error.message });
-      return res.json(data);
+    if (!subResource) {
+      if (req.method === 'GET') {
+        const { data, error } = await supabase.from('colleges').select('*').order('created_at', { ascending: false });
+        if (error) return res.status(500).json({ error: error.message });
+        
+        // Map to camelCase for frontend
+        const mapped = (data || []).map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          shortName: c.short_name,
+          slug: c.slug,
+          isActive: c.is_active,
+          createdAt: c.created_at
+        }));
+        
+        return res.json(mapped);
+      }
+      if (req.method === 'POST') {
+        const { name, shortName, slug: newSlug } = req.body || {};
+        const { data, error } = await supabase
+          .from('colleges')
+          .insert({ 
+            name, 
+            short_name: shortName, 
+            slug: newSlug, 
+            is_active: true 
+          })
+          .select()
+          .single();
+          
+        if (error) return res.status(500).json({ error: error.message });
+        
+        return res.json({
+          id: data.id,
+          name: data.name,
+          shortName: data.short_name,
+          slug: data.slug,
+          isActive: data.is_active,
+          createdAt: data.created_at
+        });
+      }
     }
-    if (req.method === 'POST') {
-      const { name, shortName, slug: newSlug } = req.body;
-      const { data, error } = await supabase.from('colleges').insert({ name, short_name: shortName, slug: newSlug, is_active: true }).select().single();
-      if (error) return res.status(500).json({ error: error.message });
-      return res.json(data);
-    }
+    
     if (req.method === 'DELETE' && sub1) {
       const { error } = await supabase.from('colleges').delete().eq('id', sub1);
       if (error) return res.status(500).json({ error: error.message });
