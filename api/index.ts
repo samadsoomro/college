@@ -113,10 +113,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!approved)
         return res.status(401).json({ error: 'Card not found.' });
 
-      // Verify password (plain text as requested/existing)
-      if (approved.password !== password) {
-        return res.status(401).json({ error: 'Incorrect password.' });
-      }
+      // Verify password (plaintext compared against bcrypt hash)
+      const match = await bcrypt.compare(String(password), String(approved.password));
+      console.log('[LOGIN] bcrypt match:', match, 'cardNumber:', approved.card_number);
+      if (!match) return res.status(401).json({ error: 'Incorrect password.' });
 
       return res.json({
         redirect: `/${collegeSlug}/library-dashboard`,
