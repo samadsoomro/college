@@ -36,6 +36,8 @@ const Books = () => {
   const navigate = useNavigate();
   const [showInfoPopup, setShowInfoPopup] = useState(false);
   const [infoPopupBook, setInfoPopupBook] = useState<any>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successBook, setSuccessBook] = useState<any>(null);
 
   useEffect(() => {
     if (collegeSlug) fetchBooks();
@@ -116,10 +118,8 @@ const Books = () => {
       });
 
       if (res.ok) {
-        toast({
-          title: "Book Borrowed Successfully!",
-          description: `You have borrowed the book: "${book.bookName}". Please visit the library and return it within 14 days. We may contact you via phone or email if required.`,
-        });
+        setSuccessBook(book);
+        setShowSuccessModal(true);
         fetchBooks();
       } else {
         const error = await res.json();
@@ -330,6 +330,57 @@ const Books = () => {
                   Close
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+        {showSuccessModal && successBook && (
+          <motion.div 
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+            >
+              <div className="text-5xl mb-4 text-center">✅</div>
+              <h3 className="text-2xl font-black text-neutral-900 text-center mb-2">
+                Borrow Request Attended!
+              </h3>
+              <p className="text-neutral-600 text-sm text-center mb-6">
+                Your request for <strong>{successBook.bookName}</strong> has been successfully received.
+              </p>
+              
+              <div className="bg-green-50 rounded-xl p-5 mb-6 space-y-4 text-sm border border-green-100">
+                <div className="flex gap-3">
+                  <span className="text-xl">🏛️</span>
+                  <p className="text-green-800">
+                    <strong>Physical Collection:</strong> Please visit our library physically to collect your respective book.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-xl">📅</span>
+                  <p className="text-green-800">
+                    <strong>14-Day Limit:</strong> You must bring back the respective book within <strong>14 days</strong>.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-xl">⚠️</span>
+                  <p className="text-green-800">
+                    <strong>Fine Policy:</strong> If you exceed the 14-day limit, a fine will be applied to your account.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full py-3 bg-green-600 text-white rounded-xl text-sm font-bold text-center hover:bg-green-700 transition-all shadow-lg shadow-green-200"
+              >
+                Got it, Thank you!
+              </button>
             </motion.div>
           </motion.div>
         )}
