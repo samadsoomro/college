@@ -196,6 +196,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const res = await fetch(`/api/${collegeSlug}/contact-messages`, {
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -212,7 +213,10 @@ export default function AdminDashboard() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/${collegeSlug}/admin/users`, { credentials: "include" });
+      const res = await fetch(`/api/${collegeSlug}/admin/users`, { 
+        headers: adminHeaders(),
+        credentials: "include" 
+      });
       if (res.ok) {
         const data = await res.json();
         setUsers([...(data.students || []), ...(data.nonStudents || [])]);
