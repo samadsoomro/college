@@ -88,25 +88,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
+    const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+
     if (role) {
-      const isS = localStorage.getItem('isSuperAdmin') === 'true';
-      const isA = localStorage.getItem('isAdmin') === 'true' || isS;
-      const isL = localStorage.getItem('isLibraryCard') === 'true';
-      const userName = localStorage.getItem('userName') || 'User';
-      
-      setIsAdmin(isA);
-      setIsSuperAdmin(isS);
-      setIsLibraryCard(isL);
-      
-      setUser({ 
-        role, 
-        name: userName,
-        isLibraryCard: isL,
-        cardNumber: localStorage.getItem('cardNumber'),
-        collegeSlug: localStorage.getItem('collegeSlug'), 
+      setUser({
+        role,
+        name: localStorage.getItem('userName') || 'User',
+        collegeSlug: localStorage.getItem('collegeSlug'),
         id: localStorage.getItem('userId'),
+        isLibraryCard: localStorage.getItem('isLibraryCard') === 'true',
+        cardNumber: localStorage.getItem('cardNumber'),
         email: localStorage.getItem('userEmail')
       });
+      setIsAdmin(isAdmin);
+      setIsSuperAdmin(isSuperAdmin);
+      setIsLibraryCard(localStorage.getItem('isLibraryCard') === 'true');
     }
     setLoading(false);
   }, []);

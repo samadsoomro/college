@@ -76,6 +76,11 @@ const SuperAdminDashboard: React.FC = () => {
   });
 
   useEffect(() => {
+    const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+    if (!isSuperAdmin) {
+      window.location.href = '/gcfm/login';
+      return;
+    }
     fetchColleges();
   }, []);
 

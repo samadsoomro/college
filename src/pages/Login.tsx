@@ -95,21 +95,48 @@ const Login: React.FC = () => {
 
       // Success - Use window.location.href to force a full reload and clear state
       if (data.redirect) {
-        localStorage.setItem('userRole', data.role);
-        localStorage.setItem('isLibraryCard', data.isLibraryCard ? 'true' : 'false');
-        localStorage.setItem('userName', data.name || data.firstName || 'User');
-        localStorage.setItem('cardNumber', data.cardNumber || '');
-        if (data.collegeSlug) localStorage.setItem('collegeSlug', data.collegeSlug);
-        if (data.role === 'admin') localStorage.setItem('isAdmin', 'true');
-        if (data.role === 'superadmin') {
-          localStorage.setItem('isSuperAdmin', 'true');
-          localStorage.setItem('isAdmin', 'true');
+        // ── Super Admin ──────────────────────────────────────────
+        if (data.role === "superadmin") {
+          localStorage.setItem("userRole", "superadmin");
+          localStorage.setItem("isSuperAdmin", "true");
+          localStorage.setItem("isAdmin", "true");
+          localStorage.setItem("userName", "Super Admin");
+          localStorage.setItem("userId", data.userId || "");
+          window.location.href = "/super-admin/dashboard";
+          return;
         }
-        if (data.userId) localStorage.setItem('userId', data.userId);
-        
-        // Force redirect to homepage if it's a card login
-        const target = data.isLibraryCard ? `/${collegeSlug}` : data.redirect;
-        window.location.href = target;
+
+        // ── College Admin ─────────────────────────────────────────
+        if (data.role === "admin") {
+          localStorage.setItem("userRole", "admin");
+          localStorage.setItem("isAdmin", "true");
+          localStorage.setItem("isSuperAdmin", "false");
+          localStorage.setItem("collegeSlug", data.collegeSlug || collegeSlug || "");
+          localStorage.setItem("collegeId", data.collegeId || "");
+          localStorage.setItem("userName", data.name || data.firstName || "Admin");
+          localStorage.setItem("userId", data.userId || "");
+          window.location.href = `/${data.collegeSlug || collegeSlug}/admin-dashboard`;
+          return;
+        }
+
+        // ── Regular User / Card User ──────────────────────────────
+        if (data.role === "user" || data.isLibraryCard) {
+          localStorage.setItem("userRole", data.role || "user");
+          localStorage.setItem("isAdmin", "false");
+          localStorage.setItem("isSuperAdmin", "false");
+          localStorage.setItem("isLibraryCard", data.isLibraryCard ? "true" : "false");
+          localStorage.setItem("userName", data.name || data.firstName || "User");
+          localStorage.setItem("cardNumber", data.cardNumber || "");
+          localStorage.setItem("userId", data.userId || "");
+          if (data.collegeSlug) localStorage.setItem("collegeSlug", data.collegeSlug);
+          
+          const target = data.isLibraryCard ? `/${collegeSlug}` : data.redirect;
+          window.location.href = target;
+          return;
+        }
+
+        // Fallback for any other successful redirect
+        window.location.href = data.redirect;
       }
     } catch (err: any) {
       setError(
