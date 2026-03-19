@@ -259,6 +259,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const res = await fetch(`/api/${collegeSlug}/admin/borrowed-books`, {
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
@@ -276,6 +277,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const res = await fetch(`/api/${collegeSlug}/admin/donations`, {
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {

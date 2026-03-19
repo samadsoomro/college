@@ -793,10 +793,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })));
     }
     if (subResource === 'borrowed-books' || subResource === 'book-borrows') {
-      const { data: borrows } = await supabase.from('book_borrows')
+      const { data: borrows, error } = await supabase.from('book_borrows')
         .select('*')
         .eq('college_id', col.id)
-        .order('borrow_date', { ascending: false });
+        .order('created_at', { ascending: false });
+
+      if (error) return res.status(500).json({ error: error.message });
 
       const cardIds = [...new Set((borrows || [])
         .map((b: any) => b.library_card_id).filter(Boolean))];
@@ -813,10 +815,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       return res.json((borrows || []).map((b: any) => ({
-        id: b.id, bookTitle: b.book_title, borrowerName: b.borrower_name,
-        borrowerEmail: b.borrower_email, borrowerPhone: b.borrower_phone,
-        libraryCardId: b.library_card_id, borrowDate: b.borrow_date,
-        dueDate: b.due_date, returnDate: b.return_date, status: b.status,
+        id: b.id,
+        bookId: b.book_id,
+        bookTitle: b.book_title,
+        borrowerName: b.borrower_name,
+        borrowerEmail: b.borrower_email,
+        borrowerPhone: b.borrower_phone,
+        libraryCardId: b.library_card_id,
+        userId: b.user_id,
+        borrowDate: b.borrow_date,
+        dueDate: b.due_date,
+        returnDate: b.return_date,
+        status: b.status,
         cardSuspended: suspendedSet.has(b.library_card_id)
       })));
     }
