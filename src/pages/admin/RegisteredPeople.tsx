@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { UserPlus, RefreshCw, Search, Mail, Phone, Trash2 } from "lucide-react";
+import { adminHeaders } from "@/contexts/AuthContext";
 
 interface RegisteredPerson {
   id: string;
@@ -35,7 +36,10 @@ const RegisteredPeople = () => {
   const fetchPeople = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/${collegeSlug}/admin/users`, { credentials: "include" });
+      const res = await fetch(`/api/${collegeSlug}/admin/users`, { 
+        headers: adminHeaders(),
+        credentials: "include" 
+      });
       if (!res.ok) throw new Error("Failed to fetch data");
       const data = await res.json();
       // 'nonStudents' contains the staff/visitor people
@@ -66,6 +70,7 @@ const RegisteredPeople = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/admin/users/${id}`, {
         method: "DELETE",
+        headers: adminHeaders(),
         credentials: "include",
       });
       if (res.ok) {
