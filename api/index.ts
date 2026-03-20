@@ -78,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: s } = await supabase.from('site_settings').select('*').eq('college_id', college.id).maybeSingle();
     return res.json({
       id: college.id, slug: college.slug, name: college.name, shortName: college.short_name,
-      primaryColor: s?.primary_color || '#006600',
+      primaryColor: s?.primary_color || '#1f6be5',
       instituteFullName: s?.institute_full_name || college.name,
       instituteShortName: s?.institute_short_name || college.short_name,
       navbarLogo: s?.navbar_logo, loadingLogo: s?.loading_logo,
@@ -469,7 +469,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: d } = await supabase.from('site_settings').select('*').eq('college_id', colId).maybeSingle();
       if (!d) return res.json({});
       return res.json({
-        id: d.id, primaryColor: d.primary_color, navbarLogo: d.navbar_logo, loadingLogo: d.loading_logo,
+        id: d.id, primaryColor: d.primary_color || '#1f6be5', navbarLogo: d.navbar_logo, loadingLogo: d.loading_logo,
         instituteShortName: d.institute_short_name, instituteFullName: d.institute_full_name,
         footerTitle: d.footer_title, footerDescription: d.footer_description,
         facebookUrl: d.facebook_url, twitterUrl: d.twitter_url, instagramUrl: d.instagram_url, youtubeUrl: d.youtube_url,

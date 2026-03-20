@@ -72,7 +72,7 @@ interface CollegeContextType {
 
 const defaultSettings: SiteSettings = {
   id: "00000000-0000-0000-0000-000000000000",
-  primaryColor: "#006600",
+  primaryColor: "#1f6be5",
   navbarLogo: null,
   loadingLogo: null,
   instituteShortName: "COL",
@@ -128,7 +128,7 @@ export const useCollege = () => {
 // Re-export useBranding for compatibility during migration if needed
 export const useBranding = useCollege;
 
-function hexToHslComponents(hex: string): string {
+const hexToHslComponents = (hex: string) => {
   const cleanHex = hex.replace(/^#/, "");
   const rHex = cleanHex.length === 3 ? cleanHex[0] + cleanHex[0] : cleanHex.substring(0, 2);
   const gHex = cleanHex.length === 3 ? cleanHex[1] + cleanHex[1] : cleanHex.substring(2, 4);
@@ -151,8 +151,12 @@ function hexToHslComponents(hex: string): string {
     }
     h /= 6;
   }
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-}
+  return { 
+    h: Math.round(h * 360), 
+    s: Math.round(s * 100), 
+    l: Math.round(l * 100) 
+  };
+};
 
 function applyCacheBuster(settings: SiteSettings): SiteSettings {
   const ts = Date.now();
@@ -173,9 +177,12 @@ const mapSettingsData = (raw: any): SiteSettings => {
   const mapped: any = { ...defaultSettings };
   Object.keys(raw).forEach(key => {
     const camelKey = snakeToCamel(key);
-    mapped[camelKey] = raw[key];
+    // Only overwrite if API provides a non-null value to avoid resetting to defaults unintentionally
+    if (raw[key] !== null && raw[key] !== undefined && raw[key] !== "") {
+      mapped[camelKey] = raw[key];
+    }
   });
-  // Ensure Booleans are correctly cast if they come as 0/1 or strings from some APIs (though Supabase handles bools)
+  // Ensure Booleans are correctly cast
   if (raw.card_qr_enabled !== undefined) mapped.cardQrEnabled = !!raw.card_qr_enabled;
   if (raw.rb_watermark_enabled !== undefined) mapped.rbWatermarkEnabled = !!raw.rb_watermark_enabled;
   
@@ -191,24 +198,41 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateGlobalStyles = (primaryColor: string) => {
     if (!primaryColor) return;
-    const hsl = hexToHslComponents(primaryColor);
-    document.documentElement.style.setProperty("--primary", hsl);
-    document.documentElement.style.setProperty("--ring", hsl);
-    document.documentElement.style.setProperty("--pakistan-green", hsl);
-    document.documentElement.style.setProperty("--pakistan-green-light", hsl);
-    document.documentElement.style.setProperty("--pakistan-green-lighter", hsl);
-    document.documentElement.style.setProperty("--pakistan-green-dark", hsl);
-    document.documentElement.style.setProperty("--pakistan-green-darkest", hsl);
-    document.documentElement.style.setProperty("--accent", hsl);
+    const { h, s, l } = hexToHslComponents(primaryColor);
+    
+    const hsl = `${h} ${s}% ${l}%`;
+    const lightHsl = `${h} ${s}% ${Math.min(l + 10, 95)}%`;
+    const lighterHsl = `${h} ${s}% ${Math.min(l + 20, 98)}%`;
+    const darkHsl = `${h} ${s}% ${Math.max(l - 10, 5)}%`;
+    const darkestHsl = `${h} ${s}% ${Math.max(l - 20, 2)}%`;
+
+    const root = document.documentElement;
+    root.style.setProperty("--primary", hsl);
+    root.style.setProperty("--ring", hsl);
+    
+    // Update Pakistan Green variants which many components use hardcoded
+    root.style.setProperty("--pakistan-green", hsl);
+    root.style.setProperty("--pakistan-green-light", lightHsl);
+    root.style.setProperty("--pakistan-green-lighter", lighterHsl);
+    root.style.setProperty("--pakistan-green-dark", darkHsl);
+    root.style.setProperty("--pakistan-green-darkest", darkestHsl);
+
+    // Update sidebar variables if they exist
+    root.style.setProperty("--sidebar-primary", hsl);
+    root.style.setProperty("--sidebar-ring", hsl);
+    
+    // Add accent support (usually a slightly different shade)
+    root.style.setProperty("--accent", darkHsl);
   };
 
   const fetchCollegeAndSettings = async () => {
     if (!collegeSlug) return;
     setLoading(true);
+    const lowSlug = collegeSlug.toLowerCase();
     try {
-    // 1. Fetch College Metadata
+    // 1. Fetch College Metadata (Case-insensitive via API)
     const ts = Date.now();
-    const collegeRes = await fetch(`/api/colleges/${collegeSlug}?t=${ts}`);
+    const collegeRes = await fetch(`/api/colleges/${lowSlug}?t=${ts}`);
       if (!collegeRes.ok) throw new Error("College not found");
       const collegeData = await collegeRes.json();
       setCollege(collegeData);
@@ -219,7 +243,7 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       // 2. Fetch specific site settings for this college
-      const settingsRes = await fetch(`/api/${collegeSlug}/settings?t=${ts}`);
+      const settingsRes = await fetch(`/api/${lowSlug}/settings?t=${ts}`);
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
         if (settingsData && settingsData.id) {
