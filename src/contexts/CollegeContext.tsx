@@ -167,6 +167,21 @@ function applyCacheBuster(settings: SiteSettings): SiteSettings {
   return bustered;
 }
 
+const snakeToCamel = (str: string) => str.replace(/([-_][a-z])/g, group => group.toUpperCase().replace('-', '').replace('_', ''));
+
+const mapSettingsData = (raw: any): SiteSettings => {
+  const mapped: any = { ...defaultSettings };
+  Object.keys(raw).forEach(key => {
+    const camelKey = snakeToCamel(key);
+    mapped[camelKey] = raw[key];
+  });
+  // Ensure Booleans are correctly cast if they come as 0/1 or strings from some APIs (though Supabase handles bools)
+  if (raw.card_qr_enabled !== undefined) mapped.cardQrEnabled = !!raw.card_qr_enabled;
+  if (raw.rb_watermark_enabled !== undefined) mapped.rbWatermarkEnabled = !!raw.rb_watermark_enabled;
+  
+  return mapped as SiteSettings;
+};
+
 export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [college, setCollege] = useState<College | null>(null);
@@ -208,9 +223,9 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
         if (settingsData && settingsData.id) {
-          // Merge DB settings with defaults so nothing is ever undefined
-          const mergedSettings = { ...defaultSettings, ...settingsData };
-          const bustered = applyCacheBuster(mergedSettings);
+          // Map snake_case from DB to camelCase for the frontend
+          const mappedSettings = mapSettingsData(settingsData);
+          const bustered = applyCacheBuster(mappedSettings);
           setSettings(bustered);
           // Prefer color from settings if it exists
           if (bustered.primaryColor) {
