@@ -110,10 +110,37 @@ const ThemeBranding: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase text-muted-foreground">Primary Theme Color</label>
-                <div className="flex gap-2">
-                  <Input type="color" name="primaryColor" value={formData.primaryColor || '#006600'} onChange={handleInputChange} className="w-12 h-10 p-1 cursor-pointer" />
-                  <Input name="primaryColor" value={formData.primaryColor || '#006600'} onChange={handleInputChange} placeholder="#006600" />
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-2 p-1 border rounded-lg bg-muted/30">
+                    <Input 
+                      type="color" 
+                      name="primaryColor" 
+                      value={formData.primaryColor || '#006600'} 
+                      onChange={handleInputChange} 
+                      className="w-10 h-10 p-1 cursor-pointer border-0 bg-transparent" 
+                    />
+                    <Input 
+                      name="primaryColor" 
+                      value={formData.primaryColor || '#006600'} 
+                      onChange={handleInputChange} 
+                      className="border-0 bg-transparent w-24 font-mono text-sm uppercase"
+                      placeholder="#006600" 
+                    />
+                  </div>
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, primaryColor: '#006600' }));
+                      toast({ title: "Reset to default", description: "Color set to #006600. Remember to save changes." });
+                    }}
+                    className="h-10 gap-2"
+                  >
+                    <Palette size={14} /> Default Color
+                  </Button>
                 </div>
+                <p className="text-[10px] text-muted-foreground">This color will be used for buttons, links, and primary UI elements.</p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase text-muted-foreground">Footer Title</label>

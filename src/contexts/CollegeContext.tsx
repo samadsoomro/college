@@ -72,7 +72,7 @@ interface CollegeContextType {
 
 const defaultSettings: SiteSettings = {
   id: "00000000-0000-0000-0000-000000000000",
-  primaryColor: "#1f6be5",
+  primaryColor: "#006600",
   navbarLogo: null,
   loadingLogo: null,
   instituteShortName: "COL",
