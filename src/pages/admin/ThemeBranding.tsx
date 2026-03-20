@@ -48,18 +48,10 @@ const ThemeBranding: React.FC = () => {
       const bucketName = `college-${collegeSlug}`;
       const publicUrl = await uploadToSupabase(file, bucketName, collegeSlug);
       
-      // Immediately save URL to settings via PATCH as requested
-      await updateSettings({ [field]: publicUrl });
-      
-      // Update local state
+      // Update local state (Persistence happens on "Save All")
       setFormData(prev => ({ ...prev, [field]: publicUrl }));
       
-      toast({ title: "Success", description: `${field} updated successfully!` });
-      
-      // Force refresh data
-      queryClient.invalidateQueries({ queryKey: ['college', collegeSlug] });
-      queryClient.invalidateQueries({ queryKey: ['settings', collegeSlug] });
-      window.dispatchEvent(new Event('college-settings-updated'));
+      toast({ title: "Logo uploaded", description: "Click 'Save All' to apply changes permanentily." });
     } catch (error: any) {
       toast({ title: "Upload failed", description: error.message, variant: "destructive" });
     } finally {
