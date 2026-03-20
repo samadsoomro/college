@@ -1014,8 +1014,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
     for (const [k, v] of Object.entries(req.body || {})) {
       if (!fieldMap[k]) continue; // Only allow mapped fields to be updated
+      
       let val = v;
-      if (k === 'rbWatermarkOpacity' || k === 'heroBackgroundOpacity') val = parseFloat(v as string) || 0;
+      // Handle Numeric fields
+      if (k === 'rbWatermarkOpacity' || k === 'heroBackgroundOpacity') {
+        val = (v !== null && v !== undefined && v !== '') ? parseFloat(v as string) : null;
+        if (typeof val === 'number' && isNaN(val)) val = null;
+      }
+      // Handle Boolean fields
+      else if (k === 'cardQrEnabled' || k === 'rbWatermarkEnabled') {
+        if (v === 'true' || v === true) val = true;
+        else if (v === 'false' || v === false) val = false;
+        else val = null;
+      }
+      // Handle empty strings for URLs/Logos (normalize to null)
+      else if (v === '') {
+        val = null;
+      }
+
       updates[fieldMap[k]] = val;
     }
     const { data: ex } = await supabase.from('site_settings').select('id').eq('college_id', colId).maybeSingle();

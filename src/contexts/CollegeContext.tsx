@@ -308,7 +308,8 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || "Failed to update settings");
+        const message = error.detail ? `${error.error}: ${error.detail}` : (error.error || "Failed to update settings");
+        throw new Error(message);
       }
 
       const updated = await res.json();
