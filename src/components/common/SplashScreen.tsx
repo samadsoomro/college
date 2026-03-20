@@ -78,7 +78,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
               >
                 <img
                   src={
-                    settings.loadingLogo || settings.navbarLogo || collegeLogo
+                    settings.loadingLogo 
+                      ? `${settings.loadingLogo}?t=${Date.now()}` 
+                      : settings.navbarLogo 
+                        ? `${settings.navbarLogo}?t=${Date.now()}` 
+                        : collegeLogo
                   }
                   alt={`${settings.instituteShortName} College Logo`}
                   className="w-full h-full object-contain p-2"

@@ -1,37 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-// import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/use-toast";
 import { useCollege } from "@/contexts/CollegeContext";
-import { adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
+import { uploadToSupabase } from "@/contexts/AuthContext";
 import { 
-  Palette, Layout, Globe, Save, Upload, RefreshCcw, Settings, Info, 
-  FileText, Smartphone, Banknote, Building, Hash, User, Share2, 
-  MapPin, CreditCard, BookOpen, Heart, Github 
+  Palette, Save, Upload, RefreshCcw, Settings, Share2, 
+  MapPin, CreditCard, BookOpen, Heart, Smartphone, Building, Hash, User 
 } from "lucide-react";
 
 const ThemeBranding: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
-   const { settings, refreshSettings, updateSettings } = useCollege();
+  const { settings, updateSettings } = useCollege();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<any>({ ...settings });
-  
-  // File states for direct upload
-  const [files, setFiles] = useState<Record<string, File | null>>({
-    navbarLogo: null,
-    loadingLogo: null,
-    heroBackgroundLogo: null,
-    cardLogo: null
-  });
+  const [uploading, setUploading] = useState<string | null>(null);
 
   useEffect(() => { 
     setFormData({ ...settings }); 
@@ -50,43 +41,41 @@ const ThemeBranding: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value[0] }));
   };
 
-  const handleFileChange = (name: string, file: File | null) => {
-    setFiles(prev => ({ ...prev, [name]: file }));
+  const handleLogoUpload = async (file: File, field: 'navbarLogo' | 'loadingLogo' | 'heroBackgroundLogo' | 'cardLogoUrl') => {
+    if (!collegeSlug) return;
+    setUploading(field);
+    try {
+      const bucketName = `college-${collegeSlug}`;
+      const publicUrl = await uploadToSupabase(file, bucketName, collegeSlug);
+      
+      // Immediately save URL to settings via PATCH as requested
+      await updateSettings({ [field]: publicUrl });
+      
+      // Update local state
+      setFormData(prev => ({ ...prev, [field]: publicUrl }));
+      
+      toast({ title: "Success", description: `${field} updated successfully!` });
+      
+      // Force refresh data
+      queryClient.invalidateQueries({ queryKey: ['college', collegeSlug] });
+      queryClient.invalidateQueries({ queryKey: ['settings', collegeSlug] });
+      window.dispatchEvent(new Event('college-settings-updated'));
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    } finally {
+      setUploading(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const isProd = window.location.hostname !== 'localhost';
-      const updates = { ...formData };
-      const bucketName = `college-${collegeSlug}`;
-
-      // Upload files if selected
-      if (files.navbarLogo) {
-        updates.navbarLogo = await uploadToSupabase(files.navbarLogo, bucketName, collegeSlug);
-      }
-      if (files.loadingLogo) {
-        updates.loadingLogo = await uploadToSupabase(files.loadingLogo, bucketName, collegeSlug);
-      }
-      if (files.heroBackgroundLogo) {
-        updates.heroBackgroundLogo = await uploadToSupabase(files.heroBackgroundLogo, bucketName, collegeSlug);
-      }
-      if (files.cardLogo) {
-        updates.cardLogoUrl = await uploadToSupabase(files.cardLogo, bucketName, collegeSlug);
-      }
-
-      await updateSettings(updates);
-
-      toast({ title: "Success", description: "Settings saved successfully!" });
-      // Clear file inputs
-      setFiles({ navbarLogo: null, loadingLogo: null, heroBackgroundLogo: null, cardLogo: null });
+      await updateSettings(formData);
+      toast({ title: "Success", description: "All settings saved successfully!" });
       
-      // Soft refresh — invalidate queries
       queryClient.invalidateQueries({ queryKey: ['college', collegeSlug] });
       queryClient.invalidateQueries({ queryKey: ['settings', collegeSlug] });
-      
-      // Trigger global refresh event
       window.dispatchEvent(new Event('college-settings-updated'));
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -158,20 +147,62 @@ const ThemeBranding: React.FC = () => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-muted-foreground">Navbar Logo</label>
-                  <Input type="file" accept="image/*" onChange={(e) => handleFileChange("navbarLogo", e.target.files?.[0] || null)} />
-                  {settings.navbarLogo && <img src={settings.navbarLogo} alt="Preview" className="h-12 border rounded p-1" />}
+                  <div className="flex items-center gap-4">
+                    {formData.navbarLogo && (
+                      <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                        <img src={`${formData.navbarLogo}?t=${Date.now()}`} alt="Navbar" className="max-w-full max-h-full object-contain" />
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-1">
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0], "navbarLogo")} 
+                        disabled={uploading === "navbarLogo"}
+                      />
+                      {uploading === "navbarLogo" && <p className="text-[10px] text-primary animate-pulse">Uploading...</p>}
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-muted-foreground">Loading Screen Logo</label>
-                  <Input type="file" accept="image/*" onChange={(e) => handleFileChange("loadingLogo", e.target.files?.[0] || null)} />
-                  {settings.loadingLogo && <img src={settings.loadingLogo} alt="Preview" className="h-12 border rounded p-1" />}
+                  <div className="flex items-center gap-4">
+                    {formData.loadingLogo && (
+                      <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                        <img src={`${formData.loadingLogo}?t=${Date.now()}`} alt="Loading" className="max-w-full max-h-full object-contain" />
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-1">
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0], "loadingLogo")} 
+                        disabled={uploading === "loadingLogo"}
+                      />
+                      {uploading === "loadingLogo" && <p className="text-[10px] text-primary animate-pulse">Uploading...</p>}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-muted-foreground">Hero Background Image</label>
-                  <Input type="file" accept="image/*" onChange={(e) => handleFileChange("heroBackgroundLogo", e.target.files?.[0] || null)} />
-                  {settings.heroBackgroundLogo && <img src={settings.heroBackgroundLogo} alt="Preview" className="h-12 border rounded p-1" />}
+                  <div className="flex items-center gap-4">
+                    {formData.heroBackgroundLogo && (
+                      <div className="w-12 h-12 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                        <img src={`${formData.heroBackgroundLogo}?t=${Date.now()}`} alt="Hero" className="max-w-full max-h-full object-contain" />
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-1">
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0], "heroBackgroundLogo")} 
+                        disabled={uploading === "heroBackgroundLogo"}
+                      />
+                      {uploading === "heroBackgroundLogo" && <p className="text-[10px] text-primary animate-pulse">Uploading...</p>}
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between">
@@ -257,8 +288,22 @@ const ThemeBranding: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase text-muted-foreground">Card Logo</label>
-                <Input type="file" accept="image/*" onChange={(e) => handleFileChange("cardLogo", e.target.files?.[0] || null)} />
-                {settings.cardLogoUrl && <img src={settings.cardLogoUrl} alt="Preview" className="h-10 border rounded p-1" />}
+                <div className="flex items-center gap-4">
+                  {formData.cardLogoUrl && (
+                    <div className="w-10 h-10 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                      <img src={`${formData.cardLogoUrl}?t=${Date.now()}`} alt="Card Logo" className="max-w-full max-h-full object-contain" />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-1">
+                    <Input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0], "cardLogoUrl")} 
+                      disabled={uploading === "cardLogoUrl"}
+                    />
+                    {uploading === "cardLogoUrl" && <p className="text-[10px] text-primary animate-pulse">Uploading...</p>}
+                  </div>
+                </div>
               </div>
               <div className="space-y-2 flex flex-col justify-end">
                 <div className="flex items-center gap-2 mb-2">

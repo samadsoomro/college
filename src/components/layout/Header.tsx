@@ -94,7 +94,7 @@ const Header: React.FC = () => {
             className="flex items-center gap-3 hover:scale-[1.02] transition-transform"
           >
             <img
-              src={settings.navbarLogo || collegeLogo}
+              src={settings.navbarLogo ? `${settings.navbarLogo}?t=${Date.now()}` : collegeLogo}
               alt={`${settings.instituteShortName} College Logo`}
               className="w-12 h-12 object-contain rounded-lg bg-white p-1 shadow-sm border border-primary/20"
             />
