@@ -48,7 +48,6 @@ interface SiteSettings {
   bankBranch: string;
   accountTitle: string;
   updatedAt: string;
-  storageBucket?: string;
 }
 
 interface College {
@@ -112,7 +111,6 @@ const defaultSettings: SiteSettings = {
   bankBranch: "",
   accountTitle: "",
   updatedAt: new Date().toISOString(),
-  storageBucket: "colleges",
 };
 
 const CollegeContext = createContext<CollegeContextType | undefined>(undefined);

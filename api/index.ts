@@ -481,8 +481,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cardContactAddress: d.card_contact_address, cardContactEmail: d.card_contact_email, cardContactPhone: d.card_contact_phone,
         rbWatermarkText: d.rb_watermark_text, rbWatermarkOpacity: d.rb_watermark_opacity, rbDisclaimerText: d.rb_disclaimer_text,
         rbWatermarkEnabled: d.rb_watermark_enabled, easypaisaNumber: d.easypaisa_number, bankAccountNumber: d.bank_account_number,
-        bankName: d.bank_name, bankBranch: d.bank_branch, accountTitle: d.account_title,
-        storageBucket: d.storage_bucket || 'colleges'
+        accountTitle: d.account_title
       });
     }
 
@@ -1010,7 +1009,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       rbWatermarkOpacity: 'rb_watermark_opacity', rbDisclaimerText: 'rb_disclaimer_text', rbWatermarkEnabled: 'rb_watermark_enabled',
       easypaisaNumber: 'easypaisa_number', bankAccountNumber: 'bank_account_number', bankName: 'bank_name',
       bankBranch: 'bank_branch', accountTitle: 'account_title', creditsText: 'credits_text',
-      contributorsText: 'contributors_text', storageBucket: 'storage_bucket'
+      contributorsText: 'contributors_text'
     };
     for (const [k, v] of Object.entries(req.body || {})) {
       if (!fieldMap[k]) continue; // Only allow mapped fields to be updated
