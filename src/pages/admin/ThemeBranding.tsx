@@ -60,7 +60,21 @@ const ThemeBranding: React.FC = () => {
     try {
       const isProd = window.location.hostname !== 'localhost';
       const updates = { ...formData };
+      const bucketName = `college-${collegeSlug}`;
 
+      // Upload files if selected
+      if (files.navbarLogo) {
+        updates.navbarLogo = await uploadToSupabase(files.navbarLogo, bucketName, collegeSlug);
+      }
+      if (files.loadingLogo) {
+        updates.loadingLogo = await uploadToSupabase(files.loadingLogo, bucketName, collegeSlug);
+      }
+      if (files.heroBackgroundLogo) {
+        updates.heroBackgroundLogo = await uploadToSupabase(files.heroBackgroundLogo, bucketName, collegeSlug);
+      }
+      if (files.cardLogo) {
+        updates.cardLogoUrl = await uploadToSupabase(files.cardLogo, bucketName, collegeSlug);
+      }
 
       await updateSettings(updates);
 
