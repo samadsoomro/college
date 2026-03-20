@@ -1019,12 +1019,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updates[fieldMap[k]] = val;
     }
     const { data: ex } = await supabase.from('site_settings').select('id').eq('college_id', colId).maybeSingle();
-    if (ex) await supabase.from('site_settings').update(updates).eq('id', ex.id);
-    else await supabase.from('site_settings').insert({ ...updates, college_id: colId });
-    const { data: updated } = await supabase.from('site_settings').select('*').eq('college_id', colId).single();
+    let updated: any;
+    if (ex) {
+      const { data, error: upErr } = await supabase.from('site_settings').update(updates).eq('id', ex.id).select().single();
+      if (upErr) return res.status(500).json({ error: 'Update failed', detail: upErr.message });
+      updated = data;
+    } else {
+      const { data, error: inErr } = await supabase.from('site_settings').insert({ ...updates, college_id: colId }).select().single();
+      if (inErr) return res.status(500).json({ error: 'Insert failed', detail: inErr.message });
+      updated = data;
+    }
+
+    if (!updated) return res.status(500).json({ error: 'Failed to retrieve updated settings' });
+
     // Return mapped object for frontend context
     return res.json({
-      id: updated.id, primaryColor: updated.primary_color, navbarLogo: updated.navbar_logo, loadingLogo: updated.loading_logo,
+      id: updated.id, primaryColor: updated.primary_color || '#006600', navbarLogo: updated.navbar_logo, loadingLogo: updated.loading_logo,
       instituteShortName: updated.institute_short_name, instituteFullName: updated.institute_full_name,
       footerTitle: updated.footer_title, footerDescription: updated.footer_description,
       facebookUrl: updated.facebook_url, twitterUrl: updated.twitter_url, instagramUrl: updated.instagram_url, youtubeUrl: updated.youtube_url,

@@ -251,6 +251,12 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const mappedSettings = mapSettingsData(settingsData);
           const bustered = applyCacheBuster(mappedSettings);
           setSettings(bustered);
+          
+          // Sync with index.html hydration script
+          try {
+            localStorage.setItem('gcfm-full-settings', JSON.stringify(bustered));
+          } catch (e) {}
+
           // Prefer color from settings if it exists
           if (bustered.primaryColor) {
             updateGlobalStyles(bustered.primaryColor);
@@ -308,6 +314,12 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = await res.json();
       const bustered = applyCacheBuster(updated);
       setSettings(bustered);
+      
+      // Sync with index.html hydration script
+      try {
+        localStorage.setItem('gcfm-full-settings', JSON.stringify(bustered));
+      } catch (e) {}
+
       if (bustered.primaryColor) {
         updateGlobalStyles(bustered.primaryColor);
       }
