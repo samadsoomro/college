@@ -11,7 +11,7 @@ import { useCollege } from "@/contexts/CollegeContext";
 import { uploadToSupabase } from "@/contexts/AuthContext";
 import { 
   Palette, Save, Upload, RefreshCcw, Settings, Share2, 
-  MapPin, CreditCard, BookOpen, Heart, Smartphone, Building, Hash, User 
+  MapPin, CreditCard, BookOpen, Heart, Smartphone, Building, Hash, User, Banknote 
 } from "lucide-react";
 
 const ThemeBranding: React.FC = () => {
