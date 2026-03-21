@@ -98,12 +98,16 @@ const Footer: React.FC = () => {
             <div className="space-y-4">
               <h3 className="text-xl font-semibold">Office Hours</h3>
               <ul className="space-y-2 text-white/80 text-sm">
-                {(settings?.officeHours || "Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed").split('\n').map((line, idx) => (
-                  <li key={idx} className="flex items-center gap-2">
-                    <Clock size={14} className={line.toLowerCase().includes('closed') ? "text-muted-foreground" : "text-accent"} />
-                    <span>{line.trim()}</span>
-                  </li>
-                ))}
+                {(settings?.officeHours || "Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed")
+                  .split('\n')
+                  .map(l => l.replace(/^\*\s*/, '').trim())
+                  .filter(Boolean)
+                  .map((line, idx) => (
+                    <li key={idx} className="flex items-center gap-2">
+                      <Clock size={14} className={line.toLowerCase().includes('closed') ? "text-muted-foreground" : "text-accent"} />
+                      <span>{line.trim()}</span>
+                    </li>
+                  ))}
               </ul>
 
               <h4 className="text-lg font-semibold pt-4">Resources</h4>
