@@ -26,12 +26,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .eq('college_id', college.id)
     .maybeSingle();
 
-  const logoUrl = settings?.navbar_logo
-    || `https://collegewebsite-three-ruddy.vercel.app/logo.png`;
+  const siteUrl = `${process.env.FRONTEND_URL || 'https://college-managment-system-coral.vercel.app'}/${slug}`;
+  const rawLogo = settings?.navbar_logo || settings?.loading_logo || `https://college-managment-system-coral.vercel.app/logo.png`;
+  const logoUrl = rawLogo.split('?')[0]; // strip query params
   const title = settings?.institute_full_name || college.name;
   const description = settings?.footer_tagline
     || `${title} - Digital Library Portal. Access books, notes, and resources.`;
-  const siteUrl = `https://collegewebsite-three-ruddy.vercel.app/${slug}`;
+
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
