@@ -47,6 +47,7 @@ interface SiteSettings {
   bankName: string;
   bankBranch: string;
   accountTitle: string;
+  officeHours: string;
   updatedAt: string;
 }
 
@@ -110,6 +111,7 @@ const defaultSettings: SiteSettings = {
   bankName: "",
   bankBranch: "",
   accountTitle: "",
+  officeHours: 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed',
   updatedAt: new Date().toISOString(),
 };
 

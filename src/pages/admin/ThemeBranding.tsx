@@ -389,6 +389,17 @@ const ThemeBranding: React.FC = () => {
                 <label className="text-xs font-bold uppercase text-muted-foreground">Google Map Embed URL</label>
                 <Input name="mapEmbedUrl" value={formData.mapEmbedUrl || ''} onChange={handleInputChange} placeholder="Iframe src URL" />
               </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Office Hours (One per line)</label>
+                <Textarea 
+                  name="officeHours" 
+                  value={formData.officeHours || ''} 
+                  onChange={handleInputChange} 
+                  placeholder="e.g. Mon–Fri: 9:00 AM – 1:00 PM&#10;Sat: 9:00 AM – 12:00 PM&#10;Sun: Closed" 
+                  rows={3} 
+                />
+                <p className="text-[10px] text-muted-foreground italic">Tip: Use "Day: Time" format, one per line.</p>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -114,7 +114,7 @@ const Contact = () => {
     { icon: <MapPin />, title: "Address", content: settings?.contactAddress || 'Address' },
     { icon: <Phone />, title: "Phone", content: settings?.contactPhone || 'Phone' },
     { icon: <Mail />, title: "Email", content: settings?.contactEmail || 'Email' },
-    { icon: <Clock />, title: "Hours", content: "Mon-Fri: 9AM - 1PM" },
+    { icon: <Clock />, title: "Hours", content: (settings?.officeHours || "Mon-Fri: 9AM - 1PM").split('\n')[0] },
   ];
 
   const containerVariants = {
@@ -349,26 +349,21 @@ const Contact = () => {
               Office Hours
             </h2>
             <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center p-4 bg-primary/5 rounded-lg">
-                <h4 className="font-semibold text-foreground mb-2">
-                  Monday - Friday
-                </h4>
-                <p className="text-primary text-lg font-medium">
-                  9:00 AM - 1:00 PM
-                </p>
-              </div>
-              <div className="text-center p-4 bg-primary/5 rounded-lg">
-                <h4 className="font-semibold text-foreground mb-2">Saturday</h4>
-                <p className="text-primary text-lg font-medium">
-                  9:00 AM - 12:00 PM
-                </p>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold text-foreground mb-2">Sunday</h4>
-                <p className="text-muted-foreground text-lg font-medium">
-                  Closed
-                </p>
-              </div>
+              {(settings?.officeHours || "Mon-Fri: 9:00 AM - 1:00 PM\nSat: 9:00 AM - 12:00 PM\nSun: Closed").split('\n').map((line, idx) => {
+                const [day, time] = line.includes(':') ? line.split(':') : [line, ''];
+                const isClosed = time.toLowerCase().includes('closed') || day.toLowerCase().includes('closed');
+                
+                return (
+                  <div key={idx} className={`text-center p-4 rounded-lg ${isClosed ? 'bg-muted' : 'bg-primary/5'}`}>
+                    <h4 className="font-semibold text-foreground mb-2">
+                      {day.trim()}
+                    </h4>
+                    <p className={`${isClosed ? 'text-muted-foreground' : 'text-primary'} text-lg font-medium`}>
+                      {time.trim() || (isClosed ? '' : 'Closed')}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         </div>

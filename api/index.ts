@@ -83,7 +83,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       instituteShortName: s?.institute_short_name || college.short_name,
       navbarLogo: s?.navbar_logo, loadingLogo: s?.loading_logo,
       footerTitle: s?.footer_title, footerTagline: s?.footer_tagline,
-      contactAddress: s?.contact_address, contactPhone: s?.contact_phone, contactEmail: s?.contact_email
+      contactAddress: s?.contact_address, contactPhone: s?.contact_phone, contactEmail: s?.contact_email,
+      officeHours: s?.office_hours || 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed'
     });
   }
 
@@ -495,7 +496,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cardContactAddress: d.card_contact_address, cardContactEmail: d.card_contact_email, cardContactPhone: d.card_contact_phone,
         rbWatermarkText: d.rb_watermark_text, rbWatermarkOpacity: d.rb_watermark_opacity, rbDisclaimerText: d.rb_disclaimer_text,
         rbWatermarkEnabled: d.rb_watermark_enabled, easypaisaNumber: d.easypaisa_number, bankAccountNumber: d.bank_account_number,
-        accountTitle: d.account_title
+        accountTitle: d.account_title,
+        officeHours: d.office_hours || 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed'
       });
     }
 
@@ -1029,7 +1031,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       rbWatermarkOpacity: 'rb_watermark_opacity', rbDisclaimerText: 'rb_disclaimer_text', rbWatermarkEnabled: 'rb_watermark_enabled',
       easypaisaNumber: 'easypaisa_number', bankAccountNumber: 'bank_account_number', bankName: 'bank_name',
       bankBranch: 'bank_branch', accountTitle: 'account_title', creditsText: 'credits_text',
-      contributorsText: 'contributors_text'
+      contributorsText: 'contributors_text',
+      officeHours: 'office_hours'
     };
     for (const [k, v] of Object.entries(req.body || {})) {
       if (!fieldMap[k]) continue; // Only allow mapped fields to be updated
@@ -1081,7 +1084,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cardContactAddress: updated.card_contact_address, cardContactEmail: updated.card_contact_email, cardContactPhone: updated.card_contact_phone,
       rbWatermarkText: updated.rb_watermark_text, rbWatermarkOpacity: updated.rb_watermark_opacity, rbDisclaimerText: updated.rb_disclaimer_text,
       rbWatermarkEnabled: updated.rb_watermark_enabled, easypaisaNumber: updated.easypaisa_number, bankAccountNumber: updated.bank_account_number,
-      bankName: updated.bank_name, bankBranch: updated.bank_branch, accountTitle: updated.account_title
+      bankName: updated.bank_name, bankBranch: updated.bank_branch, accountTitle: updated.account_title,
+      officeHours: updated.office_hours || 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed'
     });
   }
 
