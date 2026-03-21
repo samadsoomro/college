@@ -13,39 +13,7 @@ export const adminHeaders = () => ({
   'x-admin-token': 'gcfm-admin-token-2026'
 });
 
-// SHARED UPLOAD UTILITY — uses backend proxy to avoid RLS issues
-export const uploadToSupabase = async (
-  file: File, 
-  category: string, // 'books' | 'notes' | 'rare-books' | 'faculty' | 'branding' | 'events' | 'blog' | etc.
-  collegeSlug: string
-): Promise<string> => {
-  const res = await fetch(`/api/${collegeSlug}/admin/upload?category=${encodeURIComponent(category)}`, {
-    method: 'POST',
-    headers: { 
-      'x-admin-token': 'gcfm-admin-token-2026',
-      'Content-Type': 'application/json'
-    },
-    credentials: 'include',
-    body: JSON.stringify({
-      fileName: file.name,
-      fileType: file.type,
-      fileData: await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      })
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'Upload failed');
-  }
-
-  const data = await res.json();
-  return data.url;
-};
+// Admin authentication context and handlers
 
 interface UserProfile {
   id: string;

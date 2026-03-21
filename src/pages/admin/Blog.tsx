@@ -21,7 +21,8 @@ import {
 // @ts-ignore
 import { Switch } from "@/components/ui/switch"; // Assuming we might have this, if not I'll just use status dropdown
 
-import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
+import { useAuth, adminHeaders } from "@/contexts/AuthContext";
+import { uploadToSupabase } from "@/utils/upload";
 
 const AdminBlog: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();

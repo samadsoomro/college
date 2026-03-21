@@ -23,7 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
+import { useAuth, adminHeaders } from "@/contexts/AuthContext";
+import { uploadToSupabase } from "@/utils/upload";
 
 const Books: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();

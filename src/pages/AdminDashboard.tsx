@@ -34,7 +34,8 @@ import {
   Moon,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
+import { useAuth, adminHeaders } from "@/contexts/AuthContext";
+import { uploadToSupabase } from "@/utils/upload";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import collegeLogo from "@/assets/images/college-logo.png";

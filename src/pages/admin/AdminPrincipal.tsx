@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Save, RefreshCcw } from "lucide-react";
-import { adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
+import { adminHeaders } from "@/contexts/AuthContext";
+import { uploadToSupabase } from "@/utils/upload";
 import { useCollege } from "@/contexts/CollegeContext";
 
 const AdminPrincipal: React.FC = () => {

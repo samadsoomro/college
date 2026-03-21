@@ -8,7 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Trash2, Edit, Save, Loader2, RefreshCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
+import { adminHeaders } from "@/contexts/AuthContext";
+import { uploadToSupabase } from "@/utils/upload";
 import { useCollege } from "@/contexts/CollegeContext";
 
 interface FacultyMember { id: string; name: string; designation: string; description?: string; imageUrl?: string; }

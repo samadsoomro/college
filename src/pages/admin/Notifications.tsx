@@ -15,7 +15,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
+import { useAuth, adminHeaders } from "@/contexts/AuthContext";
+import { uploadToSupabase } from "@/utils/upload";
 
 const Notifications: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();

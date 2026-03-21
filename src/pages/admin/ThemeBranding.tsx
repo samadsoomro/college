@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useCollege } from "@/contexts/CollegeContext";
-import { uploadToSupabase } from "@/contexts/AuthContext";
+import { uploadToSupabase } from "@/utils/upload";
 import { 
   Palette, Save, Upload, RefreshCcw, Settings, Share2, 
   MapPin, CreditCard, BookOpen, Heart, Smartphone, Building, Hash, User, Banknote, 

@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
-import { useAuth, adminHeaders, uploadToSupabase } from "@/contexts/AuthContext";
+import { useAuth, adminHeaders } from "@/contexts/AuthContext";
+import { uploadToSupabase } from "@/utils/upload";
 
 interface HomeContent {
   heroHeading: string;
