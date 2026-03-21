@@ -159,22 +159,49 @@ const Footer: React.FC = () => {
         </div>
       </div>
 
-      {/* Credits Section */}
+      {/* Credits Section — permanent gold color */}
       <div className="border-t border-white/10 py-6">
         <div className="container">
-          <div className="text-center space-y-3">
-            <p
-              className="text-sm font-bold tracking-wide"
-              style={{ color: settings.primaryColor }}
-            >
-              {settings.creditsText}
-            </p>
-            <p
-              className="text-xs opacity-90 font-medium"
-              style={{ color: settings.primaryColor }}
-            >
-              Contributors: {settings.contributorsText}
-            </p>
+          <div className="text-center">
+            {(settings?.creditsText || settings?.contributorsText) && (
+              <div className="space-y-3">
+                {settings?.creditsText && (
+                  <div className="inline-block mb-1">
+                    <p
+                      style={{
+                        color: '#FFD700',
+                        backgroundColor: 'rgba(255,255,255,0.12)',
+                        padding: '2px 10px',
+                        borderRadius: '4px',
+                        fontSize: '0.78rem',
+                        fontWeight: '500',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {settings.creditsText}
+                    </p>
+                  </div>
+                )}
+
+                {settings?.contributorsText && (
+                  <div className="block">
+                    <p
+                      style={{
+                        color: '#FFD700',
+                        backgroundColor: 'rgba(255,255,255,0.12)',
+                        padding: '2px 10px',
+                        borderRadius: '4px',
+                        fontSize: '0.78rem',
+                        fontWeight: '500',
+                        display: 'inline-block'
+                      }}
+                    >
+                      Contributors: {settings.contributorsText}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
