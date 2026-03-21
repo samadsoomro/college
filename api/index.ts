@@ -35,40 +35,33 @@ async function getCollegeId(slug: string): Promise<string | null> {
   return data?.id || null;
 }
 
-async function deleteFile(url: string | null) {
-  if (!url?.includes('supabase')) return;
-  try {
-    const after = url.split('/storage/v1/object/public/')[1];
-    if (!after) return;
-    const bucket = after.split('/')[0];
-    const filePath = after.substring(bucket.length + 1);
-    await supabase.storage.from(bucket).remove([filePath]);
-  } catch {}
-}
-
 async function deleteStorageFile(url: string | null) {
   if (!url) return;
 
   try {
-    // Handle Cloudinary URLs:
+    // ── Cloudinary URL ─────────────────────────────────────
     if (url.includes('cloudinary.com')) {
-      // Extract public_id from Cloudinary URL:
-      // URL format: https://res.cloudinary.com/cloud/image/upload/v123/colleges/gcfm/books/filename
-      const parts = url.split('/upload/');
-      if (parts.length > 1) {
-        const withVersion = parts[1];
-        // Remove version prefix (v1234567890/) if present:
-        const publicId = withVersion.replace(/^v\d+\//, '').replace(/\.[^.]+$/, '');
-        const isPDF = url.includes('/raw/');
-        await cloudinary.uploader.destroy(publicId, {
-          resource_type: isPDF ? 'raw' : 'image'
-        });
-        console.log('[CLOUDINARY DELETE]', publicId);
-      }
+      const isRaw = url.includes('/raw/upload/');
+      const resourceType = isRaw ? 'raw' : 'image';
+
+      const uploadIndex = url.indexOf('/upload/');
+      if (uploadIndex === -1) return;
+
+      const afterUpload = url.substring(uploadIndex + 8);
+      const withoutVersion = afterUpload.replace(/^v\d+\//, '');
+      const publicId = withoutVersion.replace(/\.[^/.]+$/, '');
+
+      console.log('[CLOUDINARY DELETE] publicId:', publicId, 'resourceType:', resourceType);
+
+      const result = await cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType
+      });
+
+      console.log('[CLOUDINARY DELETE] result:', result.result);
       return;
     }
 
-    // Handle old Supabase URLs (backward compatibility):
+    // ── Supabase URL (old files) ───────────────────────────
     if (url.includes('supabase')) {
       const parts = url.split('/storage/v1/object/public/');
       if (parts.length < 2) return;
@@ -76,12 +69,13 @@ async function deleteStorageFile(url: string | null) {
       const bucket = rest.split('/')[0];
       const filePath = rest.substring(bucket.length + 1);
       await supabase.storage.from(bucket).remove([filePath]);
-      console.log('[SUPABASE DELETE]', filePath);
+      console.log('[SUPABASE DELETE]', bucket, filePath);
     }
-  } catch (e) {
-    console.error('[DELETE FILE ERROR]', e);
+  } catch (e: any) {
+    console.error('[DELETE FILE ERROR]', e.message);
   }
 }
+
 
 
 function isAdminRequest(req: VercelRequest): boolean {
@@ -1716,15 +1710,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── BOOKS (POST, PATCH, DELETE) ────────────────────────────────────────────────
     if (resource === 'admin' && sub1 === 'books' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
-        console.log('[DELETE BOOKS] id:', sub2);
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+        
+        // Step 1: Get data FIRST
         const { data: item } = await supabase.from('books').select('book_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-        if (item?.book_image) await deleteFile(item.book_image);
+        console.log('[DELETE BOOK] book_image URL:', item?.book_image);
+
+        // Step 2: Delete from Storage
+        if (item?.book_image) {
+          await deleteStorageFile(item.book_image);
+        }
+
+        // Step 3: Delete from DB
         const { error } = await supabase.from('books').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         console.log('[DELETE BOOKS] Success:', sub2);
         return res.json({ success: true });
       }
+
       if (req.method === 'POST' || req.method === 'PATCH') {
         console.log('[UPSERT BOOKS] method:', req.method, 'id:', sub2);
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
@@ -1749,15 +1752,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── NOTES (POST, PATCH, DELETE) ────────────────────────────────────────────────
     if (resource === 'admin' && sub1 === 'notes' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
-        console.log('[DELETE NOTES] id:', sub2);
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+
         const { data: item } = await supabase.from('notes').select('pdf_path').eq('id', sub2).eq('college_id', colId).maybeSingle();
-        if (item?.pdf_path) await deleteFile(item.pdf_path);
+        if (item?.pdf_path) await deleteStorageFile(item.pdf_path);
+
         const { error } = await supabase.from('notes').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         console.log('[DELETE NOTES] Success:', sub2);
         return res.json({ success: true });
       }
+
       if (req.method === 'PATCH' && sub2 && sub3 === 'toggle') {
         const { data: curr } = await supabase.from('notes').select('status').eq('id', sub2).eq('college_id', colId).single();
         const newStatus = curr?.status === 'active' ? 'inactive' : 'active';
@@ -1777,13 +1782,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'rare-books' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+
         const { data: item } = await supabase.from('rare_books').select('pdf_path, cover_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-        if (item?.pdf_path) await deleteFile(item.pdf_path);
-        if (item?.cover_image) await deleteFile(item.cover_image);
+        if (item?.pdf_path) await deleteStorageFile(item.pdf_path);
+        if (item?.cover_image) await deleteStorageFile(item.cover_image);
+
         const { error } = await supabase.from('rare_books').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
+
       if (req.method === 'PATCH' && sub2 && sub3 === 'toggle') {
         const { data: curr } = await supabase.from('rare_books').select('status').eq('id', sub2).eq('college_id', colId).single();
         const newStatus = curr?.status === 'active' ? 'inactive' : 'active';
@@ -1803,12 +1811,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'events' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+
         const { data: item } = await supabase.from('events').select('images').eq('id', sub2).eq('college_id', colId).maybeSingle();
-        for (const img of (item?.images || [])) await deleteFile(img);
+        for (const img of (item?.images || [])) await deleteStorageFile(img);
+
         const { error } = await supabase.from('events').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
+
       if (req.method === 'POST') {
         const payload = { ...req.body, college_id: colId, images: req.body.images || [] };
         const { data, error } = await supabase.from('events').insert(payload).select().single();
@@ -1826,12 +1837,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'notifications' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+
         const { data: item } = await supabase.from('notifications').select('image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-        if (item?.image) await deleteFile(item.image);
+        if (item?.image) await deleteStorageFile(item.image);
+
         const { error } = await supabase.from('notifications').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
+
       if (req.method === 'POST') {
         const payload = { ...req.body, college_id: colId, pin: req.body.pin || false, status: req.body.status || 'published' };
         const { data, error } = await supabase.from('notifications').insert(payload).select().single();
@@ -1860,12 +1874,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'blog' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+
         const { data: item } = await supabase.from('blog_posts').select('featured_image').eq('id', sub2).eq('college_id', colId).maybeSingle();
-        if (item?.featured_image) await deleteFile(item.featured_image);
+        if (item?.featured_image) await deleteStorageFile(item.featured_image);
+
         const { error } = await supabase.from('blog_posts').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
+
       if (req.method === 'POST' || req.method === 'PATCH') {
         const payload: any = {
           college_id: colId, title: req.body.title, content: req.body.content,
@@ -1888,12 +1905,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (resource === 'admin' && sub1 === 'faculty' && isApi) {
       if (req.method === 'DELETE' && sub2 && !sub3) {
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+
         const { data: item } = await supabase.from('faculty_staff').select('image_url').eq('id', sub2).eq('college_id', colId).maybeSingle();
-        if (item?.image_url) await deleteFile(item.image_url);
+        if (item?.image_url) await deleteStorageFile(item.image_url);
+
         const { error } = await supabase.from('faculty_staff').delete().eq('id', sub2).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
+
       if (req.method === 'POST' || req.method === 'PATCH') {
         const payload = { ...req.body, college_id: colId, image_url: req.body.imageUrl };
         delete payload.imageUrl;
@@ -1932,11 +1952,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (req.method === 'DELETE' && id) {
         const { data: item } = await supabase.from(table).select('*').eq('id', id).eq('college_id', colId).maybeSingle();
-        if ((item as any)?.image_url) await deleteFile((item as any).image_url);
+        if ((item as any)?.image_url) await deleteStorageFile((item as any).image_url);
+
         const { error } = await supabase.from(table).delete().eq('id', id).eq('college_id', colId);
         if (error) return res.status(500).json({ error: error.message });
         return res.json({ success: true });
       }
+
       if (req.method === 'POST' || req.method === 'PATCH') {
         const payload: any = { ...req.body, college_id: colId };
         if (req.body.imageUrl !== undefined) { payload.image_url = req.body.imageUrl; delete payload.imageUrl; }
