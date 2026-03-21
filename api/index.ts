@@ -713,9 +713,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cardNumber = `${fieldCode}-${rollNo}-${classNum}-${i}`;
     }
 
-    // 6. Generate student ID and dates
-    const shortName = college.short_name || 'COL';
-    const studentId = `${shortName}-${Date.now().toString().slice(-6)}`;
+    // 6. Generate student ID (sequential per college) and dates
+    const { count: cardCount } = await supabase
+      .from('library_card_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('college_id', college.id);
+
+    const nextSeq = (cardCount || 0) + 1;
+    const shortName = (college.short_name || slug).toUpperCase();
+    const studentId = `${shortName}-${nextSeq}`;
     const issueDate = new Date().toISOString().split('T')[0];
     const validThrough = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 

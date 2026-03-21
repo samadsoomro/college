@@ -796,9 +796,20 @@ class DbStorage {
       }
     }
 
-    const studentId = `${shortName}-${Math.floor(Math.random() * 1000000)
-      .toString()
-      .padStart(6, "0")}`;
+    const { count: cardCount } = await supabase
+      .from('library_card_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('college_id', collegeId);
+
+    const { data: colSettings } = await supabase
+      .from('site_settings')
+      .select('institute_short_name')
+      .eq('college_id', collegeId)
+      .maybeSingle();
+
+    const shortName = (colSettings?.institute_short_name || 'COL').toUpperCase();
+    const nextSeq = (cardCount || 0) + 1;
+    const studentId = `${shortName}-${nextSeq}`;
     const issueDate = new Date().toISOString().split("T")[0];
     const validThrough = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
       .toISOString()
