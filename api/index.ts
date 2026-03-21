@@ -99,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const ogSlug = ogMatch[1];
 
     const { data: college } = await supabase
-      .from('colleges').select('id, name, short_name')
+      .from('colleges').select('id, name')
       .eq('slug', ogSlug.toLowerCase()).eq('is_active', true).maybeSingle();
 
     if (!college) return res.status(404).send('College not found');
@@ -109,10 +109,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .select('navbar_logo, loading_logo, institute_full_name, footer_tagline')
       .eq('college_id', college.id).maybeSingle();
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://college-managment-system-coral.vercel.app';
-    const baseUrl = frontendUrl.startsWith('http') ? frontendUrl : `https://${frontendUrl}`;
-    const siteUrl = `${baseUrl}/${ogSlug}`;
-
+    // HARDCODED — never relative:
+    const siteUrl = `https://college-managment-system-coral.vercel.app/${ogSlug}`;
     const rawLogo = settings?.navbar_logo || settings?.loading_logo || `https://college-managment-system-coral.vercel.app/logo.png`;
     const logoUrl = rawLogo.split('?')[0];
     const title = settings?.institute_full_name || college.name;
@@ -120,6 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=3600');
+
     return res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -127,8 +126,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <meta name="description" content="${description}">
-
-  <!-- Open Graph / Facebook -->
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
   <meta property="og:image" content="${logoUrl}">
@@ -137,26 +134,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <meta property="og:url" content="${siteUrl}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${title}">
-
-  <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
   <meta name="twitter:image" content="${logoUrl}">
-
-  <!-- Meta refresh redirect (backup for JS disabled): -->
   <meta http-equiv="refresh" content="0; url=${siteUrl}">
-
-  <!-- JS redirect: -->
-  <script>
-    setTimeout(function() {
-      window.location.replace('${siteUrl}');
-    }, 100);
-  </script>
+  <script>window.location.href = '${siteUrl}';</script>
 </head>
-<body><p>Redirecting to <a href="${siteUrl}">${title}</a>...</p></body>
+<body>
+  <p>Redirecting... <a href="${siteUrl}">Click here if not redirected</a></p>
+</body>
 </html>`);
   }
+
 
 
   const url = new URL(req.url || '', `http://${req.headers.host}`);
