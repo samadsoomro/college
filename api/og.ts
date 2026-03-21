@@ -7,8 +7,9 @@ const supabase = createClient(
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Slug is passed via query param from vercel.json rewrite
-  const slug = (req.query.slug as string) || '';
+  const slug = (req.query.slug as string)
+    || (req.url || '').split('/og/')[1]?.split('?')[0]
+    || '';
 
   if (!slug) return res.status(400).send('College slug is required');
 
@@ -16,13 +17,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .from('colleges')
     .select('id, name')
     .eq('slug', slug.toLowerCase())
+    .eq('is_active', true)
     .maybeSingle();
 
   if (!college) return res.status(404).send('College not found');
 
   const { data: settings } = await supabase
     .from('site_settings')
-    .select('navbar_logo, institute_full_name, footer_tagline, contact_address')
+    .select('navbar_logo, loading_logo, institute_full_name, footer_tagline, contact_address')
     .eq('college_id', college.id)
     .maybeSingle();
 
@@ -30,9 +32,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const rawLogo = settings?.navbar_logo || settings?.loading_logo || `https://college-managment-system-coral.vercel.app/logo.png`;
   const logoUrl = rawLogo.split('?')[0]; // strip query params
   const title = settings?.institute_full_name || college.name;
-  const description = settings?.footer_tagline
+  const description = settings?.footer_tagline 
     || `${title} - Digital Library Portal. Access books, notes, and resources.`;
-
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
