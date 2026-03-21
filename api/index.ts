@@ -838,23 +838,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
   if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
 
-  // 1. Admin Universal Upload (Base64)
-  if (parts[2] === 'admin' && parts[3] === 'upload') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-    const { fileName, fileType, fileData } = req.body || {};
-    if (!fileData) return res.status(400).json({ error: 'No file data provided' });
+  // 1. Admin Universal Upload (Multipart Form Data)
+  if (parts[2] === 'admin' && parts[3] === 'upload' && req.method === 'POST') {
+    const token = req.headers['x-admin-token'];
+    if (token !== (process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026'))
+      return res.status(403).json({ error: 'Unauthorized' });
 
-    // Use college-specific bucket and category subfolder
-    const category = (url.searchParams.get('category')) || 'general';
-    const bucket = `college-${collegeSlug.toLowerCase()}`;
-    
-    // Convert Base64 (data:image/png;base64,...) to Buffer
-    const base64String = fileData.split(',')[1] || fileData;
-    const buffer = Buffer.from(base64String, 'base64');
-    
-    const ext = fileName?.split('.').pop() || 'bin';
-    const cleanedName = fileName?.split('.')[0].replace(/[^a-zA-Z0-9.-]/g, '_') || 'file';
-    const finalFileName = `${category}/${Date.now()}-${cleanedName}.${ext}`;
+    const colId = await getCollegeId(slug);
+    if (!colId) return res.status(404).json({ error: 'College not found' });
+
+    // Parse multipart form data:
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      req.on('data', (chunk: Buffer) => chunks.push(chunk));
+      req.on('end', resolve);
+      req.on('error', reject);
+    });
+
+    const boundary = (req.headers['content-type'] || '').split('boundary=')[1];
+    if (!boundary) return res.status(400).json({ error: 'No boundary' });
+
+    const body = Buffer.concat(chunks);
+    const multipartParts = parseMultipart(body, boundary);
+
+    const filePart = multipartParts.find(p => p.name === 'file');
+    const category = multipartParts.find(p => p.name === 'category')?.data.toString() || 'uploads';
+
+    if (!filePart) return res.status(400).json({ error: 'No file provided' });
+
+    const bucket = `college-${slug.toLowerCase()}`;
+    const ext = filePart.filename?.split('.').pop() || 'bin';
+    const filename = `${category}/${Date.now()}.${ext}`;
 
     // Ensure bucket exists
     const { data: buckets } = await supabase.storage.listBuckets();
@@ -862,13 +876,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await supabase.storage.createBucket(bucket, { public: true });
     }
 
-    const { data, error } = await supabase.storage.from(bucket).upload(finalFileName, buffer, {
-      contentType: fileType || 'application/octet-stream',
-      upsert: false
-    });
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(filename, filePart.data, {
+        contentType: filePart.contentType,
+        upsert: false
+      });
 
-    if (error) return res.status(500).json({ error: error.message });
-    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(finalFileName);
+    if (error) {
+      console.error('[UPLOAD ERROR]', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket).getPublicUrl(filename);
+
     return res.json({ url: publicUrl });
   }
 
@@ -1900,6 +1922,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
   return res.status(404).json({ error: 'Endpoint not found', path });
+}
+
+// Simple multipart parser helper:
+function parseMultipart(body: Buffer, boundary: string) {
+  const parts: any[] = [];
+  const delimiter = Buffer.from('--' + boundary);
+  let start = 0;
+
+  while (start < body.length) {
+    const end = body.indexOf(delimiter, start + delimiter.length);
+    if (end === -1) break;
+    const part = body.slice(start + delimiter.length + 2, end - 2);
+    const headerEnd = part.indexOf('\r\n\r\n');
+    if (headerEnd === -1) { start = end; continue; }
+
+    const headers = part.slice(0, headerEnd).toString();
+    const data = part.slice(headerEnd + 4);
+    const nameMatch = headers.match(/name="([^"]+)"/);
+    const filenameMatch = headers.match(/filename="([^"]+)"/);
+    const ctMatch = headers.match(/Content-Type:\s*([^\r\n]+)/);
+
+    parts.push({
+      name: nameMatch?.[1],
+      filename: filenameMatch?.[1],
+      contentType: ctMatch?.[1]?.trim(),
+      data: data
+    });
+    start = end;
+  }
+  return parts;
 }
 
 
