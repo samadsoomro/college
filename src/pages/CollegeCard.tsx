@@ -337,277 +337,219 @@ const CollegeCard = () => {
   const generatePDF = async () => {
     if (!submissionResult) return;
 
-    const doc = new jsPDF("p", "mm", "a4");
-    const { cardNumber, studentId, issueDate, validThrough, formData } =
-      submissionResult;
+    try {
+      const doc = new jsPDF("p", "mm", "a4");
+      const { cardNumber, studentId, issueDate, validThrough, formData } =
+        submissionResult;
 
-    const qrDestination = settings?.cardQrEnabled
-      ? settings?.cardQrUrl
-      : `${window.location.origin}/${collegeSlug}/college-card/${cardNumber}`;
-    const qrCodeUrl = getQRCodeUrl(qrDestination, 100);
+      const qrDestination = settings?.cardQrEnabled
+        ? settings?.cardQrUrl
+        : `${window.location.origin}/${collegeSlug}/college-card/${cardNumber}`;
+      const qrCodeUrl = getQRCodeUrl(qrDestination, 100);
 
-    // Fetch QR Code
-    const response = await fetch(qrCodeUrl);
-    const blob = await response.blob();
-    const qrCodeDataUrl = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(blob);
-    });
+      // Fetch QR Code with safety
+      let qrCodeDataUrl: string | null = null;
+      try {
+        const response = await fetch(qrCodeUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          qrCodeDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch (e) {
+        console.error("QR Code fetch failed:", e);
+      }
 
-    // Load Logo (Dynamic or Default)
-    const logoImg = new Image();
-    logoImg.crossOrigin = "anonymous";
-    logoImg.src = settings?.cardLogoUrl || collegeLogo;
-    await new Promise((resolve) => {
-      logoImg.onload = resolve;
-      logoImg.onerror = resolve; // Fallback to avoid hanging
-    });
+      // Load Logo with safety
+      let logoDataUrl: string | null = null;
+      try {
+        const logoImg = new Image();
+        logoImg.crossOrigin = "anonymous";
+        logoImg.src = settings?.cardLogoUrl || collegeLogo;
+        await new Promise((resolve) => {
+          logoImg.onload = resolve;
+          logoImg.onerror = resolve;
+        });
 
-    // Draw Logo to Canvas to get Data URL (standardize format)
-    const canvas = document.createElement("canvas");
-    canvas.width = logoImg.width;
-    canvas.height = logoImg.height;
-    const ctx = canvas.getContext("2d");
-    ctx?.drawImage(logoImg, 0, 0);
-    const logoDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        const canvas = document.createElement("canvas");
+        canvas.width = logoImg.width || 100;
+        canvas.height = logoImg.height || 100;
+        const ctx = canvas.getContext("2d");
+        if (ctx && logoImg.complete && logoImg.naturalWidth !== 0) {
+          ctx.drawImage(logoImg, 0, 0);
+          logoDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        }
+      } catch (e) {
+        console.error("Logo processing failed:", e);
+      }
 
-    // --- CONSTANTS ---
-    const pageW = 210;
-    const margin = 15;
-    const boxW = 180;
-    const boxH = 120; // Approx half page
-    const topY = 15; // Top box start Y
-    const botY = 150; // Bottom box start Y
+      // --- CONSTANTS ---
+      const pageW = 210;
+      const margin = 15;
+      const boxW = 180;
+      const boxH = 120;
+      const topY = 15;
+      const botY = 150;
 
-    // Helper to convert hex to RGB for jsPDF
-    const hexToRgb = (hex: string): [number, number, number] => {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result
-        ? [
-            parseInt(result[1], 16),
-            parseInt(result[2], 16),
-            parseInt(result[3], 16),
-          ]
-        : [22, 78, 59];
-    };
+      const hexToRgb = (hex: string): [number, number, number] => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result
+          ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+          : [22, 78, 59];
+      };
 
-    const primaryColorRgb = hexToRgb(settings?.primaryColor || "#1b2838");
-    const whiteColor: [number, number, number] = [255, 255, 255];
+      const primaryColorRgb = hexToRgb(settings?.primaryColor || "#1b2838");
+      const whiteColor: [number, number, number] = [255, 255, 255];
 
-    // ==========================================
-    // TOP HALF - FRONT SIDE
-    // ==========================================
+      // FRONT SIDE
+      doc.setDrawColor(...primaryColorRgb);
+      doc.setLineWidth(0.8);
+      doc.rect(margin, topY, boxW, boxH);
+      doc.setFillColor(...primaryColorRgb);
+      doc.rect(margin, topY, boxW, 28, "F");
 
-    // Border
-    doc.setDrawColor(...primaryColorRgb);
-    doc.setLineWidth(0.8);
-    doc.rect(margin, topY, boxW, boxH);
+      if (logoDataUrl) {
+        doc.addImage(logoDataUrl, "JPEG", margin + 5, topY + 2, 24, 24);
+      }
 
-    // Header Background (Color Strip)
-    doc.setFillColor(...primaryColorRgb);
-    doc.rect(margin, topY, boxW, 28, "F");
-
-    // Logo
-    doc.addImage(logoDataUrl, "JPEG", margin + 5, topY + 2, 24, 24);
-
-    // Header Text (White on Color)
-    doc.setTextColor(...whiteColor);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.text("Government of Sindh", pageW / 2, topY + 8, { align: "center" });
-    doc.text("College Education Department", pageW / 2, topY + 12, {
-      align: "center",
-    });
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text(
-      settings?.cardHeaderText || (settings?.instituteFullName || "COLLEGE").toUpperCase(),
-      pageW / 2,
-      topY + 19,
-      { align: "center" },
-    );
-
-    doc.setFontSize(10);
-    doc.text(
-      settings?.cardSubheaderText || "COLLEGE CARD",
-      pageW / 2,
-      topY + 25,
-      { align: "center" },
-    );
-
-    // --- DETAILS SECTION ---
-    doc.setTextColor(0, 0, 0);
-    const detailsX = margin + 10;
-    let currentY = topY + 36;
-    const lineHeight = 6; // Compacted for dynamic fields
-
-    // Photo Box (Right side)
-    const photoW = 30;
-    const photoH = 35;
-    const photoX = margin + boxW - photoW - 10;
-    const photoY = topY + 35;
-
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.3);
-    doc.rect(photoX, photoY, photoW, photoH);
-    doc.setFontSize(7);
-    doc.setTextColor(100, 100, 100);
-    doc.text("Paste", photoX + photoW / 2, photoY + photoH / 2 - 2, {
-      align: "center",
-    });
-    doc.text("Photograph", photoX + photoW / 2, photoY + photoH / 2 + 2, {
-      align: "center",
-    });
-    doc.text("Here", photoX + photoW / 2, photoY + photoH / 2 + 6, {
-      align: "center",
-    });
-
-    // Details Content
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(9);
-
-    const labelW = 35;
-
-    const addDetail = (
-      label: string,
-      value: string,
-      boldValue = false,
-      highlight = false,
-    ) => {
-      // Don't overflow boxH
-      if (currentY > topY + boxH - 20) return;
+      doc.setTextColor(...whiteColor);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text("Government of Sindh", pageW / 2, topY + 8, { align: "center" });
+      doc.text("College Education Department", pageW / 2, topY + 12, { align: "center" });
 
       doc.setFont("helvetica", "bold");
-      doc.text(label, detailsX, currentY);
+      doc.setFontSize(12);
+      doc.text(
+        settings?.cardHeaderText || (settings?.instituteFullName || "COLLEGE").toUpperCase(),
+        pageW / 2,
+        topY + 19,
+        { align: "center" },
+      );
 
-      if (highlight) {
-        doc.setTextColor(...primaryColorRgb);
-        doc.setFontSize(10);
+      doc.setFontSize(10);
+      doc.text(
+        settings?.cardSubheaderText || "COLLEGE CARD",
+        pageW / 2,
+        topY + 25,
+        { align: "center" },
+      );
+
+      doc.setTextColor(0, 0, 0);
+      const detailsX = margin + 10;
+      let currentY = topY + 36;
+      const lineHeight = 6;
+
+      const photoW = 30;
+      const photoH = 35;
+      const photoX = margin + boxW - photoW - 10;
+      const photoY = topY + 35;
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.3);
+      doc.rect(photoX, photoY, photoW, photoH);
+      doc.setFontSize(7);
+      doc.setTextColor(100, 100, 100);
+      doc.text("Paste Photograph Here", photoX + photoW / 2, photoY + photoH / 2, { align: "center" });
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      const labelW = 35;
+
+      const addDetail = (label: string, value: string, boldValue = false, highlight = false) => {
+        if (currentY > topY + boxH - 20) return;
         doc.setFont("helvetica", "bold");
-        doc.text(value, detailsX + labelW, currentY);
-        doc.setFontSize(9); // Reset
-        doc.setTextColor(0, 0, 0);
-        doc.setFont("helvetica", "normal");
-      } else {
-        doc.setFont("helvetica", boldValue ? "bold" : "normal");
-        doc.text(value, detailsX + labelW, currentY);
+        doc.text(label, detailsX, currentY);
+        if (highlight) {
+          doc.setTextColor(...primaryColorRgb);
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "bold");
+          doc.text(value.toString(), detailsX + labelW, currentY);
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont("helvetica", "normal");
+        } else {
+          doc.setFont("helvetica", boldValue ? "bold" : "normal");
+          doc.text(value.toString(), detailsX + labelW, currentY);
+        }
+        currentY += lineHeight;
+      };
+
+      addDetail("Name:", `${formData.firstName} ${formData.lastName}`, true, true);
+      addDetail("Father Name:", formData.fatherName || "-");
+      addDetail("Date of Birth:", new Date(formData.dob).toLocaleDateString("en-GB"));
+      addDetail("Class:", formData.studentClass, true, true);
+      addDetail("Field:", `${formData.field} (${getFieldCode(formData.field)})`, true, true);
+      addDetail("Roll Number:", formData.rollNo);
+
+      customFields
+        .filter((f) => f.showOnCard && f.fieldKey !== "class" && f.fieldKey !== "field")
+        .forEach((f) => {
+          const val = formData.dynamicFields?.[f.fieldKey] || "-";
+          addDetail(`${f.fieldLabel}:`, val);
+        });
+
+      currentY += 1;
+      addDetail("College Card ID:", cardNumber, true, true);
+      currentY += 1;
+      addDetail("Issue Date:", new Date(issueDate).toLocaleDateString("en-GB"));
+      addDetail("Valid Through:", new Date(validThrough).toLocaleDateString("en-GB"));
+
+      if (settings?.cardQrEnabled && qrCodeDataUrl) {
+        const qrSize = 25;
+        const qrX = margin + boxW - qrSize - 10;
+        const qrY = topY + boxH - qrSize - 10;
+        doc.addImage(qrCodeDataUrl, "JPEG", qrX, qrY, qrSize, qrSize);
       }
-      currentY += lineHeight;
-    };
 
-    addDetail(
-      "Name:",
-      `${formData.firstName} ${formData.lastName}`,
-      true,
-      true,
-    );
-    addDetail("Father Name:", formData.fatherName || "-");
-    addDetail(
-      "Date of Birth:",
-      new Date(formData.dob).toLocaleDateString("en-GB"),
-    );
-    addDetail("Class:", formData.studentClass, true, true);
-    addDetail(
-      "Field:",
-      `${formData.field} (${getFieldCode(formData.field)})`,
-      true,
-      true,
-    );
-    addDetail("Roll Number:", formData.rollNo);
+      const sigLineX = detailsX + 80;
+      const sigLineY = topY + boxH - 15;
+      const sigLineW = 45;
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(sigLineX, sigLineY, sigLineX + sigLineW, sigLineY);
+      doc.setFontSize(7);
+      doc.text("Principal's Signature", sigLineX + sigLineW / 2, sigLineY + 4, { align: "center" });
 
-    // Render Dynamic Fields (that were configured for card, excluding hardcoded ones)
-    customFields
-      .filter((f) => f.showOnCard && f.fieldKey !== "class" && f.fieldKey !== "field")
-      .forEach((f) => {
-        const val = formData.dynamicFields?.[f.fieldKey] || "-";
-        addDetail(`${f.fieldLabel}:`, val);
+      // BACK SIDE
+      doc.setDrawColor(...primaryColorRgb);
+      doc.setLineWidth(0.8);
+      doc.rect(margin, botY, boxW, boxH);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("TERMS & CONDITIONS", pageW / 2, botY + 15, { align: "center" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+
+      let termY = botY + 25;
+      const termX = margin + 12;
+      const termSpacing = 5;
+      (settings?.cardTermsText || "").split("\n").forEach((line) => {
+        if (termY > botY + boxH - 25) return;
+        doc.text(line, termX, termY);
+        termY += termSpacing;
       });
 
-    // HIGHLIGHT COLLEGE CARD ID
-    currentY += 1;
-    addDetail("College Card ID:", cardNumber, true, true);
-    currentY += 1;
-
-    addDetail("Issue Date:", new Date(issueDate).toLocaleDateString("en-GB"));
-    addDetail(
-      "Valid Through:",
-      new Date(validThrough).toLocaleDateString("en-GB"),
-    );
-
-    // QR Code (Bottom Right of Front Box)
-    if (settings.cardQrEnabled) {
-      const qrSize = 25;
-      const qrX = margin + boxW - qrSize - 10;
-      const qrY = topY + boxH - qrSize - 10;
-      doc.addImage(qrCodeDataUrl, "JPEG", qrX, qrY, qrSize, qrSize);
-    }
-
-    // Signature (Between Valid Through text and QR Code)
-    const sigLineX = detailsX + 80;
-    const sigLineY = topY + boxH - 15;
-    const sigLineW = 45;
-
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.5);
-    doc.line(sigLineX, sigLineY, sigLineX + sigLineW, sigLineY);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.text("Principal's Signature", sigLineX + sigLineW / 2, sigLineY + 4, {
-      align: "center",
-    });
-
-    // ==========================================
-    // BOTTOM HALF - BACK SIDE
-    // ==========================================
-
-    // Border
-    doc.setDrawColor(...primaryColorRgb);
-    doc.setLineWidth(0.8);
-    doc.rect(margin, botY, boxW, boxH);
-
-    // Title
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("TERMS & CONDITIONS", pageW / 2, botY + 15, { align: "center" });
-
-    // Content
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-
-    let termY = botY + 25;
-    const termX = margin + 12;
-    const termSpacing = 5;
-
-    const terms = (settings?.cardTermsText || "").split("\n");
-
-    terms.forEach((line) => {
-      if (termY > botY + boxH - 25) return;
-      doc.text(line, termX, termY);
+      termY = botY + boxH - 20;
+      doc.setFont("helvetica", "bold");
+      doc.text("CONTACT DETAILS:", termX, termY);
       termY += termSpacing;
-    });
+      doc.setFont("helvetica", "normal");
+      doc.text(settings?.cardContactAddress || `Library, ${settings?.instituteShortName || 'College'}`, termX, termY);
+      termY += termSpacing;
+      doc.text(`Email: ${settings?.cardContactEmail || "library@example.edu"} | Phone: ${settings?.cardContactPhone || "+92 21 XXXX XXXX"}`, termX, termY);
 
-    // Contact Details
-    termY = botY + boxH - 20;
-    doc.setFont("helvetica", "bold");
-    doc.text("CONTACT DETAILS:", termX, termY);
-    termY += termSpacing;
-    doc.setFont("helvetica", "normal");
-    doc.text(
-      settings?.cardContactAddress || `Library, ${settings?.instituteShortName || 'College'}`,
-      termX,
-      termY,
-    );
-    termY += termSpacing;
-    doc.text(
-      `Email: ${settings?.cardContactEmail || "library@example.edu"} | Phone: ${settings?.cardContactPhone || "+92 21 XXXX XXXX"}`,
-      termX,
-      termY,
-    );
-
-    doc.save(`college-card-${cardNumber}.pdf`);
+      doc.save(`college-card-${cardNumber}.pdf`);
+    } catch (error: any) {
+      console.error("PDF Generation Error:", error);
+      toast({
+        title: "Download Failed",
+        description: "An error occurred while generating your PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (submissionResult) {
