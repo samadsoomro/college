@@ -245,11 +245,11 @@ const Books = () => {
                         cover_image: book.bookImage,
                         isbn: "",
                         status:
-                          parseInt(book.availableCopies || "0") > 0
+                          Number(book.availableCopies) > 0
                             ? "available"
                             : "unavailable",
-                        total_copies: parseInt(book.totalCopies || "0"),
-                        available_copies: parseInt(book.availableCopies || "0"),
+                        total_copies: Number(book.totalCopies) || 0,
+                        available_copies: Number(book.availableCopies) || 0,
                         publication_year: 0,
                       }}
                       onBorrow={() => handleBorrow(book)}

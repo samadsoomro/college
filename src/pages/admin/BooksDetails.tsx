@@ -469,8 +469,8 @@ const Books: React.FC = () => {
                         </div>
                       )}
                       <div className="absolute top-3 right-3">
-                        <div className={`text-[10px] px-2 py-1 rounded-full font-bold shadow-sm backdrop-blur-md ${parseInt(book.availableCopies || "0") > 0 ? "bg-emerald-500/90 text-white" : "bg-rose-500/90 text-white"}`}>
-                          {book.availableCopies || 0} / {book.totalCopies || 0}
+                        <div className={`text-[10px] px-2 py-1 rounded-full font-bold shadow-sm backdrop-blur-md ${Number(book.availableCopies) > 0 ? "bg-emerald-500/90 text-white" : "bg-rose-500/90 text-white"}`}>
+                          {Number(book.availableCopies) || 0} / {Number(book.totalCopies) || 0}
                         </div>
                       </div>
                     </div>
@@ -528,7 +528,7 @@ const Books: React.FC = () => {
                               size="sm"
                               className="h-8 px-3 text-[10px] font-bold"
                               onClick={() => handleIssueBook(book.id)}
-                              disabled={parseInt(book.availableCopies || "0") <= 0}
+                              disabled={Number(book.availableCopies) <= 0}
                             >
                               Issue
                             </Button>

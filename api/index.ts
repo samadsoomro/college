@@ -626,7 +626,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 4. Standard Modules
     if (resource === 'books') {
       const { data } = await supabase.from('books').select('*').eq('college_id', colId).order('created_at', { ascending: false });
-      return res.json((data || []).map(b => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
+      return res.json((data || []).map((b: any) => ({
+        id: b.id,
+        bookName: b.book_name,
+        authorName: b.author_name,
+        shortIntro: b.short_intro,
+        description: b.description,
+        bookImage: b.book_image,
+        totalCopies: Number(b.total_copies) || 0,
+        availableCopies: Number(b.available_copies) || 0,
+        createdAt: b.created_at
+      })));
     }
     if (resource === 'events') {
       const { data } = await supabase.from('events').select('*').eq('college_id', colId).order('date', { ascending: false });
@@ -1268,7 +1278,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET' && resource === 'admin') {
     if (subResource === 'books') {
       const { data } = await supabase.from('books').select('*').eq('college_id', colId).order('created_at', { ascending: false });
-      return res.json((data || []).map(b => ({ id: b.id, bookName: b.book_name, authorName: b.author_name, shortIntro: b.short_intro, description: b.description, bookImage: b.book_image, totalCopies: b.total_copies, availableCopies: b.available_copies })));
+      return res.json((data || []).map((b: any) => ({
+        id: b.id,
+        bookName: b.book_name,
+        authorName: b.author_name,
+        shortIntro: b.short_intro,
+        description: b.description,
+        bookImage: b.book_image,
+        totalCopies: Number(b.total_copies) || 0,
+        availableCopies: Number(b.available_copies) || 0,
+        createdAt: b.created_at
+      })));
     }
     if (subResource === 'library-cards') {
       const token = req.headers['x-admin-token'];
@@ -1792,12 +1812,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (req.method === 'POST' || req.method === 'PATCH') {
         console.log('[UPSERT BOOKS] method:', req.method, 'id:', sub2);
         if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
-        const payload = { 
+        const payload: any = { 
           ...req.body, college_id: colId, 
-          book_name: req.body.bookName, author_name: req.body.authorName, 
-          short_intro: req.body.shortIntro, book_image: req.body.bookImage, 
-          total_copies: req.body.totalCopies, available_copies: req.body.availableCopies 
+          book_name: req.body.bookName || req.body.book_name, 
+          author_name: req.body.authorName || req.body.author_name, 
+          short_intro: req.body.shortIntro || req.body.short_intro || '', 
+          description: req.body.description || '',
+          book_image: req.body.bookImage || req.body.book_image || null, 
+          total_copies: Number(req.body.totalCopies || req.body.total_copies) || 1, 
         };
+        if (req.method === 'POST') {
+          payload.available_copies = payload.total_copies;
+        } else if (req.body.availableCopies !== undefined || req.body.available_copies !== undefined) {
+          payload.available_copies = Number(req.body.availableCopies ?? req.body.available_copies) || 0;
+        }
         delete payload.bookName; delete payload.authorName; delete payload.shortIntro; delete payload.bookImage; delete payload.totalCopies; delete payload.availableCopies;
         if (req.method === 'PATCH' && sub2) {
           const { error } = await supabase.from('books').update(payload).eq('id', sub2).eq('college_id', colId);
