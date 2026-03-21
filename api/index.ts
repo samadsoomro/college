@@ -124,6 +124,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <meta name="description" content="${description}">
+
+  <!-- Open Graph / Facebook -->
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
   <meta property="og:image" content="${logoUrl}">
@@ -132,15 +134,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <meta property="og:url" content="${siteUrl}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${title}">
+
+  <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
   <meta name="twitter:image" content="${logoUrl}">
-  <script>window.location.replace('${siteUrl}');</script>
+
+  <!-- Meta refresh redirect (backup for JS disabled): -->
+  <meta http-equiv="refresh" content="0; url=${siteUrl}">
+
+  <!-- JS redirect: -->
+  <script>
+    setTimeout(function() {
+      window.location.replace('${siteUrl}');
+    }, 100);
+  </script>
 </head>
 <body><p>Redirecting to <a href="${siteUrl}">${title}</a>...</p></body>
 </html>`);
   }
+
 
   const url = new URL(req.url || '', `http://${req.headers.host}`);
 
