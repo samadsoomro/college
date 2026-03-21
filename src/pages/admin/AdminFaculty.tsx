@@ -39,8 +39,8 @@ const AdminFaculty: React.FC = () => {
       const isProd = window.location.hostname !== 'localhost';
       let imageUrl = faculty.find(f => f.id === editingId)?.imageUrl || null;
 
-      if (imageFile && isProd) {
-        imageUrl = await uploadToSupabase(imageFile, settings.storageBucket || 'colleges');
+      if (imageFile) {
+        imageUrl = await uploadToSupabase(imageFile, 'faculty', collegeSlug!) || "";
       }
 
       const body = { ...formData, imageUrl };

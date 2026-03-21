@@ -176,7 +176,7 @@ const AdminHome: React.FC = () => {
     setLoading(true);
     try {
       // 1. Upload to Supabase
-      const imageUrl = await uploadToSupabase(sliderFile, 'slider-images');
+      const imageUrl = await uploadToSupabase(sliderFile, 'home', collegeSlug!);
       if (!imageUrl) throw new Error("Upload failed");
 
       // 2. Save to DB via JSON
@@ -251,7 +251,7 @@ const AdminHome: React.FC = () => {
     if (!affiliationFile || !affiliationName) return;
     setLoading(true);
     try {
-      const logoUrl = await uploadToSupabase(affiliationFile, 'affiliations');
+      const logoUrl = await uploadToSupabase(affiliationFile, 'home', collegeSlug!);
       if (!logoUrl) throw new Error("Upload failed");
 
       const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations`, { 
@@ -329,7 +329,7 @@ const AdminHome: React.FC = () => {
     try {
       let iconUrl = "";
       if (newStatFile) {
-        iconUrl = await uploadToSupabase(newStatFile, 'stats-icons') || "";
+        iconUrl = await uploadToSupabase(newStatFile, 'home', collegeSlug!) || "";
       }
 
       const res = await fetch(`/api/${collegeSlug}/admin/home/stats`, { 

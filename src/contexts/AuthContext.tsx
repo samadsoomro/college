@@ -13,21 +13,13 @@ export const adminHeaders = () => ({
   'x-admin-token': 'gcfm-admin-token-2026'
 });
 
-// BACKEND UPLOAD PROXY — uses service-role key server-side to avoid anon RLS errors
-export const uploadToSupabase = async (file: File, bucket: string, collegeSlug?: string): Promise<string> => {
-  const slug = collegeSlug || window.location.pathname.split('/')[1] || 'gcfm';
-  
-  // Convert file to Base64 for easier serverless handling
-  const reader = new FileReader();
-  const base64Promise = new Promise<string>((resolve, reject) => {
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-  
-  const base64Data = await base64Promise;
-
-  const res = await fetch(`/api/${slug}/admin/upload?bucket=${encodeURIComponent(bucket)}`, {
+// SHARED UPLOAD UTILITY — uses backend proxy to avoid RLS issues
+export const uploadToSupabase = async (
+  file: File, 
+  category: string, // 'books' | 'notes' | 'rare-books' | 'faculty' | 'branding' | 'events' | 'blog' | etc.
+  collegeSlug: string
+): Promise<string> => {
+  const res = await fetch(`/api/${collegeSlug}/admin/upload?category=${encodeURIComponent(category)}`, {
     method: 'POST',
     headers: { 
       'x-admin-token': 'gcfm-admin-token-2026',
@@ -37,7 +29,12 @@ export const uploadToSupabase = async (file: File, bucket: string, collegeSlug?:
     body: JSON.stringify({
       fileName: file.name,
       fileType: file.type,
-      fileData: base64Data
+      fileData: await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      })
     }),
   });
 

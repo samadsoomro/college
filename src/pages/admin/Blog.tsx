@@ -115,7 +115,7 @@ const AdminBlog: React.FC = () => {
       const file = input.files ? input.files[0] : null;
       if (file) {
         try {
-          const url = await uploadToSupabase(file, 'blog-content');
+          const url = await uploadToSupabase(file, 'blog-content', collegeSlug!);
           if (url) {
             const range = quillRef.current?.getEditor().getSelection();
             if (range) {
@@ -170,7 +170,7 @@ const AdminBlog: React.FC = () => {
       
       let finalFeaturedImage = featuredImagePreview;
       if (featuredImage) {
-        const url = await uploadToSupabase(featuredImage, 'blog-featured');
+        const url = await uploadToSupabase(featuredImage, 'blog-featured', collegeSlug!);
         if (url) finalFeaturedImage = url;
       }
 

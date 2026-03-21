@@ -88,8 +88,7 @@ const ThemeBranding: React.FC = () => {
     if (!collegeSlug) return;
     setUploading(field);
     try {
-      const bucketName = `college-${collegeSlug}`;
-      const publicUrl = await uploadToSupabase(file, bucketName, collegeSlug);
+      const publicUrl = await uploadToSupabase(file, 'branding', collegeSlug!);
       
       // Update local state (Persistence happens on "Save All")
       setFormData(prev => ({ ...prev, [field]: publicUrl }));

@@ -120,7 +120,7 @@ const AdminHistory: React.FC = () => {
     try {
       let imageUrl = editingSection.imageUrl;
       if (editingSection.imageFile) {
-        imageUrl = await uploadToSupabase(editingSection.imageFile, 'history-sections');
+        imageUrl = await uploadToSupabase(editingSection.imageFile, 'history', collegeSlug!);
       }
 
       const payload = { ...editingSection, imageUrl };
@@ -176,7 +176,7 @@ const AdminHistory: React.FC = () => {
 
     setLoading(true);
     try {
-      const imageUrl = await uploadToSupabase(galleryFile, 'history-gallery');
+      const imageUrl = await uploadToSupabase(galleryFile, 'history-gallery', collegeSlug!);
       if (!imageUrl) throw new Error("Upload failed");
 
       const res = await fetch(`/api/${collegeSlug}/admin/history/gallery`, {

@@ -386,9 +386,11 @@ export default function AdminDashboard() {
       let pdfPath = "";
       let coverImage = "";
       // Upload PDF and Cover Image
-      if (rareBookFiles.pdf && rareBookFiles.image) {
-        pdfPath = await uploadToSupabase(rareBookFiles.pdf, 'rare-books', collegeSlug);
-        coverImage = await uploadToSupabase(rareBookFiles.image, 'rare-books', collegeSlug);
+      if (rareBookFiles.pdf) {
+        pdfPath = await uploadToSupabase(rareBookFiles.pdf, 'rare-books', collegeSlug!);
+      }
+      if (rareBookFiles.image) {
+        coverImage = await uploadToSupabase(rareBookFiles.image, 'rare-books', collegeSlug!);
       }
 
       const res = await fetch(`/api/${collegeSlug}/admin/rare-books`, {
@@ -468,7 +470,7 @@ export default function AdminDashboard() {
       if (fileInput?.files && fileInput.files.length > 0) {
         for (let i = 0; i < fileInput.files.length; i++) {
           const file = fileInput.files[i];
-          const url = await uploadToSupabase(file, 'event-images', collegeSlug);
+          const url = await uploadToSupabase(file, 'event-images', collegeSlug!);
           if (url) imageUrls.push(url);
         }
       }
@@ -2582,7 +2584,9 @@ export default function AdminDashboard() {
               {loading ? (
                 <p className="text-muted-foreground">Loading...</p>
               ) : donations.length === 0 ? (
-                <p className="text-muted-foreground">No donations yet</p>
+                <p className="text-muted-foreground">
+                  No donations yet
+                </p>
               ) : (
                 <Card className="p-4 overflow-x-auto">
                   <table className="w-full text-sm">
@@ -2794,7 +2798,7 @@ export default function AdminDashboard() {
                         ) {
                           setLoading(true);
                           try {
-                            const pdfPath = await uploadToSupabase(selectedFile, 'study-notes', collegeSlug);
+                            const pdfPath = await uploadToSupabase(selectedFile, 'study-notes', collegeSlug!);
 
                             const res = await fetch(`/api/${collegeSlug}/admin/notes`, {
                               method: "POST",
@@ -3117,10 +3121,10 @@ export default function AdminDashboard() {
                             ).files?.[0];
 
                             // Upload files first using the helper (handles auth and bucket correctly)
-                            const pdfPath = await uploadToSupabase(selectedFile, 'rare-books', collegeSlug);
+                            const pdfPath = await uploadToSupabase(selectedFile, 'rare-books', collegeSlug!);
                             let coverImageUrl = "";
                             if (coverFile) {
-                              coverImageUrl = await uploadToSupabase(coverFile, 'rare-books', collegeSlug);
+                              coverImageUrl = await uploadToSupabase(coverFile, 'rare-books', collegeSlug!);
                             }
 
                             if (!pdfPath) throw new Error("Failed to upload PDF");

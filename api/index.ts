@@ -844,14 +844,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { fileName, fileType, fileData } = req.body || {};
     if (!fileData) return res.status(400).json({ error: 'No file data provided' });
 
-    const bucket = (url.searchParams.get('bucket')) || 'colleges';
+    // Use college-specific bucket and category subfolder
+    const category = (url.searchParams.get('category')) || 'general';
+    const bucket = `college-${collegeSlug.toLowerCase()}`;
     
     // Convert Base64 (data:image/png;base64,...) to Buffer
     const base64String = fileData.split(',')[1] || fileData;
     const buffer = Buffer.from(base64String, 'base64');
     
     const ext = fileName?.split('.').pop() || 'bin';
-    const finalFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const cleanedName = fileName?.split('.')[0].replace(/[^a-zA-Z0-9.-]/g, '_') || 'file';
+    const finalFileName = `${category}/${Date.now()}-${cleanedName}.${ext}`;
 
     // Ensure bucket exists
     const { data: buckets } = await supabase.storage.listBuckets();

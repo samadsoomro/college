@@ -59,7 +59,7 @@ const Notifications: React.FC = () => {
       setLoading(true);
       let imageUrl = "";
       if (selectedImage) {
-        imageUrl = await uploadToSupabase(selectedImage, 'notifications') || "";
+        imageUrl = await uploadToSupabase(selectedImage, 'notifications', collegeSlug!) || "";
       }
 
       const res = await fetch(`/api/${collegeSlug}/admin/notifications`, {

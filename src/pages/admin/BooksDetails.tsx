@@ -207,7 +207,7 @@ const Books: React.FC = () => {
     try {
       let bookImage = isEditing ? selectedBook?.bookImage : "";
       if (selectedFile) {
-        const url = await uploadToSupabase(selectedFile, 'books');
+        const url = await uploadToSupabase(selectedFile, 'books', collegeSlug!);
         if (url) bookImage = url;
       }
 

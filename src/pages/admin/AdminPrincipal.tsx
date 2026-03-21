@@ -40,8 +40,8 @@ const AdminPrincipal: React.FC = () => {
       const isProd = window.location.hostname !== 'localhost';
       let imageUrl = currentImageUrl;
 
-      if (imageFile && isProd) {
-        imageUrl = await uploadToSupabase(imageFile, settings.storageBucket || 'colleges');
+      if (imageFile) {
+        imageUrl = await uploadToSupabase(imageFile, 'principal', collegeSlug!) || "";
       }
 
       const res = await fetch(`/api/${collegeSlug}/admin/principal`, {
