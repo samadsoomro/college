@@ -38,6 +38,8 @@ const Books = () => {
   const [infoPopupBook, setInfoPopupBook] = useState<any>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successBook, setSuccessBook] = useState<any>(null);
+  const [confirmBook, setConfirmBook] = useState<any>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     if (collegeSlug) fetchBooks();
@@ -139,14 +141,25 @@ const Books = () => {
   const handleBorrow = (book: any) => {
     // Check if user is logged in via Card ID session
     if (user?.isLibraryCard) {
-      // Card holder — proceed with borrow normally
-      proceedWithBorrow(book);
+      // Card holder — show confirmation first
+      setConfirmBook(book);
+      setShowConfirm(true);
       return;
     }
 
     // Everyone else (email login or not logged in) — show info popup
     setInfoPopupBook(book);
     setShowInfoPopup(true);
+  };
+
+  const handleConfirmBorrow = async () => {
+    setShowConfirm(false);
+    await proceedWithBorrow(confirmBook);
+  };
+
+  const handleCancelBorrow = () => {
+    setShowConfirm(false);
+    setConfirmBook(null);
   };
 
   const handleViewDetails = (book: any) => {
@@ -281,6 +294,61 @@ const Books = () => {
       </div>
 
       <AnimatePresence>
+        {showConfirm && confirmBook && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto overflow-hidden">
+
+              {/* Header */}
+              <div className="bg-primary px-6 py-4 text-white text-center">
+                <div className="text-2xl mb-1">📚</div>
+                <h3 className="font-bold text-base">Confirm Borrow Request</h3>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 text-center space-y-4">
+                {confirmBook.bookImage && (
+                  <img
+                    src={confirmBook.bookImage}
+                    alt={confirmBook.bookName}
+                    className="h-24 w-16 object-cover rounded-lg mx-auto shadow-md"
+                  />
+                )}
+                <div>
+                  <p className="text-neutral-500 text-sm">Do you want to borrow</p>
+                  <p className="text-lg font-bold text-neutral-800 mt-1">
+                    "{confirmBook.bookName}"
+                  </p>
+                  {confirmBook.authorName && (
+                    <p className="text-sm text-neutral-400">by {confirmBook.authorName}</p>
+                  )}
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-left">
+                  <p className="text-xs text-amber-600">
+                    ⚠️ You must collect the book physically from the library within <strong>14 days</strong>.
+                  </p>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="px-6 pb-6 flex gap-3">
+                <button
+                  onClick={handleCancelBorrow}
+                  className="flex-1 py-3 border-2 border-neutral-200 text-neutral-600 rounded-xl font-semibold text-sm hover:bg-neutral-50 transition-colors"
+                >
+                  ✕ No, Cancel
+                </button>
+                <button
+                  onClick={handleConfirmBorrow}
+                  className="flex-1 py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors"
+                >
+                  ✓ Yes, Borrow
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showInfoPopup && infoPopupBook && (
           <motion.div 
             className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
