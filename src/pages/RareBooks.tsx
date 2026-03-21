@@ -48,6 +48,20 @@ const RareBooks: React.FC = () => {
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.0);
   const [rotation, setRotation] = useState(0);
+  const [pdfWidth, setPdfWidth] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (window.innerWidth < 768) {
+        setPdfWidth(window.innerWidth);
+      } else {
+        setPdfWidth(undefined);
+      }
+    };
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   useEffect(() => {
     // Security restrictions
@@ -252,7 +266,7 @@ const RareBooks: React.FC = () => {
       <AnimatePresence>
         {selectedBook && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-md"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -349,7 +363,13 @@ const RareBooks: React.FC = () => {
 
               {/* Viewer Area */}
               <div
-                className="flex-1 overflow-auto bg-neutral-900 relative flex justify-center p-4 select-none"
+                className="flex-1 overflow-auto bg-neutral-900 relative flex justify-center p-0 md:p-4 select-none"
+                style={{
+                  WebkitOverflowScrolling: "touch",
+                  overflowX: "auto",
+                  overflowY: "auto",
+                  margin: 0,
+                }}
                 onContextMenu={(e) => e.preventDefault()}
               >
                 <Document
@@ -374,6 +394,7 @@ const RareBooks: React.FC = () => {
                       pageNumber={pageNumber}
                       scale={scale}
                       rotate={rotation}
+                      width={pdfWidth}
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
                       className="border shadow-lg"
