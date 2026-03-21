@@ -1065,6 +1065,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  // GET /api/:slug/og-meta — returns HTML with dynamic OG tags for bot previews
+  if (isApi && resource === 'og-meta' && !subResource && req.method === 'GET') {
+    const { data: college } = await supabase
+      .from('colleges')
+      .select('id, name, short_name')
+      .eq('slug', collegeSlug.toLowerCase())
+      .maybeSingle();
+
+    if (!college) return res.status(404).send('Not found');
+
+    const { data: settings } = await supabase
+      .from('site_settings')
+      .select('navbar_logo, loading_logo, institute_full_name, footer_tagline')
+      .eq('college_id', college.id)
+      .maybeSingle();
+
+    const logoUrl = settings?.navbar_logo || settings?.loading_logo || '';
+    const title = settings?.institute_full_name || college.name;
+    const description = settings?.footer_tagline || `${title} - Digital Library Portal`;
+    const siteUrl = `https://collegewebsite-three-ruddy.vercel.app/${collegeSlug}`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <meta property="og:title" content="${title}" />
+  <meta property="og:description" content="${description}" />
+  <meta property="og:image" content="${logoUrl}" />
+  <meta property="og:url" content="${siteUrl}" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${title}" />
+  <meta name="twitter:description" content="${description}" />
+  <meta name="twitter:image" content="${logoUrl}" />
+  <script>window.location.replace('${siteUrl}');</script>
+</head>
+<body>Redirecting to ${title}...</body>
+</html>`);
+  }
+
   // 4. Other Admin Lists (Books, Donations, etc.)
   if (req.method === 'GET' && resource === 'admin') {
     if (subResource === 'books') {

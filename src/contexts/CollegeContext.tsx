@@ -280,17 +280,39 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   useEffect(() => {
-    if (settings.instituteFullName) {
-      document.title = settings.instituteFullName;
+    if (college && settings) {
+      // Update document title
+      document.title = settings.instituteFullName || college.name;
+
+      // Update OG meta tags dynamically for client-side sharing sync
+      const setMeta = (property: string, content: string) => {
+        let el = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
+        if (!el) {
+          el = document.createElement('meta');
+          el.setAttribute('property', property);
+          document.head.appendChild(el);
+        }
+        el.setAttribute('content', content);
+      };
+
+      const logo = settings.navbarLogo || settings.loadingLogo || '';
+      const title = settings.instituteFullName || college.name;
+      const desc = settings.footerTagline || `${title} - Digital Library`;
+
+      setMeta('og:title', title);
+      setMeta('og:description', desc);
+      if (logo) setMeta('og:image', logo);
+      setMeta('og:url', window.location.href);
+
+      // Update favicon
+      if (logo) {
+        const favicon = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+        if (favicon) {
+          favicon.href = logo + (logo.includes('?') ? '&' : '?') + 't=' + Date.now();
+        }
+      }
     }
-    if (settings.navbarLogo) {
-      const link: HTMLLinkElement = document.querySelector("link[rel*='icon']") || document.createElement("link");
-      link.type = "image/x-icon";
-      link.rel = "shortcut icon";
-      link.href = settings.navbarLogo;
-      document.getElementsByTagName("head")[0].appendChild(link);
-    }
-  }, [settings.instituteFullName, settings.navbarLogo]);
+  }, [college, settings]);
 
   const updateSettings = async (newSettings: Partial<SiteSettings>) => {
     try {
