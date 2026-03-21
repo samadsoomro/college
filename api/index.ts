@@ -109,7 +109,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .select('navbar_logo, loading_logo, institute_full_name, footer_tagline')
       .eq('college_id', college.id).maybeSingle();
 
-    const siteUrl = `${process.env.FRONTEND_URL || 'https://college-managment-system-coral.vercel.app'}/${ogSlug}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'https://college-managment-system-coral.vercel.app';
+    const baseUrl = frontendUrl.startsWith('http') ? frontendUrl : `https://${frontendUrl}`;
+    const siteUrl = `${baseUrl}/${ogSlug}`;
+
     const rawLogo = settings?.navbar_logo || settings?.loading_logo || `https://college-managment-system-coral.vercel.app/logo.png`;
     const logoUrl = rawLogo.split('?')[0];
     const title = settings?.institute_full_name || college.name;
