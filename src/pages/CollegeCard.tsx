@@ -341,72 +341,89 @@ const CollegeCard = () => {
     const instName = settings?.instituteFullName || college?.name || "College";
 
     return (
-      <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="bg-white dark:bg-card rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-border"
+          className="relative bg-white dark:bg-card rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden border border-border"
         >
-          {/* College Header — uses real college branding */}
-          <div className="bg-primary p-6 text-white text-center relative overflow-hidden">
+          {/* ✕ Close Button — TOP RIGHT, always visible */}
+          <button
+            onClick={() => setSubmissionResult(null)}
+            className="absolute top-3 right-3 z-10 w-8 h-8 bg-white/90 hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100 shadow-sm transition-colors"
+          >
+            ✕
+          </button>
+
+          {/* College Header */}
+          <div className="bg-primary px-6 py-5 text-white text-center sm:text-left sm:flex sm:items-center sm:gap-4 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_white,_transparent)]"></div>
-            <img 
-              src={logoUrl} 
-              alt="logo"
-              className="h-16 w-16 rounded-full mx-auto mb-3 object-contain bg-white p-1 shadow-lg relative z-10" 
-            />
-            <h2 className="text-xl font-bold relative z-10">
-              {instName}
-            </h2>
-            <p className="text-xs opacity-80 relative z-10">Digital Library Portal</p>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="logo"
+                className="h-12 w-12 rounded-full mx-auto sm:mx-0 mb-2 sm:mb-0 object-contain bg-white p-1 shadow-md relative z-10"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-full mx-auto sm:mx-0 mb-2 sm:mb-0 bg-white/20 flex items-center justify-center text-2xl relative z-10">
+                🏛️
+              </div>
+            )}
+            <div className="relative z-10">
+              <h2 className="text-base font-bold leading-tight uppercase tracking-wide">
+                {instName}
+              </h2>
+              <p className="text-xs opacity-75 mt-0.5">Digital Library Portal</p>
+            </div>
           </div>
 
-          {/* Success Content */}
-          <div className="p-8 space-y-6 text-center">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-950/30 rounded-full flex items-center justify-center mx-auto mb-2 animate-bounce">
-              <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-2xl font-bold text-neutral-800 dark:text-neutral-100">
-                Application Submitted!
-              </h3>
-              <p className="text-sm text-muted-foreground">
+          {/* Content */}
+          <div className="px-6 py-5 space-y-4">
+            {/* Success Icon + Title */}
+            <div className="text-center">
+              <div className="w-12 h-12 bg-green-100 dark:bg-green-950/30 rounded-full flex items-center justify-center mx-auto mb-3 border border-green-200 dark:border-green-900/50">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-neutral-800 dark:text-neutral-100">Application Submitted!</h3>
+              <p className="text-sm text-neutral-500">
                 Your college card PDF is ready for download.
               </p>
             </div>
 
             {/* Card ID Box */}
-            <div className="bg-neutral-50 dark:bg-neutral-900 border-2 border-primary/20 rounded-2xl p-5 shadow-inner">
-              <p className="text-3xl font-mono font-bold text-primary tracking-wider">
+            <div className="bg-neutral-50 dark:bg-neutral-900/50 border-2 border-primary/20 rounded-xl p-4 text-center shadow-inner">
+              <p className="text-2xl font-mono font-bold text-primary tracking-wider break-all">
                 {submissionResult.cardNumber}
               </p>
-              <p className="text-[10px] text-neutral-400 font-bold uppercase mt-2">
+              <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1 tracking-wide">
                 College Card ID — Use this to login
               </p>
-              <div className="flex justify-center gap-4 mt-3 pt-3 border-t border-primary/10">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Student ID:</span>{" "}
-                  <span className="font-bold text-foreground">{submissionResult.studentId}</span>
-                </div>
+              <div className="mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                  Student ID: <span className="font-bold text-foreground">{submissionResult.studentId}</span>
+                </p>
               </div>
             </div>
 
             {/* Important Note */}
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 text-left">
-              <p className="text-xs text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5 mb-1.5">
-                <AlertCircle className="w-3.5 h-3.5" /> IMPORTANT
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4">
+              <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> IMPORTANT
               </p>
-              <p className="text-xs text-amber-600 dark:text-amber-500 leading-relaxed">
+              <p className="text-xs text-amber-600 dark:text-amber-500 leading-relaxed font-medium">
                 Your card is <strong>pending approval</strong> by the admin.
-                Once approved, you can login using your <strong>Card ID</strong> and the password you created.
+                Once approved, login using your <strong>Card ID</strong> and
+                the password you created.
               </p>
             </div>
 
-            {/* Buttons */}
-            <div className="space-y-3 pt-2">
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-1 font-inter">
               <Button
                 onClick={generatePDF}
-                className="w-full py-6 bg-primary hover:bg-primary/90 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+                className="w-full py-6 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-primary/10"
               >
                 <Download className="w-5 h-5" />
                 Download College Card PDF
@@ -414,18 +431,11 @@ const CollegeCard = () => {
               
               <Link
                 to={`/${collegeSlug}/login?tab=card`}
-                className="block w-full py-3.5 border-2 border-primary/30 text-primary hover:bg-primary/5 rounded-2xl font-bold text-sm text-center transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-3 border-2 border-primary/30 text-primary hover:bg-primary/5 rounded-xl font-bold text-sm transition-colors"
                 onClick={() => setSubmissionResult(null)}
               >
                 🔑 Login with Card ID
               </Link>
-              
-              <button
-                onClick={() => setSubmissionResult(null)}
-                className="w-full py-2 text-neutral-400 text-sm hover:text-neutral-600 font-medium"
-              >
-                ✕ Dismiss
-              </button>
             </div>
           </div>
         </motion.div>
