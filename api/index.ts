@@ -1,6 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '');
@@ -39,8 +47,42 @@ async function deleteFile(url: string | null) {
 }
 
 async function deleteStorageFile(url: string | null) {
-  await deleteFile(url);
+  if (!url) return;
+
+  try {
+    // Handle Cloudinary URLs:
+    if (url.includes('cloudinary.com')) {
+      // Extract public_id from Cloudinary URL:
+      // URL format: https://res.cloudinary.com/cloud/image/upload/v123/colleges/gcfm/books/filename
+      const parts = url.split('/upload/');
+      if (parts.length > 1) {
+        const withVersion = parts[1];
+        // Remove version prefix (v1234567890/) if present:
+        const publicId = withVersion.replace(/^v\d+\//, '').replace(/\.[^.]+$/, '');
+        const isPDF = url.includes('/raw/');
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: isPDF ? 'raw' : 'image'
+        });
+        console.log('[CLOUDINARY DELETE]', publicId);
+      }
+      return;
+    }
+
+    // Handle old Supabase URLs (backward compatibility):
+    if (url.includes('supabase')) {
+      const parts = url.split('/storage/v1/object/public/');
+      if (parts.length < 2) return;
+      const rest = parts[1];
+      const bucket = rest.split('/')[0];
+      const filePath = rest.substring(bucket.length + 1);
+      await supabase.storage.from(bucket).remove([filePath]);
+      console.log('[SUPABASE DELETE]', filePath);
+    }
+  } catch (e) {
+    console.error('[DELETE FILE ERROR]', e);
+  }
 }
+
 
 function isAdminRequest(req: VercelRequest): boolean {
   return checkAdminToken(req);
@@ -64,7 +106,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
 
-  if (parts[parts.length - 1] === 'health') return res.json({ status: 'ok' });
+  if (parts[parts.length - 1] === 'health') {
+    return res.json({
+      status: 'ok',
+      supabaseUrl: process.env.SUPABASE_URL ? 'set' : 'MISSING',
+      supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'set' : 'MISSING',
+      cloudinaryName: process.env.CLOUDINARY_CLOUD_NAME ? 'set' : 'MISSING',
+      cloudinaryKey: process.env.CLOUDINARY_API_KEY ? 'set' : 'MISSING',
+    });
+  }
+
   if (parts[0] !== 'api') return res.status(404).json({ error: 'Route not found' });
 
   const collegeSlug = parts[1];
@@ -838,61 +889,62 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
   if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
 
-  // 1. Admin Universal Upload (Multipart Form Data)
+  // 1. Admin Universal Upload (Cloudinary)
   if (parts[2] === 'admin' && parts[3] === 'upload' && req.method === 'POST') {
     const token = req.headers['x-admin-token'];
     if (token !== (process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026'))
       return res.status(403).json({ error: 'Unauthorized' });
 
-    const colId = await getCollegeId(slug);
-    if (!colId) return res.status(404).json({ error: 'College not found' });
+    const { file, filename, mimetype, category } = req.body || {};
+    if (!file) return res.status(400).json({ error: 'No file provided' });
 
-    // Parse multipart form data:
-    const chunks: Buffer[] = [];
-    await new Promise<void>((resolve, reject) => {
-      req.on('data', (chunk: Buffer) => chunks.push(chunk));
-      req.on('end', resolve);
-      req.on('error', reject);
-    });
+    const isPDF = mimetype === 'application/pdf' || filename?.endsWith('.pdf');
 
-    const boundary = (req.headers['content-type'] || '').split('boundary=')[1];
-    if (!boundary) return res.status(400).json({ error: 'No boundary' });
+    try {
+      // Upload to Cloudinary:
+      const result = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: `colleges/${slug}/${category || 'uploads'}`,
+            resource_type: isPDF ? 'raw' : 'image',
+            // Auto-optimize images:
+            ...(isPDF ? {} : {
+              transformation: [
+                { quality: 'auto', fetch_format: 'webp' },
+                { width: 1200, crop: 'limit' }
+              ]
+            }),
+            public_id: `${Date.now()}-${(filename || 'file').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '_')}`
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
 
-    const body = Buffer.concat(chunks);
-    const multipartParts = parseMultipart(body, boundary);
-
-    const filePart = multipartParts.find(p => p.name === 'file');
-    const category = multipartParts.find(p => p.name === 'category')?.data.toString() || 'uploads';
-
-    if (!filePart) return res.status(400).json({ error: 'No file provided' });
-
-    const bucket = `college-${slug.toLowerCase()}`;
-    const ext = filePart.filename?.split('.').pop() || 'bin';
-    const filename = `${category}/${Date.now()}.${ext}`;
-
-    // Ensure bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
-    if (!(buckets || []).some(b => b.name === bucket)) {
-      await supabase.storage.createBucket(bucket, { public: true });
-    }
-
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(filename, filePart.data, {
-        contentType: filePart.contentType,
-        upsert: false
+        // Write base64 buffer to stream:
+        const buffer = Buffer.from(file, 'base64');
+        uploadStream.end(buffer);
       });
 
-    if (error) {
-      console.error('[UPLOAD ERROR]', error.message);
-      return res.status(500).json({ error: error.message });
+      return res.json({
+        url: result.secure_url,
+        publicId: result.public_id
+      });
+
+    } catch (err: any) {
+      console.error('[CLOUDINARY ERROR]', err.message);
+      // Common errors:
+      if (err.message?.includes('Invalid API key')) {
+        return res.status(500).json({ error: 'Cloudinary configuration error. Contact admin.' });
+      }
+      if (err.message?.includes('File size too large')) {
+        return res.status(413).json({ error: 'File too large. Maximum 50MB allowed.' });
+      }
+      return res.status(500).json({ error: 'Upload failed: ' + err.message });
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from(bucket).getPublicUrl(filename);
-
-    return res.json({ url: publicUrl });
   }
+
 
   // 1b. Admin Home CMS
   if (parts[2] === 'admin' && parts[3] === 'home') {
