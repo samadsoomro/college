@@ -23,10 +23,26 @@ const ThemeBranding: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<any>({ ...settings });
   const [uploading, setUploading] = useState<string | null>(null);
+  const [classOptions, setClassOptions] = useState('');
+  const [fieldOptions, setFieldOptions] = useState('');
 
   useEffect(() => { 
     setFormData({ ...settings }); 
   }, [settings]);
+
+  useEffect(() => {
+    const fetchCardFields = async () => {
+      if (!collegeSlug) return;
+      const res = await fetch(`/api/${collegeSlug}/library-card-fields`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const classField = data.find((f: any) => f.fieldKey === 'class');
+      const fieldField = data.find((f: any) => f.fieldKey === 'field');
+      if (classField?.options) setClassOptions(classField.options.join('\n'));
+      if (fieldField?.options) setFieldOptions(fieldField.options.join('\n'));
+    };
+    fetchCardFields();
+  }, [collegeSlug]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -72,6 +88,30 @@ const ThemeBranding: React.FC = () => {
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally { setLoading(false); }
+  };
+
+  const saveCardFields = async () => {
+    if (!collegeSlug) return;
+    const classArr = classOptions.split('\n').map(s => s.trim()).filter(Boolean);
+    const fieldArr = fieldOptions.split('\n').map(s => s.trim()).filter(Boolean);
+
+    const res = await fetch(`/api/${collegeSlug}/admin/library-card-fields`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
+      },
+      body: JSON.stringify({
+        classOptions: classArr,
+        fieldOptions: fieldArr
+      })
+    });
+
+    if (res.ok) {
+      toast({ title: 'Card Fields Saved!', description: 'Dropdowns updated.' });
+    } else {
+      toast({ title: 'Error', description: 'Failed to save fields', variant: 'destructive' });
+    }
   };
 
   const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
@@ -339,6 +379,53 @@ const ThemeBranding: React.FC = () => {
               <div className="space-y-2"><label className="text-[10px] font-bold text-muted-foreground">CARD EMAIL</label><Input name="cardContactEmail" value={formData.cardContactEmail || ''} onChange={handleInputChange} /></div>
               <div className="space-y-2"><label className="text-[10px] font-bold text-muted-foreground">CARD PHONE</label><Input name="cardContactPhone" value={formData.cardContactPhone || ''} onChange={handleInputChange} /></div>
             </div>
+          </CardContent>
+        </Card>
+        
+        {/* 5.5 College Card Fields Section */}
+        <Card className="shadow-md border-primary/20">
+          <CardContent className="pt-6">
+            <SectionHeader icon={CreditCard} title="🎓 College Card — Class & Field Options" />
+            <p className="text-sm text-muted-foreground mb-6">
+              Manage the dropdown options shown on the college card application form.
+              Each option on a separate line.
+            </p>
+
+            <div className="grid md:grid-cols-2 gap-6 mb-6">
+              {/* Class Options */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Class Options</label>
+                <p className="text-[10px] text-muted-foreground">One class per line e.g. "Class 11"</p>
+                <Textarea
+                  rows={8}
+                  className="w-full font-mono text-sm"
+                  value={classOptions}
+                  onChange={(e) => setClassOptions(e.target.value)}
+                  placeholder={"Class 11\nClass 12\nADS I\nADS II\nBSc Part 1"}
+                />
+              </div>
+
+              {/* Field/Group Options */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Field / Group Options</label>
+                <p className="text-[10px] text-muted-foreground">One field per line e.g. "Computer Science"</p>
+                <Textarea
+                  rows={8}
+                  className="w-full font-mono text-sm"
+                  value={fieldOptions}
+                  onChange={(e) => setFieldOptions(e.target.value)}
+                  placeholder={"Computer Science\nPre-Medical\nPre-Engineering\nHumanities\nCommerce"}
+                />
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={saveCardFields}
+              className="gap-2"
+            >
+              <Save size={16} /> Save Card Fields
+            </Button>
           </CardContent>
         </Card>
 

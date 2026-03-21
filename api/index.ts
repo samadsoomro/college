@@ -1413,6 +1413,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // PUT /api/:slug/admin/library-card-fields - Save custom dropdown options
+  if (req.method === 'PUT' && resource === 'admin' && subResource === 'library-card-fields') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = await getCollegeId(collegeSlug);
+    if (!colId) return res.status(404).json({ error: 'College not found' });
+
+    const { classOptions, fieldOptions } = req.body || {};
+
+    // Upsert class field:
+    const { data: existingClass } = await supabase
+      .from('library_card_fields')
+      .select('id').eq('college_id', colId).eq('field_key', 'class').maybeSingle();
+
+    if (existingClass) {
+      await supabase.from('library_card_fields')
+        .update({ options: classOptions, updated_at: new Date().toISOString() })
+        .eq('id', existingClass.id);
+    } else {
+      await supabase.from('library_card_fields').insert({
+        college_id: colId, field_label: 'Class', field_key: 'class',
+        field_type: 'select', is_required: true, show_on_form: true,
+        show_on_card: true, show_in_admin: true, display_order: 1,
+        options: classOptions
+      });
+    }
+
+    // Upsert field/group:
+    const { data: existingField } = await supabase
+      .from('library_card_fields')
+      .select('id').eq('college_id', colId).eq('field_key', 'field').maybeSingle();
+
+    if (existingField) {
+      await supabase.from('library_card_fields')
+        .update({ options: fieldOptions, updated_at: new Date().toISOString() })
+        .eq('id', existingField.id);
+    } else {
+      await supabase.from('library_card_fields').insert({
+        college_id: colId, field_label: 'Field/Group', field_key: 'field',
+        field_type: 'select', is_required: true, show_on_form: true,
+        show_on_card: true, show_in_admin: true, display_order: 2,
+        options: fieldOptions
+      });
+    }
+
+    return res.json({ success: true });
+  }
+
   // 5. Admin POST/PATCH/DELETE Operations — Consolidating below at unified handlers.
   if (req.method !== 'GET' && resource === 'admin') {
     // This block is now handled by the unified section at the end of the file.
