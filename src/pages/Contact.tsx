@@ -355,10 +355,10 @@ const Contact = () => {
               <Clock className="text-primary" />
               Office Hours
             </h2>
-            <div className="space-y-2">
-              {(settings?.officeHours || "Mon-Fri: 9:00 AM - 1:00 PM\nSat: 9:00 AM - 12:00 PM\nSun: Closed")
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {(settings?.officeHours || 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed')
                 .split('\n')
-                .map(l => l.replace(/^\*\s*/, '').trim()) // remove any leading * or spaces
+                .map(l => l.replace(/^\*\s*/, '').trim())
                 .filter(Boolean)
                 .map((line, i) => {
                   const colonIndex = line.indexOf(':');
@@ -368,12 +368,29 @@ const Contact = () => {
                   const time = colonIndex !== -1
                     ? line.substring(colonIndex + 1).trim()
                     : '';
+                  const isClosed = time.toLowerCase().includes('closed') || !time;
+
                   return (
-                    <div key={i} className="flex justify-between items-center py-3 border-b border-neutral-100 last:border-0">
-                      <span className="text-sm text-neutral-600 font-medium">{day}</span>
-                      <span className="text-sm font-semibold text-primary">
+                    <div
+                      key={i}
+                      className={`rounded-xl p-4 text-center border-2 transition-colors ${
+                        isClosed
+                          ? 'bg-neutral-50 border-neutral-200'
+                          : 'bg-primary/5 border-primary/20'
+                      }`}
+                    >
+                      {/* Day */}
+                      <p className="text-sm font-semibold text-neutral-600 mb-2">{day}</p>
+                      {/* Divider */}
+                      <div className={`w-8 h-0.5 mx-auto mb-2 rounded ${
+                        isClosed ? 'bg-neutral-300' : 'bg-primary/40'
+                      }`} />
+                      {/* Time */}
+                      <p className={`text-sm font-bold ${
+                        isClosed ? 'text-neutral-400' : 'text-primary'
+                      }`}>
                         {time || 'Closed'}
-                      </span>
+                      </p>
                     </div>
                   );
                 })
