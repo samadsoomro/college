@@ -250,7 +250,7 @@ export default function AdminDashboard() {
       const fieldRes = await fetch(`/api/${collegeSlug}/library-card-fields`);
       if (fieldRes.ok) {
         const fields = await fieldRes.json();
-        setCustomFields(fields.filter((f: any) => f.showInAdmin));
+        setCustomFields(fields.filter((f: any) => f.showInAdmin && f.fieldKey !== 'class' && f.fieldKey !== 'field'));
       }
     } catch (error) {
       console.error('Error fetching college cards or fields:', error);

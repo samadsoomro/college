@@ -11,7 +11,8 @@ import { useCollege } from "@/contexts/CollegeContext";
 import { uploadToSupabase } from "@/contexts/AuthContext";
 import { 
   Palette, Save, Upload, RefreshCcw, Settings, Share2, 
-  MapPin, CreditCard, BookOpen, Heart, Smartphone, Building, Hash, User, Banknote 
+  MapPin, CreditCard, BookOpen, Heart, Smartphone, Building, Hash, User, Banknote, 
+  Plus, Trash2 
 } from "lucide-react";
 
 const ThemeBranding: React.FC = () => {
@@ -23,8 +24,12 @@ const ThemeBranding: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<any>({ ...settings });
   const [uploading, setUploading] = useState<string | null>(null);
-  const [classOptions, setClassOptions] = useState('');
-  const [fieldOptions, setFieldOptions] = useState('');
+  
+  const [systemFields, setSystemFields] = useState([
+    { fieldKey: 'class', fieldLabel: 'Class', options: '' },
+    { fieldKey: 'field', fieldLabel: 'Field/Group', options: '' }
+  ]);
+  const [customFields, setCustomFields] = useState<any[]>([]);
 
   useEffect(() => { 
     setFormData({ ...settings }); 
@@ -36,10 +41,32 @@ const ThemeBranding: React.FC = () => {
       const res = await fetch(`/api/${collegeSlug}/library-card-fields`);
       if (!res.ok) return;
       const data = await res.json();
-      const classField = data.find((f: any) => f.fieldKey === 'class');
-      const fieldField = data.find((f: any) => f.fieldKey === 'field');
-      if (classField?.options) setClassOptions(classField.options.join('\n'));
-      if (fieldField?.options) setFieldOptions(fieldField.options.join('\n'));
+      
+      const sys = [
+        { fieldKey: 'class', fieldLabel: 'Class', options: '' },
+        { fieldKey: 'field', fieldLabel: 'Field/Group', options: '' }
+      ];
+      const custom: any[] = [];
+
+      data.forEach((f: any) => {
+        if (f.fieldKey === 'class' || f.fieldKey === 'field') {
+          const match = sys.find(s => s.fieldKey === f.fieldKey);
+          if (match) {
+            match.fieldLabel = f.fieldLabel;
+            match.options = (f.options || []).join('\n');
+          }
+        } else {
+          custom.push({
+            id: f.id,
+            fieldKey: f.fieldKey,
+            fieldLabel: f.fieldLabel,
+            options: (f.options || []).join('\n')
+          });
+        }
+      });
+
+      setSystemFields(sys);
+      setCustomFields(custom);
     };
     fetchCardFields();
   }, [collegeSlug]);
@@ -92,8 +119,18 @@ const ThemeBranding: React.FC = () => {
 
   const saveCardFields = async () => {
     if (!collegeSlug) return;
-    const classArr = classOptions.split('\n').map(s => s.trim()).filter(Boolean);
-    const fieldArr = fieldOptions.split('\n').map(s => s.trim()).filter(Boolean);
+    setLoading(true);
+    
+    const payload = {
+      systemFields: systemFields.map(f => ({
+        ...f,
+        options: f.options.split('\n').map(s => s.trim()).filter(Boolean)
+      })),
+      customFields: customFields.map(f => ({
+        ...f,
+        options: f.options.split('\n').map(s => s.trim()).filter(Boolean)
+      }))
+    };
 
     const res = await fetch(`/api/${collegeSlug}/admin/library-card-fields`, {
       method: 'PUT',
@@ -101,17 +138,41 @@ const ThemeBranding: React.FC = () => {
         'Content-Type': 'application/json',
         'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026'
       },
-      body: JSON.stringify({
-        classOptions: classArr,
-        fieldOptions: fieldArr
-      })
+      body: JSON.stringify(payload)
     });
 
+    setLoading(false);
     if (res.ok) {
-      toast({ title: 'Card Fields Saved!', description: 'Dropdowns updated.' });
+      toast({ title: 'Card Fields Saved!', description: 'Hybrid field configuration updated.' });
     } else {
       toast({ title: 'Error', description: 'Failed to save fields', variant: 'destructive' });
     }
+  };
+
+  const addCustomField = () => {
+    setCustomFields([...customFields, { 
+      fieldKey: `custom_${Date.now()}`, 
+      fieldLabel: 'New Custom Field', 
+      options: '' 
+    }]);
+  };
+
+  const removeCustomField = (index: number) => {
+    const newFields = [...customFields];
+    newFields.splice(index, 1);
+    setCustomFields(newFields);
+  };
+
+  const updateSystemField = (index: number, updates: any) => {
+    const newFields = [...systemFields];
+    newFields[index] = { ...newFields[index], ...updates };
+    setSystemFields(newFields);
+  };
+
+  const updateCustomField = (index: number, updates: any) => {
+    const newFields = [...customFields];
+    newFields[index] = { ...newFields[index], ...updates };
+    setCustomFields(newFields);
   };
 
   const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
@@ -385,47 +446,135 @@ const ThemeBranding: React.FC = () => {
         {/* 5.5 College Card Fields Section */}
         <Card className="shadow-md border-primary/20">
           <CardContent className="pt-6">
-            <SectionHeader icon={CreditCard} title="🎓 College Card — Class & Field Options" />
-            <p className="text-sm text-muted-foreground mb-6">
-              Manage the dropdown options shown on the college card application form.
-              Each option on a separate line.
-            </p>
-
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
-              {/* Class Options */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-muted-foreground">Class Options</label>
-                <p className="text-[10px] text-muted-foreground">One class per line e.g. "Class 11"</p>
-                <Textarea
-                  rows={8}
-                  className="w-full font-mono text-sm"
-                  value={classOptions}
-                  onChange={(e) => setClassOptions(e.target.value)}
-                  placeholder={"Class 11\nClass 12\nADS I\nADS II\nBSc Part 1"}
-                />
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <SectionHeader icon={CreditCard} title="🎓 College Card — Form Fields" />
+                <p className="text-sm text-muted-foreground">
+                  Configure the dropdown fields shown on the college card application form.
+                </p>
               </div>
-
-              {/* Field/Group Options */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-muted-foreground">Field / Group Options</label>
-                <p className="text-[10px] text-muted-foreground">One field per line e.g. "Computer Science"</p>
-                <Textarea
-                  rows={8}
-                  className="w-full font-mono text-sm"
-                  value={fieldOptions}
-                  onChange={(e) => setFieldOptions(e.target.value)}
-                  placeholder={"Computer Science\nPre-Medical\nPre-Engineering\nHumanities\nCommerce"}
-                />
-              </div>
+              <Button
+                type="button"
+                onClick={saveCardFields}
+                disabled={loading}
+                className="gap-2 shadow-sm"
+              >
+                <Save size={16} /> Save Field Logic
+              </Button>
             </div>
 
-            <Button
-              type="button"
-              onClick={saveCardFields}
-              className="gap-2"
-            >
-              <Save size={16} /> Save Card Fields
-            </Button>
+            <div className="space-y-8">
+              {/* Type 1: Permanent System Fields */}
+              <div className="bg-neutral-50 p-6 rounded-2xl border border-neutral-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 bg-neutral-900 rounded-lg text-white">
+                    <Settings size={14} />
+                  </div>
+                  <h3 className="font-black text-sm uppercase tracking-widest text-neutral-900">
+                    🔒 System Fields (Permanent for ID)
+                  </h3>
+                </div>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {systemFields.map((field, idx) => (
+                    <div key={field.fieldKey} className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+                          Field Name (Label)
+                        </label>
+                        <span className="text-[9px] bg-neutral-200 px-1.5 py-0.5 rounded font-mono text-neutral-500">
+                          ID Key: {field.fieldKey}
+                        </span>
+                      </div>
+                      <Input 
+                        value={field.fieldLabel} 
+                        onChange={(e) => updateSystemField(idx, { fieldLabel: e.target.value })}
+                        className="font-bold border-neutral-200"
+                        placeholder={field.fieldKey === 'class' ? 'e.g. Class / Grade' : 'e.g. Field / Group'}
+                      />
+                      <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider block">
+                        Dropdown Options (One per line)
+                      </label>
+                      <Textarea
+                        rows={6}
+                        className="w-full font-mono text-sm bg-white border-neutral-200"
+                        value={field.options}
+                        onChange={(e) => updateSystemField(idx, { options: e.target.value })}
+                        placeholder="Option 1\nOption 2\nOption 3"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Type 2: Custom Extra Fields */}
+              <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-primary rounded-lg text-white shadow-sm shadow-primary/20">
+                      <Plus size={14} />
+                    </div>
+                    <h3 className="font-black text-sm uppercase tracking-widest text-primary">
+                      ➕ Custom Extra Fields
+                    </h3>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={addCustomField}
+                    className="h-8 gap-2 font-bold text-xs border-primary/20 text-primary hover:bg-primary/10"
+                  >
+                    <Plus size={14} /> Add Field
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {customFields.map((field, idx) => (
+                    <div key={idx} className="bg-white p-5 rounded-xl border border-neutral-100 shadow-sm space-y-3 relative group">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeCustomField(idx)}
+                        className="absolute -top-2 -right-2 h-7 w-7 bg-white shadow-md border text-rose-500 hover:text-rose-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Plus size={14} className="rotate-45" />
+                      </Button>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+                          Custom Label (e.g. Semester)
+                        </label>
+                        <Input 
+                          value={field.fieldLabel} 
+                          onChange={(e) => updateCustomField(idx, { fieldLabel: e.target.value })}
+                          className="font-bold"
+                          placeholder="e.g. Semester"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-neutral-400 tracking-wider">
+                          Options (One per line)
+                        </label>
+                        <Textarea
+                          rows={4}
+                          className="w-full font-mono text-xs bg-neutral-50"
+                          value={field.options}
+                          onChange={(e) => updateCustomField(idx, { options: e.target.value })}
+                          placeholder="Fall 2024\nSpring 2025"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  {customFields.length === 0 && (
+                    <div className="md:col-span-2 py-8 text-center border-2 border-dashed border-primary/10 rounded-xl text-neutral-400 text-sm italic">
+                      No custom fields added yet. Click "Add Field" to begin.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

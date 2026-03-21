@@ -1413,48 +1413,70 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // PUT /api/:slug/admin/library-card-fields - Save custom dropdown options
+  // PUT /api/:slug/admin/library-card-fields - Save hybrid fields (System + Custom)
   if (req.method === 'PUT' && resource === 'admin' && subResource === 'library-card-fields') {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
     const colId = await getCollegeId(collegeSlug);
     if (!colId) return res.status(404).json({ error: 'College not found' });
 
-    const { classOptions, fieldOptions } = req.body || {};
+    const { systemFields, customFields } = req.body || {};
 
-    // Upsert class field:
-    const { data: existingClass } = await supabase
-      .from('library_card_fields')
-      .select('id').eq('college_id', colId).eq('field_key', 'class').maybeSingle();
+    // 1. Upsert System Fields (class and field)
+    for (const f of (systemFields || [])) {
+      if (f.fieldKey === 'class' || f.fieldKey === 'field') {
+        const { data: existing } = await supabase
+          .from('library_card_fields')
+          .select('id')
+          .eq('college_id', colId)
+          .eq('field_key', f.fieldKey)
+          .maybeSingle();
 
-    if (existingClass) {
-      await supabase.from('library_card_fields')
-        .update({ options: classOptions, updated_at: new Date().toISOString() })
-        .eq('id', existingClass.id);
-    } else {
-      await supabase.from('library_card_fields').insert({
-        college_id: colId, field_label: 'Class', field_key: 'class',
-        field_type: 'select', is_required: true, show_on_form: true,
-        show_on_card: true, show_in_admin: true, display_order: 1,
-        options: classOptions
-      });
+        if (existing) {
+          await supabase.from('library_card_fields')
+            .update({ 
+              options: f.options, 
+              field_label: f.fieldLabel, // allow changing label like "Class" -> "Semester"
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', existing.id);
+        } else {
+          await supabase.from('library_card_fields').insert({
+            college_id: colId,
+            field_label: f.fieldLabel,
+            field_key: f.fieldKey,
+            field_type: 'select',
+            is_required: true,
+            show_on_form: true,
+            show_on_card: true,
+            show_in_admin: true,
+            display_order: f.fieldKey === 'class' ? 1 : 2,
+            options: f.options
+          });
+        }
+      }
     }
 
-    // Upsert field/group:
-    const { data: existingField } = await supabase
-      .from('library_card_fields')
-      .select('id').eq('college_id', colId).eq('field_key', 'field').maybeSingle();
+    // 2. Clear out existing Custom Fields (not class or field)
+    await supabase.from('library_card_fields')
+      .delete()
+      .eq('college_id', colId)
+      .not('field_key', 'in', '("class","field")');
 
-    if (existingField) {
-      await supabase.from('library_card_fields')
-        .update({ options: fieldOptions, updated_at: new Date().toISOString() })
-        .eq('id', existingField.id);
-    } else {
-      await supabase.from('library_card_fields').insert({
-        college_id: colId, field_label: 'Field/Group', field_key: 'field',
-        field_type: 'select', is_required: true, show_on_form: true,
-        show_on_card: true, show_in_admin: true, display_order: 2,
-        options: fieldOptions
-      });
+    // 3. Insert New Custom Fields
+    if (customFields && customFields.length > 0) {
+      const customPayload = customFields.map((f: any, idx: number) => ({
+        college_id: colId,
+        field_label: f.fieldLabel,
+        field_key: f.fieldKey || `custom_${Date.now()}_${idx}`,
+        field_type: 'select',
+        is_required: f.isRequired || false,
+        show_on_form: true,
+        show_on_card: true,
+        show_in_admin: true,
+        display_order: 10 + idx,
+        options: f.options
+      }));
+      await supabase.from('library_card_fields').insert(customPayload);
     }
 
     return res.json({ success: true });

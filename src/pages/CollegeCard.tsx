@@ -808,7 +808,9 @@ const CollegeCard = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="class">Class *</Label>
+                        <Label htmlFor="class">
+                          {customFields.find(f => f.fieldKey === 'class')?.fieldLabel || 'Class'} *
+                        </Label>
                         <Select
                           value={formData.studentClass}
                           onValueChange={(value) =>
@@ -816,7 +818,7 @@ const CollegeCard = () => {
                           }
                         >
                           <SelectTrigger data-testid="select-class">
-                            <SelectValue placeholder="Select your class" />
+                            <SelectValue placeholder={`Select ${customFields.find(f => f.fieldKey === 'class')?.fieldLabel || 'Class'}`} />
                           </SelectTrigger>
                           <SelectContent>
                             {customFields
@@ -830,7 +832,9 @@ const CollegeCard = () => {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="field">Field / Group *</Label>
+                        <Label htmlFor="field">
+                          {customFields.find(f => f.fieldKey === 'field')?.fieldLabel || 'Field / Group'} *
+                        </Label>
                         <Select
                           value={formData.field}
                           onValueChange={(value) =>
@@ -838,7 +842,7 @@ const CollegeCard = () => {
                           }
                         >
                           <SelectTrigger data-testid="select-field">
-                            <SelectValue placeholder="Select your field" />
+                            <SelectValue placeholder={`Select ${customFields.find(f => f.fieldKey === 'field')?.fieldLabel || 'Field / Group'}`} />
                           </SelectTrigger>
                           <SelectContent>
                             {customFields
