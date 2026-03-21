@@ -110,23 +110,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // GET /api/:slug/library-card-applications/by-card/:cardNumber
   if (resource === 'library-card-applications' && subResource === 'by-card' && sub2 && req.method === 'GET') {
-    const { data: cards } = await supabase.from('colleges').select('id').eq('slug', collegeSlug).maybeSingle();
-    if (!cards) return res.status(404).json({ error: 'College not found' });
-    
+    const colId = await getCollegeId(slug);
+    if (!colId) return res.status(404).json({ error: 'College not found' });
+
     const { data } = await supabase
       .from('library_card_applications')
-      .select('email, phone, first_name, last_name, card_number, status')
+      .select('*')
       .ilike('card_number', sub2)
-      .eq('college_id', cards.id)
-      .eq('status', 'approved')
+      .eq('college_id', colId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (!data) return res.status(404).json({ error: 'Card not found' });
+
     return res.json({
+      cardNumber: data.card_number,
+      studentId: data.student_id,
+      name: `${data.first_name} ${data.last_name}`,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      fatherName: data.father_name,
+      dob: data.dob,
       email: data.email,
       phone: data.phone,
-      name: `${data.first_name} ${data.last_name}`,
-      cardNumber: data.card_number
+      class: data.class,
+      field: data.field,
+      rollNo: data.roll_no,
+      issueDate: data.issue_date,
+      validThrough: data.valid_through,
+      status: data.status,
+      dynamicFields: data.dynamic_fields || {}
     });
   }
 

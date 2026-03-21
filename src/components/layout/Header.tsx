@@ -245,6 +245,15 @@ const Header: React.FC = () => {
                     user.email?.split("@")[0] ||
                     "User"}
                   </span>
+                  {isLibraryCard && (
+                    <Link
+                      to={`/${collegeSlug}/my-card`}
+                      className="text-xs flex items-center gap-1 text-primary hover:underline font-bold"
+                    >
+                      <CreditCard size={12} />
+                      Download My Card
+                    </Link>
+                  )}
                   {isSuperAdmin ? (
                     <span className="text-xs px-1.5 py-0.5 bg-indigo-600 text-white rounded font-bold">
                       Super Admin
@@ -413,6 +422,16 @@ const Header: React.FC = () => {
                             </span>
                           )}
                         </div>
+                        {isLibraryCard && (
+                          <Link
+                            to={`/${collegeSlug}/my-card`}
+                            className="flex items-center gap-2 px-4 py-3 bg-primary/10 text-primary rounded-lg font-bold mb-2"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            <CreditCard size={18} />
+                            Download My Card
+                          </Link>
+                        )}
                         <Button
                           variant="outline"
                           className="w-full"

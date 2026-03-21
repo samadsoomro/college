@@ -32,6 +32,12 @@ const Login: React.FC = () => {
   const { settings } = useCollege();
   const navigate = useNavigate();
   const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("tab") === "card") {
+      setUseCollegeCard(true);
+    }
+  }, [location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); // ← CRITICAL: must prevent default form submission

@@ -24,6 +24,7 @@ import Events from "@/pages/Events";
 import NotificationsPage from "@/pages/Notifications";
 import Blog from "@/pages/Blog";
 import BlogPost from "@/pages/BlogPost";
+import MyCard from "@/pages/MyCard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import BooksDetails from "@/pages/admin/BooksDetails";
 import History from "@/pages/History";
@@ -71,6 +72,7 @@ const App = () => (
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="rare-books" element={<RareBooks />} />
               <Route path="college-card" element={<CollegeCard />} />
+              <Route path="my-card" element={<MyCard />} />
               <Route path="library-card" element={<Navigate to="../college-card" replace />} />
               <Route path="library-dashboard" element={<Navigate to=".." replace />} />
               <Route path="faculty" element={<Faculty />} />

@@ -16,23 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCollege } from "@/contexts/CollegeContext";
-import {
-  BookOpen,
-  Wifi,
-  Users,
-  Computer,
-  Library,
-  Percent,
-  Check,
-  ArrowRight,
-  ArrowLeft,
-  Download,
-  CreditCard,
-  Eye,
-  EyeOff,
-  RefreshCcw,
-} from "lucide-react";
+import { Download, CreditCard, Eye, EyeOff, RefreshCcw, Check, ArrowRight, ArrowLeft, BookOpen, Wifi, Users, Computer, Library, Percent, AlertCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import { jsPDF } from "jspdf";
+import { generateLibraryCardPDF } from "@/utils/pdfGenerator";
 import collegeLogo from "@/assets/images/college-logo.png";
 
 const getQRCodeUrl = (text: string, size: number = 100) => {
@@ -101,7 +88,7 @@ interface SubmissionResult {
 
 const CollegeCard = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
-  const { settings } = useCollege();
+  const { settings, college } = useCollege();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -336,269 +323,112 @@ const CollegeCard = () => {
 
   const generatePDF = async () => {
     if (!submissionResult) return;
-
-    try {
-      const doc = new jsPDF("p", "mm", "a4");
-      const { cardNumber, studentId, issueDate, validThrough, formData } =
-        submissionResult;
-
-      const qrDestination = settings?.cardQrEnabled
-        ? settings?.cardQrUrl
-        : `${window.location.origin}/${collegeSlug}/college-card/${cardNumber}`;
-      const qrCodeUrl = getQRCodeUrl(qrDestination, 100);
-
-      // Fetch QR Code with safety
-      let qrCodeDataUrl: string | null = null;
-      try {
-        const response = await fetch(qrCodeUrl);
-        if (response.ok) {
-          const blob = await response.blob();
-          qrCodeDataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-        }
-      } catch (e) {
-        console.error("QR Code fetch failed:", e);
-      }
-
-      // Load Logo with safety
-      let logoDataUrl: string | null = null;
-      try {
-        const logoImg = new Image();
-        logoImg.crossOrigin = "anonymous";
-        logoImg.src = settings?.cardLogoUrl || collegeLogo;
-        await new Promise((resolve) => {
-          logoImg.onload = resolve;
-          logoImg.onerror = resolve;
-        });
-
-        const canvas = document.createElement("canvas");
-        canvas.width = logoImg.width || 100;
-        canvas.height = logoImg.height || 100;
-        const ctx = canvas.getContext("2d");
-        if (ctx && logoImg.complete && logoImg.naturalWidth !== 0) {
-          ctx.drawImage(logoImg, 0, 0);
-          logoDataUrl = canvas.toDataURL("image/jpeg", 0.8);
-        }
-      } catch (e) {
-        console.error("Logo processing failed:", e);
-      }
-
-      // --- CONSTANTS ---
-      const pageW = 210;
-      const margin = 15;
-      const boxW = 180;
-      const boxH = 120;
-      const topY = 15;
-      const botY = 150;
-
-      const hexToRgb = (hex: string): [number, number, number] => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result
-          ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
-          : [22, 78, 59];
-      };
-
-      const primaryColorRgb = hexToRgb(settings?.primaryColor || "#1b2838");
-      const whiteColor: [number, number, number] = [255, 255, 255];
-
-      // FRONT SIDE
-      doc.setDrawColor(...primaryColorRgb);
-      doc.setLineWidth(0.8);
-      doc.rect(margin, topY, boxW, boxH);
-      doc.setFillColor(...primaryColorRgb);
-      doc.rect(margin, topY, boxW, 28, "F");
-
-      if (logoDataUrl) {
-        doc.addImage(logoDataUrl, "JPEG", margin + 5, topY + 2, 24, 24);
-      }
-
-      doc.setTextColor(...whiteColor);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.text("Government of Sindh", pageW / 2, topY + 8, { align: "center" });
-      doc.text("College Education Department", pageW / 2, topY + 12, { align: "center" });
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text(
-        settings?.cardHeaderText || (settings?.instituteFullName || "COLLEGE").toUpperCase(),
-        pageW / 2,
-        topY + 19,
-        { align: "center" },
-      );
-
-      doc.setFontSize(10);
-      doc.text(
-        settings?.cardSubheaderText || "COLLEGE CARD",
-        pageW / 2,
-        topY + 25,
-        { align: "center" },
-      );
-
-      doc.setTextColor(0, 0, 0);
-      const detailsX = margin + 10;
-      let currentY = topY + 36;
-      const lineHeight = 6;
-
-      const photoW = 30;
-      const photoH = 35;
-      const photoX = margin + boxW - photoW - 10;
-      const photoY = topY + 35;
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.3);
-      doc.rect(photoX, photoY, photoW, photoH);
-      doc.setFontSize(7);
-      doc.setTextColor(100, 100, 100);
-      doc.text("Paste Photograph Here", photoX + photoW / 2, photoY + photoH / 2, { align: "center" });
-
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(9);
-      const labelW = 35;
-
-      const addDetail = (label: string, value: string, boldValue = false, highlight = false) => {
-        if (currentY > topY + boxH - 20) return;
-        doc.setFont("helvetica", "bold");
-        doc.text(label, detailsX, currentY);
-        if (highlight) {
-          doc.setTextColor(...primaryColorRgb);
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "bold");
-          doc.text(value.toString(), detailsX + labelW, currentY);
-          doc.setFontSize(9);
-          doc.setTextColor(0, 0, 0);
-          doc.setFont("helvetica", "normal");
-        } else {
-          doc.setFont("helvetica", boldValue ? "bold" : "normal");
-          doc.text(value.toString(), detailsX + labelW, currentY);
-        }
-        currentY += lineHeight;
-      };
-
-      addDetail("Name:", `${formData.firstName} ${formData.lastName}`, true, true);
-      addDetail("Father Name:", formData.fatherName || "-");
-      addDetail("Date of Birth:", new Date(formData.dob).toLocaleDateString("en-GB"));
-      addDetail("Class:", formData.studentClass, true, true);
-      addDetail("Field:", `${formData.field} (${getFieldCode(formData.field)})`, true, true);
-      addDetail("Roll Number:", formData.rollNo);
-
-      customFields
-        .filter((f) => f.showOnCard && f.fieldKey !== "class" && f.fieldKey !== "field")
-        .forEach((f) => {
-          const val = formData.dynamicFields?.[f.fieldKey] || "-";
-          addDetail(`${f.fieldLabel}:`, val);
-        });
-
-      currentY += 1;
-      addDetail("College Card ID:", cardNumber, true, true);
-      currentY += 1;
-      addDetail("Issue Date:", new Date(issueDate).toLocaleDateString("en-GB"));
-      addDetail("Valid Through:", new Date(validThrough).toLocaleDateString("en-GB"));
-
-      if (settings?.cardQrEnabled && qrCodeDataUrl) {
-        const qrSize = 25;
-        const qrX = margin + boxW - qrSize - 10;
-        const qrY = topY + boxH - qrSize - 10;
-        doc.addImage(qrCodeDataUrl, "JPEG", qrX, qrY, qrSize, qrSize);
-      }
-
-      const sigLineX = detailsX + 80;
-      const sigLineY = topY + boxH - 15;
-      const sigLineW = 45;
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.5);
-      doc.line(sigLineX, sigLineY, sigLineX + sigLineW, sigLineY);
-      doc.setFontSize(7);
-      doc.text("Principal's Signature", sigLineX + sigLineW / 2, sigLineY + 4, { align: "center" });
-
-      // BACK SIDE
-      doc.setDrawColor(...primaryColorRgb);
-      doc.setLineWidth(0.8);
-      doc.rect(margin, botY, boxW, boxH);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.text("TERMS & CONDITIONS", pageW / 2, botY + 15, { align: "center" });
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-
-      let termY = botY + 25;
-      const termX = margin + 12;
-      const termSpacing = 5;
-      (settings?.cardTermsText || "").split("\n").forEach((line) => {
-        if (termY > botY + boxH - 25) return;
-        doc.text(line, termX, termY);
-        termY += termSpacing;
-      });
-
-      termY = botY + boxH - 20;
-      doc.setFont("helvetica", "bold");
-      doc.text("CONTACT DETAILS:", termX, termY);
-      termY += termSpacing;
-      doc.setFont("helvetica", "normal");
-      doc.text(settings?.cardContactAddress || `Library, ${settings?.instituteShortName || 'College'}`, termX, termY);
-      termY += termSpacing;
-      doc.text(`Email: ${settings?.cardContactEmail || "library@example.edu"} | Phone: ${settings?.cardContactPhone || "+92 21 XXXX XXXX"}`, termX, termY);
-
-      doc.save(`college-card-${cardNumber}.pdf`);
-    } catch (error: any) {
-      console.error("PDF Generation Error:", error);
-      toast({
-        title: "Download Failed",
-        description: "An error occurred while generating your PDF. Please try again.",
-        variant: "destructive",
-      });
-    }
+    generateLibraryCardPDF({
+      cardNumber: submissionResult.cardNumber,
+      studentId: submissionResult.studentId,
+      issueDate: submissionResult.issueDate,
+      validThrough: submissionResult.validThrough,
+      formData: submissionResult.formData,
+      settings,
+      collegeSlug: collegeSlug || "gcfm",
+      collegeLogo,
+      customFields: customFields
+    }, toast);
   };
 
   if (submissionResult) {
+    const logoUrl = settings?.navbarLogo || settings?.loadingLogo || collegeLogo;
+    const instName = settings?.instituteFullName || college?.name || "College";
+
     return (
-      <div className="min-h-screen bg-background pt-24 pb-12 px-4">
-        <div className="max-w-2xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center"
-          >
-            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="w-10 h-10 text-primary" />
+      <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="bg-white dark:bg-card rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-border"
+        >
+          {/* College Header — uses real college branding */}
+          <div className="bg-primary p-6 text-white text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_white,_transparent)]"></div>
+            <img 
+              src={logoUrl} 
+              alt="logo"
+              className="h-16 w-16 rounded-full mx-auto mb-3 object-contain bg-white p-1 shadow-lg relative z-10" 
+            />
+            <h2 className="text-xl font-bold relative z-10">
+              {instName}
+            </h2>
+            <p className="text-xs opacity-80 relative z-10">Digital Library Portal</p>
+          </div>
+
+          {/* Success Content */}
+          <div className="p-8 space-y-6 text-center">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-950/30 rounded-full flex items-center justify-center mx-auto mb-2 animate-bounce">
+              <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground mb-4">
-              Application Submitted Successfully!
-            </h1>
-            <p className="text-muted-foreground mb-8">
-              Your college card PDF is ready for download.
-            </p>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-bold text-neutral-800 dark:text-neutral-100">
+                Application Submitted!
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Your college card PDF is ready for download.
+              </p>
+            </div>
 
-            <Card className="mb-8">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <CreditCard className="w-8 h-8 text-primary" />
-                  <span className="text-xl font-mono font-bold text-foreground">
-                    {submissionResult.cardNumber}
-                  </span>
+            {/* Card ID Box */}
+            <div className="bg-neutral-50 dark:bg-neutral-900 border-2 border-primary/20 rounded-2xl p-5 shadow-inner">
+              <p className="text-3xl font-mono font-bold text-primary tracking-wider">
+                {submissionResult.cardNumber}
+              </p>
+              <p className="text-[10px] text-neutral-400 font-bold uppercase mt-2">
+                College Card ID — Use this to login
+              </p>
+              <div className="flex justify-center gap-4 mt-3 pt-3 border-t border-primary/10">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Student ID:</span>{" "}
+                  <span className="font-bold text-foreground">{submissionResult.studentId}</span>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  College Card ID - Use this to register for college services
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Student ID: {submissionResult.studentId}
-                </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Button
-              onClick={generatePDF}
-              size="lg"
-              className="gap-2"
-              data-testid="button-download-pdf"
-            >
-              <Download className="w-5 h-5" />
-              Download College Card PDF
-            </Button>
-          </motion.div>
-        </div>
+            {/* Important Note */}
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 text-left">
+              <p className="text-xs text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5 mb-1.5">
+                <AlertCircle className="w-3.5 h-3.5" /> IMPORTANT
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-500 leading-relaxed">
+                Your card is <strong>pending approval</strong> by the admin.
+                Once approved, you can login using your <strong>Card ID</strong> and the password you created.
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="space-y-3 pt-2">
+              <Button
+                onClick={generatePDF}
+                className="w-full py-6 bg-primary hover:bg-primary/90 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+              >
+                <Download className="w-5 h-5" />
+                Download College Card PDF
+              </Button>
+              
+              <Link
+                to={`/${collegeSlug}/login?tab=card`}
+                className="block w-full py-3.5 border-2 border-primary/30 text-primary hover:bg-primary/5 rounded-2xl font-bold text-sm text-center transition-colors"
+                onClick={() => setSubmissionResult(null)}
+              >
+                🔑 Login with Card ID
+              </Link>
+              
+              <button
+                onClick={() => setSubmissionResult(null)}
+                className="w-full py-2 text-neutral-400 text-sm hover:text-neutral-600 font-medium"
+              >
+                ✕ Dismiss
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
