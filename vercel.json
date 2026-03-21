@@ -1,13 +1,9 @@
 {
   "version": 2,
   "outputDirectory": "dist",
-  "builds": [
-    { "src": "api/index.ts", "use": "@vercel/node" },
-    { "src": "api/og.ts", "use": "@vercel/node" }
-  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index.ts" },
-    { "source": "/og/:slug", "destination": "/api/og.ts" },
+    { "source": "/og/:slug", "destination": "/api/index.ts" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

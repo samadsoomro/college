@@ -89,7 +89,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Cookie,x-admin-token');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  // Handle /og/:slug — must be checked using req.url directly
+  // because vercel.json routes /og/:slug to api/index.ts
+  // URL will be: /og/gcfm or /og/dj
+  const rawUrl = req.url || '';
+  const ogMatch = rawUrl.match(/^\/og\/([^\/\?]+)/);
+
+  if (ogMatch) {
+    const ogSlug = ogMatch[1];
+
+    const { data: college } = await supabase
+      .from('colleges').select('id, name, short_name')
+      .eq('slug', ogSlug.toLowerCase()).eq('is_active', true).maybeSingle();
+
+    if (!college) return res.status(404).send('College not found');
+
+    const { data: settings } = await supabase
+      .from('site_settings')
+      .select('navbar_logo, loading_logo, institute_full_name, footer_tagline')
+      .eq('college_id', college.id).maybeSingle();
+
+    const siteUrl = `${process.env.FRONTEND_URL || 'https://college-managment-system-coral.vercel.app'}/${ogSlug}`;
+    const rawLogo = settings?.navbar_logo || settings?.loading_logo || `https://college-managment-system-coral.vercel.app/logo.png`;
+    const logoUrl = rawLogo.split('?')[0];
+    const title = settings?.institute_full_name || college.name;
+    const description = settings?.footer_tagline || `${title} - Digital Library Portal`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    return res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <meta name="description" content="${description}">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${description}">
+  <meta property="og:image" content="${logoUrl}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="${siteUrl}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${title}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${description}">
+  <meta name="twitter:image" content="${logoUrl}">
+  <script>window.location.replace('${siteUrl}');</script>
+</head>
+<body><p>Redirecting to <a href="${siteUrl}">${title}</a>...</p></body>
+</html>`);
+  }
+
   const url = new URL(req.url || '', `http://${req.headers.host}`);
+
   const path = url.pathname;
   const parts = path.split('/').filter(Boolean); // ["api", "slug", "module", ...]
   const isApi = parts[0] === 'api';
