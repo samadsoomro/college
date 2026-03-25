@@ -116,6 +116,69 @@ const AdminHome: React.FC = () => {
   // Local state for editing hero content
   const [editedContent, setEditedContent] = useState<HomeContent | null>(null);
 
+  const [faqs, setFaqs] = useState<any[]>([]);
+
+  // Load FAQs:
+  const fetchFaqs = async () => {
+    const res = await fetch(`/api/${collegeSlug}/admin/faqs`, {
+      headers: adminHeaders()
+    });
+    if (res.ok) setFaqs(await res.json());
+  };
+
+  useEffect(() => {
+    if (collegeSlug && isAdmin) {
+      fetchFaqs();
+    }
+  }, [collegeSlug, isAdmin]);
+
+  // Add blank FAQ:
+  const addFaq = () => {
+    setFaqs(prev => [...prev, {
+      id: `new-${Date.now()}`,
+      question: '',
+      answer: '',
+      display_order: prev.length + 1,
+      isNew: true
+    }]);
+  };
+
+  // Update locally:
+  const updateFaqLocal = (id: string, field: string, value: string) => {
+    setFaqs(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
+  };
+
+  // Save to DB:
+  const saveFaq = async (faq: any) => {
+    const method = faq.isNew ? 'POST' : 'PATCH';
+    const url = faq.isNew
+      ? `/api/${collegeSlug}/admin/faqs`
+      : `/api/${collegeSlug}/admin/faqs/${faq.id}`;
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...adminHeaders() },
+      body: JSON.stringify({ question: faq.question, answer: faq.answer, displayOrder: faq.display_order })
+    });
+    if (res.ok) {
+      toast({ title: '✅ FAQ saved!' });
+      fetchFaqs(); // refresh
+    }
+  };
+
+  // Delete:
+  const deleteFaq = async (id: string) => {
+    if (id.startsWith('new-')) {
+      setFaqs(prev => prev.filter(f => f.id !== id));
+      return;
+    }
+    await fetch(`/api/${collegeSlug}/admin/faqs/${id}`, {
+      method: 'DELETE',
+      headers: adminHeaders()
+    });
+    toast({ title: 'FAQ deleted' });
+    fetchFaqs();
+  };
+
   useEffect(() => {
     if (content) {
       setEditedContent(content);
@@ -448,6 +511,84 @@ const AdminHome: React.FC = () => {
               </form>
             </CardContent>
           </Card>
+
+          {/* FAQ Management Section */}
+          <div className="mt-6 border rounded-xl p-5 space-y-4 bg-card text-card-foreground shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold">❓ FAQ Section</h3>
+                <p className="text-sm text-neutral-500">
+                  These questions appear on the homepage after College Affiliations.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addFaq}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium flex items-center gap-2"
+              >
+                ➕ Add Question
+              </button>
+            </div>
+
+            {/* FAQ List */}
+            <div className="space-y-4">
+              {faqs.map((faq, index) => (
+                <div key={faq.id} className="border rounded-lg p-4 space-y-3 bg-neutral-50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded font-medium">
+                      Q{index + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => deleteFaq(faq.id)}
+                      className="text-xs text-red-500 hover:text-red-700 font-medium"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+
+                  {/* Question input */}
+                  <div>
+                    <label className="text-sm font-medium">Question</label>
+                    <input
+                      type="text"
+                      value={faq.question}
+                      onChange={e => updateFaqLocal(faq.id, 'question', e.target.value)}
+                      placeholder="Enter question..."
+                      className="w-full mt-1 border rounded-lg px-3 py-2 text-sm bg-background"
+                    />
+                  </div>
+
+                  {/* Answer textarea */}
+                  <div>
+                    <label className="text-sm font-medium">Answer</label>
+                    <textarea
+                      rows={3}
+                      value={faq.answer}
+                      onChange={e => updateFaqLocal(faq.id, 'answer', e.target.value)}
+                      placeholder="Enter answer..."
+                      className="w-full mt-1 border rounded-lg px-3 py-2 text-sm bg-background"
+                    />
+                  </div>
+
+                  {/* Save button per FAQ */}
+                  <button
+                    type="button"
+                    onClick={() => saveFaq(faq)}
+                    className="px-4 py-1.5 bg-emerald-500 text-white hover:bg-emerald-600 transition-colors rounded-lg text-xs font-medium"
+                  >
+                    💾 Save
+                  </button>
+                </div>
+              ))}
+
+              {faqs.length === 0 && (
+                <div className="text-center py-6 text-neutral-400 text-sm border-2 border-dashed rounded-lg">
+                  No FAQs yet. Click "➕ Add Question" to create your first FAQ.
+                </div>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="slider" className="mt-4">

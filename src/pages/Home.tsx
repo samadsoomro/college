@@ -185,6 +185,16 @@ const Home: React.FC = () => {
   const affiliations = homeData?.affiliations || [];
   const loading = homeLoading;
 
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [openFaq, setOpenFaq] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/${collegeSlug}/home/faqs`)
+      .then(r => r.json())
+      .then(data => setFaqs(data || []))
+      .catch(() => {});
+  }, [collegeSlug]);
+
   // Default Stats configuration to map with DB data or use as fallback
   const defaultStats = [
     {
@@ -452,6 +462,73 @@ const Home: React.FC = () => {
           )}
         </div>
       </section>
+
+      {/* FAQ Section */}
+      {faqs.length > 0 && (
+        <section className="py-16 px-4 bg-neutral-50 mb-12">
+          <div className="max-w-3xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-10">
+              <motion.h2 
+                className="text-3xl font-bold text-neutral-800"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                viewport={{ once: true }}
+              >
+                Frequently Asked Questions
+              </motion.h2>
+              <motion.p 
+                className="text-neutral-500 mt-2"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                viewport={{ once: true }}
+              >
+                Find answers to common questions about our college services.
+              </motion.p>
+            </div>
+
+            {/* FAQ Accordion */}
+            <div className="space-y-3">
+              {faqs.map((faq, idx) => (
+                <motion.div
+                  key={faq.id}
+                  className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: idx * 0.1 }}
+                  viewport={{ once: true }}
+                >
+                  {/* Question */}
+                  <button
+                    onClick={() => setOpenFaq(openFaq === faq.id ? null : faq.id)}
+                    className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-neutral-50 transition-colors"
+                  >
+                    <span className="font-semibold text-neutral-800 text-sm md:text-base">
+                      {faq.question}
+                    </span>
+                    <span className={`text-primary text-xl font-bold transition-transform ${
+                      openFaq === faq.id ? 'rotate-45' : ''
+                    }`}>
+                      +
+                    </span>
+                  </button>
+
+                  {/* Answer */}
+                  {openFaq === faq.id && (
+                    <div className="px-5 pb-4 border-t border-neutral-100">
+                      <p className="text-neutral-600 text-sm leading-relaxed pt-3">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-16 lg:py-24 gradient-primary text-white">

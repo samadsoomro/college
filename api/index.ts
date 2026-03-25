@@ -951,8 +951,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  // GET /api/:slug/home/faqs — public route
+  if (isApi && resource === 'home' && sub1 === 'faqs' && !sub2 && req.method === 'GET') {
+    const colId = await getCollegeId(slug);
+    if (!colId) return res.status(404).json({ error: 'College not found' });
+    const { data } = await supabase
+      .from('home_faqs').select('id, question, answer, display_order')
+      .eq('college_id', colId).eq('is_active', true)
+      .order('display_order', { ascending: true });
+    return res.json(data || []);
+  }
+
   // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
   if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
+
+  // GET /api/:slug/admin/faqs — admin route
+  if (isApi && resource === 'admin' && sub1 === 'faqs' && !sub2 && req.method === 'GET') {
+    const colId = await getCollegeId(slug);
+    if (!colId) return res.status(404).json({ error: 'College not found' });
+    const { data } = await supabase
+      .from('home_faqs').select('*')
+      .eq('college_id', colId)
+      .order('display_order', { ascending: true });
+    return res.json(data || []);
+  }
+
+  // POST /api/:slug/admin/faqs — add new FAQ
+  if (isApi && resource === 'admin' && sub1 === 'faqs' && !sub2 && req.method === 'POST') {
+    const colId = await getCollegeId(slug);
+    if (!colId) return res.status(404).json({ error: 'College not found' });
+    const { question, answer, displayOrder } = req.body || {};
+    if (!question || !answer) return res.status(400).json({ error: 'Question and answer required' });
+    const { data, error } = await supabase.from('home_faqs')
+      .insert({ college_id: colId, question, answer, display_order: displayOrder || 0, is_active: true })
+      .select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  // PATCH /api/:slug/admin/faqs/:id — update FAQ
+  if (isApi && resource === 'admin' && sub1 === 'faqs' && sub2 && !sub3 && req.method === 'PATCH') {
+    const colId = await getCollegeId(slug);
+    if (!colId) return res.status(404).json({ error: 'College not found' });
+    const { question, answer } = req.body || {};
+    const { data, error } = await supabase.from('home_faqs')
+      .update({ question, answer, updated_at: new Date().toISOString() })
+      .eq('id', sub2).eq('college_id', colId)
+      .select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  // DELETE /api/:slug/admin/faqs/:id — delete FAQ
+  if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'faqs' && sub2 && !sub3) {
+    const colId = await getCollegeId(slug);
+    if (!colId) return res.status(404).json({ error: 'College not found' });
+    await supabase.from('home_faqs').delete().eq('id', sub2).eq('college_id', colId);
+    return res.json({ success: true });
+  }
 
   // 1. Admin Universal Upload (Cloudinary)
   if (parts[2] === 'admin' && parts[3] === 'upload' && req.method === 'POST') {
