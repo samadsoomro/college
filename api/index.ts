@@ -565,6 +565,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ── PUBLIC DATA ROUTES ────────────────────────────────────────────────────
   if (req.method === 'GET' && resource !== 'admin') {
+    // 1a. Home FAQs (must be checked before generic home block)
+    if (resource === 'home' && sub1 === 'faqs') {
+      const { data } = await supabase
+        .from('home_faqs').select('id, question, answer, display_order')
+        .eq('college_id', colId).eq('is_active', true)
+        .order('display_order', { ascending: true });
+      return res.json(data || []);
+    }
+
     // 1. Full Home Data (content, slider, stats, affiliations)
     if (resource === 'home') {
       const [{ data: c }, { data: sl }, { data: st }, { data: af }] = await Promise.all([
