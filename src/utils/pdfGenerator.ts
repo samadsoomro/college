@@ -120,8 +120,8 @@ export const generateLibraryCardPDF = async (data: PDFData, toast: any) => {
     doc.setTextColor(...whiteColor);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.text("Government of Sindh", pageW / 2, topY + 8, { align: "center" });
-    doc.text("College Education Department", pageW / 2, topY + 12, { align: "center" });
+    doc.text(settings?.cardAuthorityLine1 || "Government of Sindh", pageW / 2, topY + 8, { align: "center" });
+    doc.text(settings?.cardAuthorityLine2 || "College Education Department", pageW / 2, topY + 12, { align: "center" });
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);

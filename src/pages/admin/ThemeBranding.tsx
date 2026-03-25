@@ -409,6 +409,14 @@ const ThemeBranding: React.FC = () => {
             <SectionHeader icon={CreditCard} title="College Card Settings" />
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Card Authority Line 1</label>
+                <Input name="cardAuthorityLine1" value={formData.cardAuthorityLine1 || ''} onChange={handleInputChange} placeholder="e.g. Government of Sindh" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Card Authority Line 2</label>
+                <Input name="cardAuthorityLine2" value={formData.cardAuthorityLine2 || ''} onChange={handleInputChange} placeholder="e.g. College Education Department" />
+              </div>
+              <div className="space-y-2">
                 <label className="text-xs font-bold uppercase text-muted-foreground">Card Header Text</label>
                 <Input name="cardHeaderText" value={formData.cardHeaderText || ''} onChange={handleInputChange} />
               </div>
