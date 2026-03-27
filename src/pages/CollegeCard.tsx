@@ -306,7 +306,7 @@ const CollegeCard = () => {
       toast({
         title: "Application Submitted!",
         description:
-          "Your college card application has been submitted successfully.",
+          `Your ${settings?.termCardMenu || 'College Card'} application has been submitted successfully.`,
       });
     } catch (error: any) {
       console.error("Error submitting application:", error);
@@ -388,7 +388,7 @@ const CollegeCard = () => {
               </div>
               <h3 className="text-lg font-bold text-neutral-800 dark:text-neutral-100">Application Submitted!</h3>
               <p className="text-sm text-neutral-500">
-                Your college card PDF is ready for download.
+                Your {(settings?.termCardMenu || 'College Card').toLowerCase()} PDF is ready for download.
               </p>
             </div>
 
@@ -398,7 +398,7 @@ const CollegeCard = () => {
                 {submissionResult.cardNumber}
               </p>
               <p className="text-[10px] text-neutral-400 font-bold uppercase mt-1 tracking-wide">
-                College Card ID — Use this to login
+                {settings?.termCardMenu || 'College Card'} ID — Use this to login
               </p>
               <div className="mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                 <p className="text-sm text-neutral-600 dark:text-neutral-400">
@@ -426,7 +426,7 @@ const CollegeCard = () => {
                 className="w-full py-6 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-primary/10"
               >
                 <Download className="w-5 h-5" />
-                Download College Card PDF
+                Download {settings?.termCardMenu || 'College Card'} PDF
               </Button>
               
               <Link
@@ -452,10 +452,10 @@ const CollegeCard = () => {
           className="text-center mb-12"
         >
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 md:whitespace-nowrap">
-            Get Your College Card
+            Get Your {settings?.termCardMenu || 'College Card'}
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            A college card is your key to unlimited learning. Apply online and
+            A {(settings?.termCardMenu || 'College Card').toLowerCase()} is your key to unlimited learning. Apply online and
             start exploring today.
           </p>
         </motion.div>
@@ -470,7 +470,7 @@ const CollegeCard = () => {
             Card Benefits
           </h2>
           <p className="text-muted-foreground text-center mb-8">
-            Everything included with your free college card:
+            Everything included with your free {(settings?.termCardMenu || 'College Card').toLowerCase()}:
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {benefits.map((benefit, index) => (
