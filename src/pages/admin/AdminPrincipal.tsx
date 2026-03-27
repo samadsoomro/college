@@ -64,7 +64,7 @@ const AdminPrincipal: React.FC = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Principal Management</h1>
+      <h1 className="text-3xl font-bold">{settings?.termPrincipal || 'Principal'} Management</h1>
       <Card>
         <CardHeader><CardTitle>Update Details</CardTitle></CardHeader>
         <CardContent>

@@ -1272,8 +1272,8 @@ export default function AdminDashboard() {
   ];
 
   const aboutModules = [
-    { id: "history", label: "History of College", icon: History, count: 0 },
-    { id: "principal", label: "Principal", icon: User, count: 0 },
+    { id: "history", label: `${settings?.termInstitution || 'College'} History`, icon: History, count: 0 },
+    { id: "principal", label: settings?.termPrincipal || "Principal", icon: User, count: 0 },
     { id: "faculty", label: "Faculty", icon: Users, count: 0 },
   ];
 

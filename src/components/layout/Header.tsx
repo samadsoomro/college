@@ -59,12 +59,12 @@ const Header: React.FC = () => {
     { path: `/${collegeSlug}/notes`, label: "Notes" },
     { path: `/${collegeSlug}/events`, label: "Events" },
     { path: `/${collegeSlug}/notifications`, label: "Notifications" },
-    { path: `/${collegeSlug}/college-card`, label: "College Card" },
+    { path: `/${collegeSlug}/college-card`, label: settings?.termCardMenu || "College Card" },
     {
       label: "About",
       children: [
-        { path: `/${collegeSlug}/history`, label: "History of College" },
-        { path: `/${collegeSlug}/principal-message`, label: "Principal’s Message" },
+        { path: `/${collegeSlug}/history`, label: `${settings?.termInstitution || 'College'} History` },
+        { path: `/${collegeSlug}/principal-message`, label: `${settings?.termPrincipal || 'Principal'}’s Message` },
         { path: `/${collegeSlug}/faculty`, label: "Faculty & Staff" },
       ],
     },

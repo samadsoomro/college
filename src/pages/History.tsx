@@ -108,10 +108,10 @@ const History: React.FC = () => {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
         >
-          <div className="text-center space-y-4">
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                {header?.title || `History of ${settings?.instituteShortName || 'College'}`}
-              </h1>
+          <div className="text-center mb-16 space-y-4">
+            <h1 className="text-4xl md:text-6xl font-black bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent tracking-tight">
+              {header?.title || `${settings?.termInstitution || 'College'} History`}
+            </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               {header?.subtitle ||
                 "A legacy of academic excellence spanning over seven decades."}

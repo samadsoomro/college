@@ -190,6 +190,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       navbarLogo: s?.navbar_logo, loadingLogo: s?.loading_logo,
       footerTitle: s?.footer_title, footerTagline: s?.footer_tagline,
       contactAddress: s?.contact_address, contactPhone: s?.contact_phone, contactEmail: s?.contact_email,
+      termCardMenu: s?.term_card_menu || 'College Card',
+      termInstitution: s?.term_institution || 'College',
+      termPrincipal: s?.term_principal || 'Principal',
       officeHours: s?.office_hours || 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed'
     });
   }
@@ -613,6 +616,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rbWatermarkText: d.rb_watermark_text, rbWatermarkOpacity: d.rb_watermark_opacity, rbDisclaimerText: d.rb_disclaimer_text,
         rbWatermarkEnabled: d.rb_watermark_enabled, easypaisaNumber: d.easypaisa_number, bankAccountNumber: d.bank_account_number,
         accountTitle: d.account_title,
+        termCardMenu: d.term_card_menu || 'College Card',
+        termInstitution: d.term_institution || 'College',
+        termPrincipal: d.term_principal || 'Principal',
         officeHours: d.office_hours || 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed'
       });
     }
@@ -1241,6 +1247,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       easypaisaNumber: 'easypaisa_number', bankAccountNumber: 'bank_account_number', bankName: 'bank_name',
       bankBranch: 'bank_branch', accountTitle: 'account_title', creditsText: 'credits_text',
       contributorsText: 'contributors_text',
+      termCardMenu: 'term_card_menu',
+      termInstitution: 'term_institution',
+      termPrincipal: 'term_principal',
       officeHours: 'office_hours'
     };
     for (const [k, v] of Object.entries(req.body || {})) {
@@ -1295,6 +1304,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       rbWatermarkText: updated.rb_watermark_text, rbWatermarkOpacity: updated.rb_watermark_opacity, rbDisclaimerText: updated.rb_disclaimer_text,
       rbWatermarkEnabled: updated.rb_watermark_enabled, easypaisaNumber: updated.easypaisa_number, bankAccountNumber: updated.bank_account_number,
       bankName: updated.bank_name, bankBranch: updated.bank_branch, accountTitle: updated.account_title,
+      termCardMenu: updated.term_card_menu || 'College Card',
+      termInstitution: updated.term_institution || 'College',
+      termPrincipal: updated.term_principal || 'Principal',
       officeHours: updated.office_hours || 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed'
     });
   }

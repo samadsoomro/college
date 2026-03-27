@@ -41,6 +41,9 @@ interface SiteSettings {
   rbWatermarkOpacity: number;
   rbDisclaimerText: string;
   rbWatermarkEnabled: boolean;
+  termCardMenu: string;
+  termInstitution: string;
+  termPrincipal: string;
   // Donation Details
   easypaisaNumber: string;
   bankAccountNumber: string;

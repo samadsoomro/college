@@ -82,7 +82,7 @@ const PrincipalMessage: React.FC = () => {
         >
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Principal's Message
+              {settings?.termPrincipal || 'Principal'}'s Message
             </h1>
           </div>
 
@@ -107,7 +107,7 @@ const PrincipalMessage: React.FC = () => {
                     {principal.name}
                   </h3>
                   <p className="text-sm text-primary font-medium mt-1">
-                    Principal, {settings?.instituteShortName || 'College'}
+                    {settings?.termPrincipal || 'Principal'}, {settings?.instituteShortName || 'College'}
                   </p>
                 </div>
 

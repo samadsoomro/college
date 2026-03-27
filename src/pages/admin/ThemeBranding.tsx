@@ -12,7 +12,7 @@ import { uploadToSupabase } from "@/utils/upload";
 import { 
   Palette, Save, Upload, RefreshCcw, Settings, Share2, 
   MapPin, CreditCard, BookOpen, Heart, Smartphone, Building, Hash, User, Banknote, 
-  Plus, Trash2 
+  Plus, Trash2, Type, Tag
 } from "lucide-react";
 
 const ThemeBranding: React.FC = () => {
@@ -627,6 +627,39 @@ const ThemeBranding: React.FC = () => {
               <div className="md:col-span-2 space-y-2">
                 <label className="text-xs font-bold uppercase text-muted-foreground">Disclaimer Text</label>
                 <Textarea name="rbDisclaimerText" value={formData.rbDisclaimerText || ''} onChange={handleInputChange} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 6. Terminology & Labels */}
+        <Card className="shadow-md">
+          <CardContent className="pt-6">
+            <SectionHeader icon={Type} title="🚩 Terminology & Labels" />
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Institution Type (e.g. College, School, University)</label>
+                <div className="flex items-center gap-2">
+                  <Building className="text-muted-foreground" size={16}/>
+                  <Input name="termInstitution" value={formData.termInstitution || 'College'} onChange={handleInputChange} placeholder="e.g. College" />
+                </div>
+                <p className="text-[10px] text-muted-foreground">This label appears in 'History', 'About' sections and page titles.</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Principal Title (e.g. Principal, Headmaster, Director)</label>
+                <div className="flex items-center gap-2">
+                  <User className="text-muted-foreground" size={16}/>
+                  <Input name="termPrincipal" value={formData.termPrincipal || 'Principal'} onChange={handleInputChange} placeholder="e.g. Principal" />
+                </div>
+                <p className="text-[10px] text-muted-foreground">This label appears on the menu and the message page.</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase text-muted-foreground">Card Menu Name (e.g. College Card, Library Card, ID Card)</label>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="text-muted-foreground" size={16}/>
+                  <Input name="termCardMenu" value={formData.termCardMenu || 'College Card'} onChange={handleInputChange} placeholder="e.g. College Card" />
+                </div>
+                <p className="text-[10px] text-muted-foreground">The text shown for the ID card section across the site.</p>
               </div>
             </div>
           </CardContent>

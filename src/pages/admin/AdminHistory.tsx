@@ -35,10 +35,12 @@ import {
 } from "@/components/ui/select";
 import { useAuth, adminHeaders } from "@/contexts/AuthContext";
 import { uploadToSupabase } from "@/utils/upload";
+import { useCollege } from "@/contexts/CollegeContext";
 
 const AdminHistory: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const { toast } = useToast();
+  const { settings } = useCollege();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("header");
   const { isAdmin } = useAuth();
@@ -251,7 +253,7 @@ const AdminHistory: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            History of College
+            {settings?.termInstitution || 'College'} History
           </h2>
           <p className="text-muted-foreground">
             Manage the content and media for the institution's history page.
@@ -293,7 +295,7 @@ const AdminHistory: React.FC = () => {
                     onChange={(e) =>
                       setHeader({ ...header, title: e.target.value })
                     }
-                    placeholder="e.g. History of GCFM"
+                    placeholder={`e.g. History of ${settings?.instituteShortName || 'Institution'}`}
                   />
                 </div>
                 <div className="space-y-2">
