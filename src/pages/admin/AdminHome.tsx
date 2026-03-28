@@ -518,7 +518,7 @@ const AdminHome: React.FC = () => {
               <div>
                 <h3 className="text-lg font-bold">❓ FAQ Section</h3>
                 <p className="text-sm text-neutral-500">
-                  These questions appear on the homepage after College Affiliations.
+                  These questions appear on the homepage after Affiliations & Authorities.
                 </p>
               </div>
               <button

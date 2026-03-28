@@ -22,7 +22,9 @@ const CollegeLayoutContent: React.FC = () => {
       <ScrollToTop />
       <Header />
       <main className="flex-1">
-        <Outlet />
+        <div key={location.pathname} style={{ animation: 'fadeIn 0.4s ease forwards' }}>
+          <Outlet />
+        </div>
       </main>
       {!isAdminRoute && <Footer />}
       {!isAdminRoute && <BackToTop />}

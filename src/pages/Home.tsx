@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useInView } from 'react-intersection-observer';
+import { useCountUp } from '@/hooks/useCountUp';
+import { AnimatedSection } from '@/components/AnimatedSection';
 import { useParams } from "react-router-dom";
 import Hero from "@/components/layout/Hero";
 import HomeSlider from "@/components/home/HomeSlider";
@@ -108,17 +111,13 @@ const AffiliationsLayout: React.FC<{ affiliations: Affiliation[] }> = ({
         <div key={blockIdx} className="w-full">
           {block.type === "long" ? (
             <div className="flex justify-center">
-              {block.items.map((aff) => (
-                <motion.a
-                  key={aff.id}
+              {block.items.map((aff, index) => (
+                <AnimatedSection key={aff.id} delay={index * 80}>
+                <a
                   href={aff.link || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group block w-full max-w-4xl hover:opacity-95 transition-opacity"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6 }}
-                  viewport={{ once: true }}
                 >
                   <div className="bg-card p-4 rounded-xl shadow-sm border border-border/50 group-hover:shadow-md transition-shadow">
                     <img
@@ -128,22 +127,19 @@ const AffiliationsLayout: React.FC<{ affiliations: Affiliation[] }> = ({
                       className="w-full h-auto object-contain transition-transform group-hover:scale-[1.01]"
                     />
                   </div>
-                </motion.a>
+                </a>
+                </AnimatedSection>
               ))}
             </div>
           ) : (
             <div className="flex flex-wrap justify-center gap-12 md:gap-16 lg:gap-24 items-center">
               {block.items.map((aff, itemIdx) => (
-                <motion.a
-                  key={aff.id}
+                <AnimatedSection key={aff.id} delay={itemIdx * 80}>
+                <a
                   href={aff.link || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group flex flex-col items-center justify-center hover:opacity-90 transition-opacity w-32 md:w-40 lg:w-48"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: itemIdx * 0.1 }}
-                  viewport={{ once: true }}
                 >
                   <div className="relative w-24 h-24 md:w-32 md:h-32 flex items-center justify-center bg-card rounded-full shadow-sm border border-border/50 group-hover:shadow-md transition-all p-4">
                     <img
@@ -156,13 +152,23 @@ const AffiliationsLayout: React.FC<{ affiliations: Affiliation[] }> = ({
                   <span className="mt-4 text-sm font-medium text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity text-center line-clamp-1">
                     {aff.name}
                   </span>
-                </motion.a>
+                </a>
+                </AnimatedSection>
               ))}
             </div>
           )}
         </div>
       ))}
     </div>
+  );
+};
+
+const AnimatedStat = ({ value, suffix, isVisible }: { value: number; suffix: string; isVisible: boolean }) => {
+  const count = useCountUp(value, 2000, isVisible);
+  return (
+    <span className="text-3xl lg:text-4xl font-bold text-primary mb-1">
+      {count.toLocaleString()}{suffix}
+    </span>
   );
 };
 
@@ -187,6 +193,11 @@ const Home: React.FC = () => {
 
   const [faqs, setFaqs] = useState<any[]>([]);
   const [openFaq, setOpenFaq] = useState<string | null>(null);
+
+  const { ref: statsRef, inView: statsVisible } = useInView({
+    threshold: 0.3,
+    triggerOnce: true
+  });
 
   useEffect(() => {
     fetch(`/api/${collegeSlug}/home/faqs`)
@@ -354,9 +365,13 @@ const Home: React.FC = () => {
 
       {/* Stats Section */}
       <section className="py-16 lg:py-24 bg-background">
-        <div className="container px-4">
+        <div className="container px-4" ref={statsRef}>
           <div className="flex flex-wrap justify-center gap-6 lg:gap-8">
-            {displayStats.map((stat, index) => (
+            {displayStats.map((stat, index) => {
+              const numMatch = stat.number.match(/(\d+)(.*)/);
+              const value = numMatch ? parseInt(numMatch[1], 10) : parseInt(stat.number, 10) || 0;
+              const suffix = numMatch ? numMatch[2] : '';
+              return (
               <motion.div
                 key={index}
                 className="flex flex-col items-center text-center p-6 lg:p-8 bg-secondary rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all w-[calc(50%-1.5rem)] lg:w-[calc(25%-2rem)] min-w-[160px] max-w-[280px]"
@@ -378,14 +393,12 @@ const Home: React.FC = () => {
                     stat.icon
                   )}
                 </div>
-                <span className="text-3xl lg:text-4xl font-bold text-primary mb-1">
-                  {stat.number}
-                </span>
+                <AnimatedStat value={value} suffix={suffix} isVisible={statsVisible} />
                 <span className="text-sm lg:text-base text-muted-foreground">
                   {stat.label}
                 </span>
               </motion.div>
-            ))}
+            )})}
           </div>
         </div>
       </section>
@@ -394,46 +407,39 @@ const Home: React.FC = () => {
       <section className="py-16 lg:py-24 bg-secondary">
         <div className="container">
           <div className="text-center max-w-2xl mx-auto mb-12 lg:mb-16">
-            <motion.h2
+            <AnimatedSection>
+            <h2
               className="text-3xl lg:text-4xl font-bold text-foreground mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
             >
               {content.featuresHeading ||
                 `Why Choose ${settings?.instituteShortName || 'College'}?`}
-            </motion.h2>
-            <motion.p
+            </h2>
+            </AnimatedSection>
+            <AnimatedSection delay={100}>
+            <p
               className="text-lg text-muted-foreground"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              viewport={{ once: true }}
             >
               {content.featuresSubheading ||
                 "Discover the features that make our library the perfect learning companion"}
-            </motion.p>
+            </p>
+            </AnimatedSection>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
             {features.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                className="bg-card p-6 lg:p-8 rounded-2xl border border-border shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-primary/20 transition-all"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <div className="text-4xl mb-4">{feature.emoji}</div>
-                <h3 className="text-xl font-semibold text-foreground mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
-              </motion.div>
+              <AnimatedSection key={feature.title} delay={index * 100}>
+                <div
+                  className="bg-card p-6 lg:p-8 rounded-2xl border border-border shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-primary/20 transition-all h-full"
+                >
+                  <div className="text-4xl mb-4">{feature.emoji}</div>
+                  <h3 className="text-xl font-semibold text-foreground mb-3">
+                    {feature.title}
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                </div>
+              </AnimatedSection>
             ))}
           </div>
         </div>
@@ -443,16 +449,14 @@ const Home: React.FC = () => {
       <section className="py-16 lg:py-24 bg-background">
         <div className="container">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <motion.h2
-              className="text-3xl lg:text-4xl font-bold text-foreground mb-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
-            >
-              {content.affiliationsHeading ||
-                "College Affiliations & Authorities"}
-            </motion.h2>
+            <AnimatedSection delay={100}>
+              <h2
+                className="text-3xl lg:text-4xl font-bold text-foreground mb-4"
+              >
+                {content.affiliationsHeading ||
+                  "Affiliations & Authorities"}
+              </h2>
+            </AnimatedSection>
           </div>
 
           {affiliations.length > 0 && (
@@ -469,61 +473,54 @@ const Home: React.FC = () => {
           <div className="max-w-3xl mx-auto">
             {/* Header */}
             <div className="text-center mb-10">
-              <motion.h2 
-                className="text-3xl font-bold text-foreground"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
-              >
-                Frequently Asked Questions
-              </motion.h2>
-              <motion.p 
-                className="text-muted-foreground mt-2"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                viewport={{ once: true }}
-              >
-                Find answers to common questions about our college services.
-              </motion.p>
+              <AnimatedSection delay={100}>
+                <h2 
+                  className="text-3xl font-bold text-foreground"
+                >
+                  Frequently Asked Questions
+                </h2>
+              </AnimatedSection>
+              <AnimatedSection delay={200}>
+                <p 
+                  className="text-muted-foreground mt-2"
+                >
+                  Find answers to common questions about our college services.
+                </p>
+              </AnimatedSection>
             </div>
 
             {/* FAQ Accordion */}
             <div className="space-y-3">
               {faqs.map((faq, idx) => (
-                <motion.div
-                  key={faq.id}
-                  className="bg-card rounded-xl border border-border overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: idx * 0.1 }}
-                  viewport={{ once: true }}
-                >
-                  {/* Question */}
-                  <button
-                    onClick={() => setOpenFaq(openFaq === faq.id ? null : faq.id)}
-                    className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-secondary/50 transition-colors"
+                <AnimatedSection key={faq.id} delay={idx * 80}>
+                  <div
+                    className="bg-card rounded-xl border border-border overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                   >
-                    <span className="font-semibold text-foreground text-sm md:text-base">
-                      {faq.question}
-                    </span>
-                    <span className={`text-primary text-xl font-bold transition-transform ${
-                      openFaq === faq.id ? 'rotate-45' : ''
-                    }`}>
-                      +
-                    </span>
-                  </button>
+                    {/* Question */}
+                    <button
+                      onClick={() => setOpenFaq(openFaq === faq.id ? null : faq.id)}
+                      className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-secondary/50 transition-colors"
+                    >
+                      <span className="font-semibold text-foreground text-sm md:text-base">
+                        {faq.question}
+                      </span>
+                      <span className={`text-primary text-xl font-bold transition-transform ${
+                        openFaq === faq.id ? 'rotate-45' : ''
+                      }`}>
+                        +
+                      </span>
+                    </button>
 
-                  {/* Answer */}
-                  {openFaq === faq.id && (
-                    <div className="px-5 pb-4 border-t border-border">
-                      <p className="text-muted-foreground text-sm leading-relaxed pt-3">
-                        {faq.answer}
-                      </p>
-                    </div>
-                  )}
-                </motion.div>
+                    {/* Answer */}
+                    {openFaq === faq.id && (
+                      <div className="px-5 pb-4 border-t border-border">
+                        <p className="text-muted-foreground text-sm leading-relaxed pt-3">
+                          {faq.answer}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </AnimatedSection>
               ))}
             </div>
           </div>
@@ -533,13 +530,7 @@ const Home: React.FC = () => {
       {/* CTA Section */}
       <section className="py-16 lg:py-24 gradient-primary text-white">
         <div className="container">
-          <motion.div
-            className="text-center max-w-3xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-          >
+          <AnimatedSection className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl lg:text-4xl font-bold mb-4">
               {content.ctaHeading || "Ready to Start Learning?"}
             </h2>
@@ -561,7 +552,7 @@ const Home: React.FC = () => {
                 Browse Library
               </a>
             </div>
-          </motion.div>
+          </AnimatedSection>
         </div>
       </section>
     </motion.div>

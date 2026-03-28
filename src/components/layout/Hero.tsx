@@ -227,11 +227,22 @@ const Hero: React.FC<HeroProps> = ({ heading, subheading, overlayText }) => {
               </span>
             </motion.div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight hover:scale-[1.02] transition-transform duration-500">
+            <h1
+              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight hover:scale-[1.02] transition-transform duration-500"
+              style={{
+                animation: 'slideInLeft 0.8s ease forwards'
+              }}
+            >
               <span className="text-gradient">{heading || defaultHeading}</span>
             </h1>
 
-            <p className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-xl hover:translate-y-[-4px] transition-transform duration-300">
+            <p
+              className="text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-xl hover:translate-y-[-4px] transition-transform duration-300"
+              style={{
+                animation: 'slideInRight 0.8s ease 0.2s forwards',
+                opacity: 0
+              }}
+            >
               {subheading || defaultSubheading}
             </p>
 

@@ -247,6 +247,18 @@ const Books = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="book-card rounded-xl border border-transparent bg-white cursor-pointer"
+                    style={{
+                      transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+                    }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.transform = 'translateY(-6px)';
+                      (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 30px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                      (e.currentTarget as HTMLElement).style.boxShadow = '';
+                    }}
                   >
                     <BookCard
                       book={{
