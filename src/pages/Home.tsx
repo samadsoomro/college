@@ -445,7 +445,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* College Affiliations Section */}
+      {/* Affiliations Section */}
       <section className="py-16 lg:py-24 bg-background">
         <div className="container">
           <div className="text-center max-w-3xl mx-auto mb-12">
@@ -453,8 +453,7 @@ const Home: React.FC = () => {
               <h2
                 className="text-3xl lg:text-4xl font-bold text-foreground mb-4"
               >
-                {content.affiliationsHeading ||
-                  "Affiliations & Authorities"}
+                Affiliations & Authorities
               </h2>
             </AnimatedSection>
           </div>
