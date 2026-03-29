@@ -61,7 +61,7 @@ const Events: React.FC = () => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
           >
-            {settings.eventsHeading || "College Events"}
+            {settings?.eventsHeading || 'Events'}
           </motion.h1>
           <motion.p
             className="text-lg text-muted-foreground max-w-2xl mx-auto"
@@ -69,7 +69,7 @@ const Events: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1 }}
           >
-            {settings.eventsDescription || "Stay updated with the latest happenings, seminars, and book fairs at our library."}
+            {settings?.eventsDescription || 'Stay updated with upcoming college events'}
           </motion.p>
         </div>
       </div>

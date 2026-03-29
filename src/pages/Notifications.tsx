@@ -130,7 +130,7 @@ const Notifications: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
           >
             <Bell className="w-10 h-10 lg:w-12 lg:h-12 text-pakistan-green" />
-            {settings.notificationsHeading || "Notifications"}
+            {settings?.notificationsHeading || 'Notifications'}
           </motion.h1>
           <motion.p
             className="text-xl text-muted-foreground max-w-2xl mx-auto font-medium"
@@ -138,7 +138,7 @@ const Notifications: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1 }}
           >
-            {settings.notificationsDescription || "Official announcements, news, and updates from College"}
+            {settings?.notificationsDescription || 'Official announcements and updates'}
           </motion.p>
         </div>
       </div>

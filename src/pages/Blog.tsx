@@ -73,7 +73,7 @@ const Blog: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             className="text-4xl md:text-6xl font-black tracking-tight mb-4"
           >
-            {settings.blogHeading || 'College News & Updates'}
+            {settings?.blogHeading || 'College News & Updates'}
           </motion.h1>
           <motion.p
             initial={{ y: 20, opacity: 0 }}
@@ -81,7 +81,7 @@ const Blog: React.FC = () => {
             transition={{ delay: 0.2 }}
             className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto font-medium"
           >
-            {settings.blogDescription || 'Stay informed with the latest academic updates, announcements, events, and educational insights from the college community.'}
+            {settings?.blogDescription || 'Stay informed with the latest academic updates'}
           </motion.p>
         </div>
       </div>

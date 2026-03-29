@@ -156,7 +156,7 @@ const Contact = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            {settings?.contactHeading || "Contact Us"}
+            {settings?.contactHeading || 'Contact Us'}
           </motion.h1>
           <motion.p
             className="text-lg text-white/90"
@@ -164,7 +164,7 @@ const Contact = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            {settings?.contactDescription || "Get in touch with us for official information, student support, and general inquiries."}
+            {settings?.contactDescription || 'Get in touch with us for official information and student support'}
           </motion.p>
         </div>
       </div>

@@ -266,7 +266,7 @@ const RareBooks: React.FC = () => {
       <AnimatePresence>
         {selectedBook && (
           <motion.div
-            className="fixed inset-0 z-[70] flex items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-md"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-md"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -280,7 +280,7 @@ const RareBooks: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Toolbar - Optimized for Mobile */}
-              <div className="p-3 border-b flex items-center justify-between bg-secondary shrink-0 gap-2">
+              <div className="p-3 border-b flex items-center justify-between bg-secondary shrink-0 gap-2 sticky top-0 z-[101]">
                 <div className="flex items-center gap-2 overflow-hidden flex-1">
                   <Button
                     variant="ghost"
