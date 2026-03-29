@@ -662,6 +662,90 @@ const ThemeBranding: React.FC = () => {
                 <p className="text-[10px] text-muted-foreground">The text shown for the ID card section across the site.</p>
               </div>
             </div>
+
+            <div className="mt-8 pt-6 border-t">
+              <h3 className="text-sm font-bold uppercase text-primary mb-4 flex items-center gap-2">
+                <Type size={16} /> Page Headings & Descriptions
+              </h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Blog Page */}
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="text-xs font-black uppercase text-secondary-foreground flex items-center gap-2">
+                    <BookOpen size={14} /> Blog Page
+                  </h4>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Heading</label>
+                    <Input name="blogHeading" value={formData.blogHeading || ''} onChange={handleInputChange} placeholder="College News & Updates" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Description Line</label>
+                    <Textarea name="blogDescription" value={formData.blogDescription || ''} onChange={handleInputChange} placeholder="Stay informed with the latest academic updates..." rows={2} className="text-sm" />
+                  </div>
+                </div>
+
+                {/* Notes Page */}
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="text-xs font-black uppercase text-secondary-foreground flex items-center gap-2">
+                    <Tag size={14} /> Notes Page
+                  </h4>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Heading</label>
+                    <Input name="notesHeading" value={formData.notesHeading || ''} onChange={handleInputChange} placeholder="Notes & Study Materials" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Description Line</label>
+                    <Textarea name="notesDescription" value={formData.notesDescription || ''} onChange={handleInputChange} placeholder="Download course notes, syllabus..." rows={2} className="text-sm" />
+                  </div>
+                </div>
+
+                {/* Events Page */}
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="text-xs font-black uppercase text-secondary-foreground flex items-center gap-2">
+                    <Palette size={14} /> Events Page
+                  </h4>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Heading</label>
+                    <Input name="eventsHeading" value={formData.eventsHeading || ''} onChange={handleInputChange} placeholder="College Events" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Description Line</label>
+                    <Textarea name="eventsDescription" value={formData.eventsDescription || ''} onChange={handleInputChange} placeholder="Stay updated with the latest happenings..." rows={2} className="text-sm" />
+                  </div>
+                </div>
+
+                {/* Notifications Page */}
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="text-xs font-black uppercase text-secondary-foreground flex items-center gap-2">
+                    <Share2 size={14} /> Notifications Page
+                  </h4>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Heading</label>
+                    <Input name="notificationsHeading" value={formData.notificationsHeading || ''} onChange={handleInputChange} placeholder="Notifications" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Description Line</label>
+                    <Textarea name="notificationsDescription" value={formData.notificationsDescription || ''} onChange={handleInputChange} placeholder="Official announcements, news..." rows={2} className="text-sm" />
+                  </div>
+                </div>
+
+                {/* Contact Page */}
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30 md:col-span-2">
+                  <h4 className="text-xs font-black uppercase text-secondary-foreground flex items-center gap-2">
+                    <MapPin size={14} /> Contact Page
+                  </h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Heading</label>
+                      <Input name="contactHeading" value={formData.contactHeading || ''} onChange={handleInputChange} placeholder="Contact Us" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground">Description Line</label>
+                      <Textarea name="contactDescription" value={formData.contactDescription || ''} onChange={handleInputChange} placeholder="Get in touch with us..." rows={2} className="text-sm" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

@@ -106,10 +106,10 @@ const Notes: React.FC = () => {
       <div className="py-12 lg:py-16 bg-gradient-to-br from-secondary to-background text-center">
         <div className="container">
           <motion.h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-4" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-            Notes & Study Materials
+            {settings.notesHeading || "Notes & Study Materials"}
           </motion.h1>
-          <motion.p className="text-lg text-muted-foreground max-w-xl mx-auto" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
-            Download course notes, syllabus, and study guides organized by class and subject
+          <motion.p className="text-lg text-muted-foreground max-w-2xl mx-auto" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
+            {settings.notesDescription || "Download course notes, syllabus, and study guides organized by class and subject"}
           </motion.p>
         </div>
       </div>

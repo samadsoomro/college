@@ -62,7 +62,7 @@ const Blog: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-neutral-50"
+      className="min-h-screen bg-background"
     >
       {/* Header Section */}
       <div className="bg-primary text-white pt-28 pb-20 relative overflow-hidden">
@@ -73,7 +73,7 @@ const Blog: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             className="text-4xl md:text-6xl font-black tracking-tight mb-4"
           >
-            College News & Updates
+            {settings.blogHeading || 'College News & Updates'}
           </motion.h1>
           <motion.p
             initial={{ y: 20, opacity: 0 }}
@@ -81,8 +81,7 @@ const Blog: React.FC = () => {
             transition={{ delay: 0.2 }}
             className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto font-medium"
           >
-            Stay informed with the latest academic updates, announcements,
-            events, and educational insights from the college community.
+            {settings.blogDescription || 'Stay informed with the latest academic updates, announcements, events, and educational insights from the college community.'}
           </motion.p>
         </div>
       </div>
@@ -106,10 +105,10 @@ const Blog: React.FC = () => {
               <div className="w-24 h-24 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-6">
                 <BookOpen size={48} className="text-primary/30" />
               </div>
-              <h3 className="text-2xl font-bold text-slate-800 mb-2">
+              <h3 className="text-2xl font-bold text-foreground mb-2">
                 No News or Updates
               </h3>
-              <p className="text-slate-500 max-w-sm mx-auto">
+              <p className="text-muted-foreground max-w-sm mx-auto">
                 Check back soon for latest announcements and educational insights from the college community.
               </p>
             </div>
@@ -126,9 +125,9 @@ const Blog: React.FC = () => {
                     to={`/${collegeSlug}/blog/${post.slug}`}
                     className="group block h-full"
                   >
-                    <Card className="h-full border-none shadow-sm hover:shadow-2xl transition-all duration-300 rounded-3xl overflow-hidden flex flex-col hover:-translate-y-2 bg-white ring-1 ring-slate-200/50">
+                    <Card className="h-full border-none shadow-sm hover:shadow-2xl transition-all duration-300 rounded-3xl overflow-hidden flex flex-col hover:-translate-y-2 bg-card ring-1 ring-border">
                       {/* Image */}
-                      <div className="h-56 relative overflow-hidden bg-slate-100">
+                      <div className="h-56 relative overflow-hidden bg-muted">
                         {post.featuredImage ? (
                           <img
                             src={post.featuredImage}
@@ -136,7 +135,7 @@ const Blog: React.FC = () => {
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                           />
                         ) : (
-                          <div className="flex items-center justify-center h-full text-slate-300">
+                          <div className="flex items-center justify-center h-full text-muted-foreground/40">
                             <BookOpen size={48} />
                           </div>
                         )}
@@ -150,7 +149,7 @@ const Blog: React.FC = () => {
 
                       {/* Content */}
                       <div className="p-6 flex flex-col flex-1">
-                        <div className="flex items-center text-xs font-bold text-slate-500 mb-3 gap-2">
+                        <div className="flex items-center text-xs font-bold text-muted-foreground mb-3 gap-2">
                           <Calendar size={14} className="text-primary" />
                           {new Date(post.createdAt).toLocaleDateString(
                             undefined,
@@ -161,10 +160,10 @@ const Blog: React.FC = () => {
                             },
                           )}
                         </div>
-                        <h2 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
+                        <h2 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
                           {post.title}
                         </h2>
-                        <p className="text-slate-600 text-sm leading-relaxed mb-6 line-clamp-3">
+                        <p className="text-muted-foreground text-sm leading-relaxed mb-6 line-clamp-3">
                           {post.shortDescription ||
                             "Click to read more about this topic..."}
                         </p>

@@ -51,6 +51,16 @@ interface SiteSettings {
   bankBranch: string;
   accountTitle: string;
   officeHours: string;
+  blogHeading: string;
+  blogDescription: string;
+  notesHeading: string;
+  notesDescription: string;
+  eventsHeading: string;
+  eventsDescription: string;
+  notificationsHeading: string;
+  notificationsDescription: string;
+  contactHeading: string;
+  contactDescription: string;
   updatedAt: string;
 }
 
@@ -115,6 +125,19 @@ const defaultSettings: SiteSettings = {
   bankBranch: "",
   accountTitle: "",
   officeHours: 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed',
+  termCardMenu: "College Card",
+  termInstitution: "College",
+  termPrincipal: "Principal",
+  blogHeading: "College News & Updates",
+  blogDescription: "Stay informed with the latest academic updates, announcements, events, and educational insights from the college community.",
+  notesHeading: "Notes & Study Materials",
+  notesDescription: "Download course notes, syllabus, and study guides organized by class and subject",
+  eventsHeading: "College Events",
+  eventsDescription: "Stay updated with the latest happenings, seminars, and book fairs at our library.",
+  notificationsHeading: "Notifications",
+  notificationsDescription: "Official announcements, news, and updates from College",
+  contactHeading: "Contact Us",
+  contactDescription: "Get in touch with us for official information, student support, and general inquiries.",
   updatedAt: new Date().toISOString(),
 };
 

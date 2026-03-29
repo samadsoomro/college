@@ -220,8 +220,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // GET /api/:slug/library-card-applications/by-card/:cardNumber
   if (resource === 'library-card-applications' && subResource === 'by-card' && sub2 && req.method === 'GET') {
+    if (!col) return res.status(404).json({ error: 'College not found' });
     const colId = col.id;
-    if (!colId) return res.status(404).json({ error: 'College not found' });
 
     const { data } = await supabase
       .from('library_card_applications')
@@ -1450,7 +1450,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       termCardMenu: 'term_card_menu',
       termInstitution: 'term_institution',
       termPrincipal: 'term_principal',
-      officeHours: 'office_hours'
+      officeHours: 'office_hours',
+      blogHeading: 'blog_heading',
+      blogDescription: 'blog_description',
+      notesHeading: 'notes_heading',
+      notesDescription: 'notes_description',
+      eventsHeading: 'events_heading',
+      eventsDescription: 'events_description',
+      notificationsHeading: 'notifications_heading',
+      notificationsDescription: 'notifications_description',
+      contactHeading: 'contact_heading',
+      contactDescription: 'contact_description'
     };
     for (const [k, v] of Object.entries(req.body || {})) {
       if (!fieldMap[k]) continue; // Only allow mapped fields to be updated
@@ -1507,7 +1517,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       termCardMenu: updated.term_card_menu || 'College Card',
       termInstitution: updated.term_institution || 'College',
       termPrincipal: updated.term_principal || 'Principal',
-      officeHours: updated.office_hours || 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed'
+      officeHours: updated.office_hours || 'Mon–Fri: 9:00 AM – 1:00 PM\nSat: 9:00 AM – 12:00 PM\nSun: Closed',
+      blogHeading: updated.blog_heading || 'College News & Updates',
+      blogDescription: updated.blog_description || 'Stay informed with the latest academic updates, announcements, events, and educational insights from the college community.',
+      notesHeading: updated.notes_heading || 'Notes & Study Materials',
+      notesDescription: updated.notes_description || 'Download course notes, syllabus, and study guides organized by class and subject',
+      eventsHeading: updated.events_heading || 'College Events',
+      eventsDescription: updated.events_description || 'Stay updated with the latest happenings, seminars, and book fairs at our library.',
+      notificationsHeading: updated.notifications_heading || 'Notifications',
+      notificationsDescription: updated.notifications_description || 'Official announcements, news, and updates from College',
+      contactHeading: updated.contact_heading || 'Contact Us',
+      contactDescription: updated.contact_description || 'Get in touch with us for official information, student support, and general inquiries.'
     });
   }
 

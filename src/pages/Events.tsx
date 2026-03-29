@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCollege } from "@/contexts/CollegeContext";
 
 interface Event {
   id: string;
@@ -22,6 +23,7 @@ const Events: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { settings } = useCollege();
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -59,7 +61,7 @@ const Events: React.FC = () => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
           >
-            College Events
+            {settings.eventsHeading || "College Events"}
           </motion.h1>
           <motion.p
             className="text-lg text-muted-foreground max-w-2xl mx-auto"
@@ -67,8 +69,7 @@ const Events: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1 }}
           >
-            Stay updated with the latest happenings, seminars, and book fairs at
-            our library.
+            {settings.eventsDescription || "Stay updated with the latest happenings, seminars, and book fairs at our library."}
           </motion.p>
         </div>
       </div>

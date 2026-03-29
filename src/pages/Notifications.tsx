@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCollege } from "@/contexts/CollegeContext";
 
 interface Notification {
   id: string;
@@ -85,11 +86,12 @@ const renderMessageWithLinks = (text: string) => {
   return elements.length > 0 ? elements : text;
 };
 
-const NotificationsPage: React.FC = () => {
+const Notifications: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { settings } = useCollege();
 
   useEffect(() => {
     if (collegeSlug) fetchNotifications();
@@ -128,15 +130,15 @@ const NotificationsPage: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
           >
             <Bell className="w-10 h-10 lg:w-12 lg:h-12 text-pakistan-green" />
-            Notifications
+            {settings.notificationsHeading || "Notifications"}
           </motion.h1>
           <motion.p
-            className="text-xl text-neutral-600 max-w-2xl mx-auto font-medium"
+            className="text-xl text-muted-foreground max-w-2xl mx-auto font-medium"
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1 }}
           >
-            Official announcements, news, and updates from College
+            {settings.notificationsDescription || "Official announcements, news, and updates from College"}
           </motion.p>
         </div>
       </div>
@@ -246,4 +248,4 @@ const NotificationsPage: React.FC = () => {
   );
 };
 
-export default NotificationsPage;
+export default Notifications;
