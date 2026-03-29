@@ -1106,40 +1106,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const body = req.body || {};
     
     // Unified mapping for both camelCase and snake_case
-    const title = body.title || '';
+    const title = body.title || body.titleText || '';
     const button_text = body.buttonText || body.button_text || '';
     const pdf_url = body.pdfUrl || body.pdf_url || '';
-    const is_enabled = body.isEnabled !== undefined ? !!body.isEnabled : (!!body.is_enabled);
-
-    console.log('[DEBUG EXAM PAPER]', { colId, title, is_enabled });
+    const is_enabled = body.isEnabled !== undefined ? !!body.isEnabled : !!body.is_enabled;
 
     if (!colId) return res.status(404).json({ error: 'College not found' });
 
-    // Try UPSERT first (requires unique constraint on college_id)
-    const { error: upsertError } = await supabase.from('home_exam_papers')
-      .upsert({ 
-        college_id: colId, 
-        title, 
-        button_text, 
-        pdf_url, 
-        is_enabled,
-        updated_at: new Date().toISOString() 
-      }, { onConflict: 'college_id' });
+    // 1. Check if record exists
+    const { data: existing } = await supabase.from('home_exam_papers')
+      .select('id').eq('college_id', colId).maybeSingle();
 
-    if (upsertError) {
-      console.error('[EXAM PAPER UPSERT ERROR - FALLBACK]', upsertError);
-      // Fallback: Manual check-then-update
-      const { data: existing } = await supabase.from('home_exam_papers')
-        .select('id').eq('college_id', colId).maybeSingle();
-      
-      if (existing) {
-        await supabase.from('home_exam_papers')
-          .update({ title, button_text, pdf_url, is_enabled, updated_at: new Date().toISOString() })
-          .eq('college_id', colId);
-      } else {
-        await supabase.from('home_exam_papers')
-          .insert({ college_id: colId, title, button_text, pdf_url, is_enabled });
-      }
+    let error;
+    if (existing) {
+      // 2. Update existing
+      const { error: err } = await supabase.from('home_exam_papers')
+        .update({ 
+          title, 
+          button_text, 
+          pdf_url, 
+          is_enabled, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('college_id', colId);
+      error = err;
+    } else {
+      // 3. Insert new
+      const { error: err } = await supabase.from('home_exam_papers')
+        .insert({ 
+          college_id: colId, 
+          title, 
+          button_text, 
+          pdf_url, 
+          is_enabled 
+        });
+      error = err;
+    }
+
+    if (error) {
+      console.error('[EXAM PAPER SAVE ERROR]', error);
+      return res.status(500).json({ error: error.message });
     }
 
     return res.json({ success: true });

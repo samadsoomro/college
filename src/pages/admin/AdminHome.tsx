@@ -317,7 +317,7 @@ const AdminHome: React.FC = () => {
       if (res.ok) {
         toast({ title: "Success", description: "Program saved" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/academic-programs`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to save program", variant: "destructive" });
@@ -338,7 +338,7 @@ const AdminHome: React.FC = () => {
       if (res.ok) {
         toast({ title: "Deleted", description: "Program removed" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/academic-programs`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {}
   };
@@ -367,7 +367,7 @@ const AdminHome: React.FC = () => {
       if (res.ok) {
         toast({ title: "Success", description: "Exam paper settings updated" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home/exam-paper`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {
       toast({ title: "Error", description: "Save failed", variant: "destructive" });
@@ -388,7 +388,7 @@ const AdminHome: React.FC = () => {
       if (res.ok) {
         toast({ title: "Success", description: "Home content updated" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/content`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to update content", variant: "destructive" });
@@ -419,7 +419,7 @@ const AdminHome: React.FC = () => {
         const fileInput = document.getElementById("slider-upload") as HTMLInputElement;
         if (fileInput) fileInput.value = "";
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {
       toast({ title: "Error", description: error instanceof Error ? error.message : "Upload failed", variant: "destructive" });
@@ -438,7 +438,7 @@ const AdminHome: React.FC = () => {
       if (res.ok) {
         toast({ title: "Deleted", description: "Image removed" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {
       toast({ title: "Error", description: "Delete failed", variant: "destructive" });
@@ -454,7 +454,7 @@ const AdminHome: React.FC = () => {
       });
       if (res.ok) {
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {}
   };
@@ -468,7 +468,7 @@ const AdminHome: React.FC = () => {
       });
       if (res.ok) {
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {}
   };
@@ -495,7 +495,7 @@ const AdminHome: React.FC = () => {
         const fileInput = document.getElementById("affiliation-upload") as HTMLInputElement;
         if (fileInput) fileInput.value = "";
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {
       toast({ title: "Error", description: "Add failed", variant: "destructive" });
@@ -514,7 +514,7 @@ const AdminHome: React.FC = () => {
       if (res.ok) {
         toast({ title: "Deleted", description: "Affiliation removed" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {
       toast({ title: "Error", description: "Delete failed", variant: "destructive" });
@@ -530,7 +530,7 @@ const AdminHome: React.FC = () => {
       });
       if (res.ok) {
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {}
   };
@@ -544,7 +544,7 @@ const AdminHome: React.FC = () => {
       });
       if (res.ok) {
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {}
   };
@@ -579,7 +579,7 @@ const AdminHome: React.FC = () => {
         const fileInput = document.getElementById("new-stat-icon") as HTMLInputElement;
         if (fileInput) fileInput.value = "";
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/stats`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {
       toast({ title: "Error", description: "Add failed", variant: "destructive" });
@@ -598,7 +598,7 @@ const AdminHome: React.FC = () => {
       if (res.ok) {
         toast({ title: "Deleted", description: "Stat removed" });
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/stats`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
     } catch (error) {
       toast({ title: "Error", description: "Delete failed", variant: "destructive" });
