@@ -578,23 +578,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 1. Full Home Data (content, slider, stats, affiliations)
-    if (resource === 'home') {
-      const [{ data: c }, { data: sl }, { data: st }, { data: af }] = await Promise.all([
+    if (resource === 'home' && !subResource) {
+      const [{ data: c }, { data: sl }, { data: st }, { data: af }, { data: programs }, { data: examPaper }] = await Promise.all([
         supabase.from('home_content').select('*').eq('college_id', colId).maybeSingle(),
         supabase.from('home_slider_images').select('*').eq('college_id', colId).eq('is_active', true).order('order'),
         supabase.from('home_stats').select('*').eq('college_id', colId).order('order'),
-        supabase.from('home_affiliations').select('*').eq('college_id', colId).eq('is_active', true).order('order')
+        supabase.from('home_affiliations').select('*').eq('college_id', colId).eq('is_active', true).order('order'),
+        supabase.from('home_academic_programs').select('*').eq('college_id', colId).order('display_order', { ascending: true }),
+        supabase.from('home_exam_papers').select('*').eq('college_id', colId).maybeSingle()
       ]);
       return res.json({
         content: {
           heroHeading: c?.hero_heading, heroSubheading: c?.hero_subheading, heroOverlayText: c?.hero_overlay_text,
           featuresHeading: c?.features_heading, featuresSubheading: c?.features_subheading,
-          affiliationsHeading: c?.affiliations_heading, ctaHeading: c?.cta_heading, ctaSubheading: c?.cta_subheading
+          affiliationsHeading: c?.affiliations_heading, ctaHeading: c?.cta_heading, ctaSubheading: c?.cta_subheading,
+          heroTagline: c?.hero_tagline || '', heroTaglineEnabled: c?.hero_tagline_enabled || false,
+          academicSectionEnabled: c?.academic_section_enabled ?? true, academicSectionHeading: c?.academic_section_heading || 'Academic Programs',
+          academicSectionSubheading: c?.academic_section_subheading || 'Excellence in Education'
         },
         slider: (sl || []).map(s => ({ id: s.id, imageUrl: s.image_url, order: s.order, isActive: s.is_active })),
         stats: (st || []).map(s => ({ id: s.id, number: s.number, label: s.label, icon: s.icon, iconUrl: s.icon_url, color: s.color, order: s.order })),
-        affiliations: (af || []).map(a => ({ id: a.id, name: a.name, logoUrl: a.logo_url, link: a.link, order: a.order, isActive: a.is_active }))
+        affiliations: (af || []).map(a => ({ id: a.id, name: a.name, logoUrl: a.logo_url, link: a.link, order: a.order, isActive: a.is_active })),
+        programs: programs || [],
+        examPaper: examPaper || null
       });
+    }
+
+    // GET /api/:slug/home/academic-programs
+    if (isApi && resource === 'home' && sub1 === 'academic-programs' && req.method === 'GET') {
+      const colId = await getCollegeId(slug);
+      if (!colId) return res.status(404).json({ error: 'Not found' });
+      const { data } = await supabase.from('home_academic_programs')
+        .select('*').eq('college_id', colId)
+        .order('display_order', { ascending: true });
+      return res.json(data || []);
+    }
+
+    // GET /api/:slug/home/exam-paper
+    if (isApi && resource === 'home' && sub1 === 'exam-paper' && req.method === 'GET') {
+      const colId = await getCollegeId(slug);
+      if (!colId) return res.status(404).json({ error: 'Not found' });
+      const { data } = await supabase.from('home_exam_papers')
+        .select('*').eq('college_id', colId).maybeSingle();
+      return res.json(data || {});
     }
 
     // 2. Site Settings (for CollegeContext)
@@ -1026,6 +1052,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ success: true });
   }
 
+  // GET /api/:slug/admin/academic-programs
+  if (isApi && resource === 'admin' && sub1 === 'academic-programs' && !sub2 && req.method === 'GET') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = await getCollegeId(slug);
+    const { data } = await supabase.from('home_academic_programs')
+      .select('*').eq('college_id', colId).order('display_order');
+    return res.json(data || []);
+  }
+
+  // POST /api/:slug/admin/academic-programs
+  if (isApi && resource === 'admin' && sub1 === 'academic-programs' && !sub2 && req.method === 'POST') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = await getCollegeId(slug);
+    const { title, subjects, icon, displayOrder } = req.body || {};
+    const { data, error } = await supabase.from('home_academic_programs')
+      .insert({ college_id: colId, title, subjects, icon: icon || 'BookOpen', display_order: displayOrder || 0 })
+      .select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  // PATCH /api/:slug/admin/academic-programs/:id
+  if (isApi && resource === 'admin' && sub1 === 'academic-programs' && sub2 && req.method === 'PATCH') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = await getCollegeId(slug);
+    const { title, subjects, icon } = req.body || {};
+    const { data, error } = await supabase.from('home_academic_programs')
+      .update({ title, subjects, icon })
+      .eq('id', sub2).eq('college_id', colId).select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  // DELETE /api/:slug/admin/academic-programs/:id
+  if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'academic-programs' && sub2) {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = await getCollegeId(slug);
+    await supabase.from('home_academic_programs').delete().eq('id', sub2).eq('college_id', colId);
+    return res.json({ success: true });
+  }
+
+  // PATCH /api/:slug/admin/exam-paper
+  if (isApi && resource === 'admin' && sub1 === 'exam-paper' && !sub2 && req.method === 'PATCH') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = await getCollegeId(slug);
+    const { title, buttonText, pdfUrl, isEnabled } = req.body || {};
+    const { data: existing } = await supabase.from('home_exam_papers')
+      .select('id').eq('college_id', colId).maybeSingle();
+    if (existing) {
+      await supabase.from('home_exam_papers')
+        .update({ title, button_text: buttonText, pdf_url: pdfUrl, is_enabled: isEnabled, updated_at: new Date().toISOString() })
+        .eq('college_id', colId);
+    } else {
+      await supabase.from('home_exam_papers')
+        .insert({ college_id: colId, title, button_text: buttonText, pdf_url: pdfUrl, is_enabled: isEnabled });
+    }
+    return res.json({ success: true });
+  }
+
   // 1. Admin Universal Upload (Cloudinary)
   if (parts[2] === 'admin' && parts[3] === 'upload' && req.method === 'POST') {
     const token = req.headers['x-admin-token'];
@@ -1090,7 +1175,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (sub === 'content') {
       if (req.method === 'GET') {
         const { data } = await supabase.from('home_content').select('*').eq('college_id', colId).maybeSingle();
-        return res.json(data ? { heroHeading: data.hero_heading, heroSubheading: data.hero_subheading, heroOverlayText: data.hero_overlay_text, featuresHeading: data.features_heading, featuresSubheading: data.features_subheading, affiliationsHeading: data.affiliations_heading, ctaHeading: data.cta_heading, ctaSubheading: data.cta_subheading } : {});
+        return res.json(data ? { 
+          heroHeading: data.hero_heading, heroSubheading: data.hero_subheading, heroOverlayText: data.hero_overlay_text, 
+          featuresHeading: data.features_heading, featuresSubheading: data.features_subheading, 
+          affiliationsHeading: data.affiliations_heading, ctaHeading: data.cta_heading, ctaSubheading: data.cta_subheading,
+          heroTagline: data.hero_tagline, heroTaglineEnabled: data.hero_tagline_enabled,
+          academicSectionEnabled: data.academic_section_enabled, academicSectionHeading: data.academic_section_heading,
+          academicSectionSubheading: data.academic_section_subheading
+        } : {});
       }
       if (req.method === 'POST') {
         const { data: existing } = await supabase.from('home_content').select('id').eq('college_id', colId).maybeSingle();
@@ -1098,6 +1190,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           hero_heading: req.body.heroHeading, hero_subheading: req.body.heroSubheading, hero_overlay_text: req.body.heroOverlayText,
           features_heading: req.body.featuresHeading, features_subheading: req.body.featuresSubheading,
           affiliations_heading: req.body.affiliationsHeading, cta_heading: req.body.ctaHeading, cta_subheading: req.body.ctaSubheading,
+          hero_tagline: req.body.heroTagline, hero_tagline_enabled: req.body.heroTaglineEnabled,
+          academic_section_enabled: req.body.academicSectionEnabled, academic_section_heading: req.body.academicSectionHeading,
+          academic_section_subheading: req.body.academicSectionSubheading,
           updated_at: new Date().toISOString()
         };
         if (existing) await supabase.from('home_content').update(payload).eq('id', existing.id);

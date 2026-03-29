@@ -7,14 +7,21 @@ import { useParams } from "react-router-dom";
 import Hero from "@/components/layout/Hero";
 import HomeSlider from "@/components/home/HomeSlider";
 import {
+  Heart,
+  Clock,
   BookOpen,
   Users,
   Award,
   TrendingUp,
   Search,
   Star,
-  Heart,
-  Clock,
+  Cog, 
+  Microscope, 
+  Laptop, 
+  FlaskConical, 
+  Calculator, 
+  Palette, 
+  Music,
 } from "lucide-react";
 import { useCollege } from "@/contexts/CollegeContext";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +36,27 @@ interface HomeContent {
   affiliationsHeading?: string;
   ctaHeading?: string;
   ctaSubheading?: string;
+  heroTagline?: string;
+  heroTaglineEnabled?: boolean;
+  academicSectionEnabled?: boolean;
+  academicSectionHeading?: string;
+  academicSectionSubheading?: string;
+}
+
+interface AcademicProgram {
+  id: string;
+  title: string;
+  subjects: string;
+  icon: string;
+  display_order: number;
+}
+
+interface ExamPaper {
+  id: string;
+  title: string;
+  button_text: string;
+  pdf_url: string;
+  is_enabled: boolean;
 }
 
 interface SliderImage {
@@ -172,11 +200,28 @@ const AnimatedStat = ({ value, suffix, isVisible }: { value: number; suffix: str
   );
 };
 
+const iconMap: Record<string, any> = {
+  Cog, Microscope, Laptop, TrendingUp, BookOpen, Star,
+  FlaskConical, Calculator, Palette, Music,
+};
+
+const ProgramIcon = ({ name, className }: { name: string; className?: string }) => {
+  const Icon = iconMap[name] || BookOpen;
+  return <Icon className={className} />;
+};
+
 const Home: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const { settings } = useCollege();
   
-  const { data: homeData, isLoading: homeLoading } = useQuery({
+  const { data: homeData, isLoading } = useQuery<{
+    content: HomeContent;
+    slider: SliderImage[];
+    stats: HomeStat[];
+    affiliations: Affiliation[];
+    programs: AcademicProgram[];
+    examPaper: ExamPaper;
+  }>({
     queryKey: [`/api/${collegeSlug}/home`],
     queryFn: async () => {
       const res = await fetch(`/api/${collegeSlug}/home`);
@@ -187,9 +232,11 @@ const Home: React.FC = () => {
 
   const content = homeData?.content || {};
   const slider = homeData?.slider || [];
-  const dbStats = homeData?.stats || [];
+  const stats = homeData?.stats || [];
   const affiliations = homeData?.affiliations || [];
-  const loading = homeLoading;
+  const programs = homeData?.programs || [];
+  const examPaper = homeData?.examPaper || null;
+  const loading = isLoading;
 
   const [faqs, setFaqs] = useState<any[]>([]);
   const [openFaq, setOpenFaq] = useState<string | null>(null);
@@ -247,8 +294,8 @@ const Home: React.FC = () => {
   };
 
   const displayStats =
-    dbStats && dbStats.length > 0
-      ? dbStats.map((ds, idx) => ({
+    stats && stats.length > 0
+      ? stats.map((ds, idx) => ({
         number: ds.number,
         label: ds.label,
         iconUrl: ds.iconUrl,
@@ -354,6 +401,17 @@ const Home: React.FC = () => {
         overlayText={content.heroOverlayText}
       />
 
+      {content?.heroTaglineEnabled && content?.heroTagline && (
+        <div
+          className="text-center mt-[-40px] relative z-10"
+          style={{ animation: 'fadeInUp 0.8s ease 0.5s forwards', opacity: 0 }}
+        >
+          <span className="inline-block bg-white/15 backdrop-blur-md border border-white/30 text-white font-semibold px-6 py-2.5 rounded-full text-sm md:text-base tracking-wide shadow-xl">
+            ⭐ {content.heroTagline}
+          </span>
+        </div>
+      )}
+
       {/* Image Slider Section */}
       {slider.length > 0 && (
         <section className="py-12 bg-background">
@@ -363,7 +421,6 @@ const Home: React.FC = () => {
         </section>
       )}
 
-      {/* Stats Section */}
       <section className="py-16 lg:py-24 bg-background">
         <div className="container px-4" ref={statsRef}>
           <div className="flex flex-wrap justify-center gap-6 lg:gap-8">
@@ -402,6 +459,84 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Academic Programs Section */}
+      {content?.academicSectionEnabled && programs.length > 0 && (
+        <section className="py-16 lg:py-24 px-4 bg-white">
+          <div className="max-w-6xl mx-auto">
+            {/* Heading */}
+            <AnimatedSection className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-neutral-800">
+                {content?.academicSectionHeading || 'Academic Programs'}
+              </h2>
+              <p className="text-neutral-500 mt-2 text-lg">
+                {content?.academicSectionSubheading || 'Excellence in Education'}
+              </p>
+            </AnimatedSection>
+
+            {/* Program Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {programs.map((program, index) => (
+                <AnimatedSection key={program.id} delay={index * 120}>
+                  <div
+                    className="group bg-white border-2 border-neutral-100 rounded-2xl p-6 text-center hover:border-primary/30 hover:shadow-xl transition-all duration-300 cursor-default h-full flex flex-col items-center"
+                    style={{ transform: 'translateY(0)', transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-8px)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}
+                  >
+                    {/* Icon */}
+                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
+                      <ProgramIcon name={program.icon} className="w-8 h-8 text-primary" />
+                    </div>
+                    {/* Title */}
+                    <h3 className="font-bold text-neutral-800 text-lg mb-3">
+                      {program.title}
+                    </h3>
+                    {/* Subjects */}
+                    <div className="flex flex-wrap justify-center gap-1.5 mt-auto">
+                      {program.subjects.split(',').map((subject: string, i: number) => (
+                        <span key={i} className="text-[10px] bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-full font-medium">
+                          {subject.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </AnimatedSection>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Exam Paper Download Button */}
+      {examPaper?.is_enabled && examPaper?.pdf_url && (
+        <section className="py-10 px-4 bg-neutral-50">
+          <div className="max-w-2xl mx-auto text-center">
+            <AnimatedSection>
+              <a
+                href={examPaper.pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="exam-paper-btn group inline-flex items-center gap-4 bg-primary text-white px-8 py-5 rounded-2xl font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-300"
+                style={{ animation: 'fadeInUp 0.6s ease forwards' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.04)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+              >
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
+                  📄
+                </div>
+                <div className="text-left">
+                  <p className="text-xs uppercase tracking-widest opacity-80 mb-0.5 font-bold">{examPaper.title}</p>
+                  <p className="text-lg font-extrabold leading-tight">{examPaper.button_text}</p>
+                </div>
+                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 group-hover:translate-x-1 transition-transform">
+                  →
+                </div>
+              </a>
+            </AnimatedSection>
+          </div>
+        </section>
+      )}
 
       {/* Features Section */}
       <section className="py-16 lg:py-24 bg-secondary">

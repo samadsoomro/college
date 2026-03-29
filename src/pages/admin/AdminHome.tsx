@@ -37,6 +37,27 @@ interface HomeContent {
   affiliationsHeading: string;
   ctaHeading: string;
   ctaSubheading: string;
+  heroTagline: string;
+  heroTaglineEnabled: boolean;
+  academicSectionEnabled: boolean;
+  academicSectionHeading: string;
+  academicSectionSubheading: string;
+}
+
+interface AcademicProgram {
+  id: string;
+  title: string;
+  subjects: string;
+  icon: string;
+  display_order: number;
+}
+
+interface ExamPaper {
+  id: string;
+  title: string;
+  button_text: string;
+  pdf_url: string;
+  is_enabled: boolean;
 }
 
 interface SliderImage {
@@ -113,6 +134,26 @@ const AdminHome: React.FC = () => {
     }
   });
 
+  const { data: dbPrograms = [], isLoading: programsLoading } = useQuery<AcademicProgram[]>({
+    queryKey: [`/api/${collegeSlug}/admin/academic-programs`],
+    queryFn: async () => {
+      const ts = Date.now();
+      const res = await fetch(`/api/${collegeSlug}/admin/academic-programs?t=${ts}`, { headers: adminHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch academic programs");
+      return res.json();
+    }
+  });
+
+  const { data: dbExamPaper, isLoading: examLoading } = useQuery<ExamPaper>({
+    queryKey: [`/api/${collegeSlug}/home/exam-paper`],
+    queryFn: async () => {
+      const ts = Date.now();
+      const res = await fetch(`/api/${collegeSlug}/home/exam-paper?t=${ts}`, { headers: adminHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch exam paper");
+      return res.json();
+    }
+  });
+
   // Local state for editing hero content
   const [editedContent, setEditedContent] = useState<HomeContent | null>(null);
 
@@ -185,6 +226,20 @@ const AdminHome: React.FC = () => {
     }
   }, [content]);
 
+  // Academic Programs State
+  const [programs, setPrograms] = useState<AcademicProgram[]>([]);
+  useEffect(() => {
+    if (dbPrograms) setPrograms(dbPrograms);
+  }, [dbPrograms]);
+
+  // Exam Paper State
+  const [examPaper, setExamPaper] = useState<ExamPaper | null>(null);
+  useEffect(() => {
+    if (dbExamPaper) setExamPaper(dbExamPaper);
+  }, [dbExamPaper]);
+
+  const [uploadingPaper, setUploadingPaper] = useState(false);
+
   // Form states for new items
   const [sliderFile, setSliderFile] = useState<File | null>(null);
   const [affiliationFile, setAffiliationFile] = useState<File | null>(null);
@@ -209,6 +264,102 @@ const AdminHome: React.FC = () => {
   const getPositionLabel = (index: number) => {
     const labels = ["First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth"];
     return labels[index] || `#${index + 1}`;
+  };
+
+  // Helper for updating content locally
+  const updateContent = (field: keyof HomeContent, value: any) => {
+    if (!editedContent) return;
+    setEditedContent({ ...editedContent, [field]: value });
+  };
+
+  // Academic Programs Handlers
+  const addProgram = () => {
+    setPrograms(prev => [...prev, {
+      id: `new-${Date.now()}`,
+      title: '',
+      subjects: '',
+      icon: 'BookOpen',
+      display_order: prev.length + 1
+    }]);
+  };
+
+  const updateProgram = (id: string, field: string, value: any) => {
+    setPrograms(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const saveProgram = async (prog: any) => {
+    const isNew = prog.id.toString().startsWith('new-');
+    const method = isNew ? "POST" : "PATCH";
+    const url = isNew 
+      ? `/api/${collegeSlug}/admin/academic-programs`
+      : `/api/${collegeSlug}/admin/academic-programs/${prog.id}`;
+    
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          title: prog.title, 
+          subjects: prog.subjects, 
+          icon: prog.icon,
+          displayOrder: prog.display_order 
+        })
+      });
+      if (res.ok) {
+        toast({ title: "Success", description: "Program saved" });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/academic-programs`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save program", variant: "destructive" });
+    }
+  };
+
+  const deleteProgram = async (id: string) => {
+    if (id.toString().startsWith('new-')) {
+      setPrograms(prev => prev.filter(p => p.id !== id));
+      return;
+    }
+    if (!confirm("Remove this program?")) return;
+    try {
+      const res = await fetch(`/api/${collegeSlug}/admin/academic-programs/${id}`, {
+        method: "DELETE",
+        headers: adminHeaders()
+      });
+      if (res.ok) {
+        toast({ title: "Deleted", description: "Program removed" });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/academic-programs`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+      }
+    } catch (error) {}
+  };
+
+  // Exam Paper Handlers
+  const updateExamPaper = (field: string, value: any) => {
+    setExamPaper(prev => prev ? { ...prev, [field]: value } : { id: '', title: '', button_text: '', pdf_url: '', is_enabled: false, [field]: value });
+  };
+
+  const saveExamPaper = async () => {
+    if (!examPaper) return;
+    try {
+      const res = await fetch(`/api/${collegeSlug}/admin/exam-paper`, {
+        method: "PATCH",
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: examPaper.title,
+          buttonText: examPaper.button_text,
+          pdfUrl: examPaper.pdf_url,
+          isEnabled: examPaper.is_enabled
+        })
+      });
+      if (res.ok) {
+        toast({ title: "Success", description: "Exam paper settings updated" });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home/exam-paper`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home`] });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Save failed", variant: "destructive" });
+    }
   };
 
   // Handlers
@@ -504,10 +655,204 @@ const AdminHome: React.FC = () => {
                     <Textarea value={editedContent.ctaSubheading} onChange={e => setEditedContent({...editedContent, ctaSubheading: e.target.value})} />
                   </div>
                 </div>
-                <Button type="submit" disabled={loading} className="w-full md:w-auto">
-                  {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Save All Text Changes
-                </Button>
+
+                <div className="grid gap-6 md:grid-cols-2 mt-6">
+                  {/* Section A — Hero Tagline Toggle */}
+                  <div className="border rounded-xl p-4 space-y-3 bg-secondary/10">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold flex items-center gap-2 text-primary">
+                        <Star className="w-4 h-4 fill-primary" /> Hero Tagline
+                      </h4>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <span className="text-xs text-neutral-500 uppercase font-bold tracking-wider">Show on homepage</span>
+                        <Switch checked={editedContent.heroTaglineEnabled} 
+                          onCheckedChange={checked => updateContent('heroTaglineEnabled', checked)} />
+                      </label>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Tagline Text</Label>
+                      <Input value={editedContent.heroTagline || ''}
+                        onChange={e => updateContent('heroTagline', e.target.value)}
+                        placeholder="e.g. Highest Merit Commerce College in Karachi" />
+                    </div>
+                    <p className="text-[10px] text-neutral-400 italic">
+                      Appears at the bottom of the hero section as a highlighted glass badge.
+                    </p>
+                  </div>
+
+                  {/* Section C — Exam Paper Button */}
+                  <div className="border rounded-xl p-4 space-y-3 bg-secondary/10">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold flex items-center gap-2 text-primary">
+                        <Upload className="w-4 h-4" /> Exam Paper Button
+                      </h4>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <span className="text-xs text-neutral-500 uppercase font-bold tracking-wider">Show on homepage</span>
+                        <Switch checked={examPaper?.is_enabled || false}
+                          onCheckedChange={checked => updateExamPaper('is_enabled', checked)} />
+                      </label>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-xs font-bold text-muted-foreground uppercase">Small Label Text</Label>
+                        <Input value={examPaper?.title || ''}
+                          onChange={e => updateExamPaper('title', e.target.value)}
+                          placeholder="Past Examination Papers 2026"
+                          className="mt-1" />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-bold text-muted-foreground uppercase">Button Text</Label>
+                        <Input value={examPaper?.button_text || ''}
+                          onChange={e => updateExamPaper('button_text', e.target.value)}
+                          placeholder="Access Past Examination Papers 2026"
+                          className="mt-1" />
+                      </div>
+                      <div className="pt-1">
+                        <Label className="text-xs font-bold text-muted-foreground uppercase">Upload PDF</Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input type="file" accept=".pdf"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setUploadingPaper(true);
+                              try {
+                                const url = await uploadToSupabase(file, 'exam-papers', collegeSlug!);
+                                updateExamPaper('pdf_url', url);
+                                toast({ title: '✅ PDF uploaded!' });
+                              } catch (err: any) {
+                                toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+                              } finally {
+                                setUploadingPaper(false);
+                              }
+                            }}
+                            className="text-xs" />
+                          <Button 
+                            type="button" 
+                            variant="primary" 
+                            size="sm"
+                            onClick={saveExamPaper}
+                            disabled={uploadingPaper}
+                          >
+                            {uploadingPaper ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                        {examPaper?.pdf_url && (
+                          <a href={examPaper.pdf_url} target="_blank" rel="noreferrer"
+                            className="text-[10px] text-primary underline mt-1.5 block font-medium">
+                            ✅ PDF uploaded — click to preview
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section B — Academic Programs */}
+                  <div className="border rounded-xl p-5 md:col-span-2 space-y-5 bg-card shadow-sm mt-4">
+                    <div className="flex items-center justify-between border-b pb-4">
+                      <div>
+                        <h4 className="font-bold flex items-center gap-2 text-lg">
+                          <Plus className="w-5 h-5 text-primary" /> Academic Programs Section
+                        </h4>
+                        <p className="text-xs text-muted-foreground">Showcase your departments and subject offerings.</p>
+                      </div>
+                      <label className="flex items-center gap-3 cursor-pointer bg-secondary/50 px-3 py-1.5 rounded-full">
+                        <span className="text-xs font-bold uppercase tracking-wider text-neutral-600">Show Section</span>
+                        <Switch checked={editedContent.academicSectionEnabled ?? true}
+                          onCheckedChange={checked => updateContent('academicSectionEnabled', checked)} />
+                      </label>
+                    </div>
+
+                    {/* Section headings */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold text-muted-foreground uppercase">Section Heading</Label>
+                        <Input value={editedContent.academicSectionHeading || ''}
+                          onChange={e => updateContent('academicSectionHeading', e.target.value)}
+                          placeholder="Academic Programs" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold text-muted-foreground uppercase">Section Subheading</Label>
+                        <Input value={editedContent.academicSectionSubheading || ''}
+                          onChange={e => updateContent('academicSectionSubheading', e.target.value)}
+                          placeholder="Excellence in Education" />
+                      </div>
+                    </div>
+
+                    {/* Programs list */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                      {programs.map((prog, index) => (
+                        <div key={prog.id} className="border-2 border-dashed border-neutral-100 rounded-2xl p-4 bg-neutral-50/50 space-y-3 relative group">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-tighter">Program #{index + 1}</span>
+                            <button onClick={() => deleteProgram(prog.id)}
+                              className="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Trash2 className="w-3 h-3" /> Remove
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Program Name</Label>
+                              <Input value={prog.title}
+                                onChange={e => updateProgram(prog.id, 'title', e.target.value)}
+                                placeholder="e.g. Pre-Engineering"
+                                className="h-9 text-sm" />
+                            </div>
+                            
+                            <div>
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Subjects (Comma Separated)</Label>
+                              <Input value={prog.subjects}
+                                onChange={e => updateProgram(prog.id, 'subjects', e.target.value)}
+                                placeholder="Math, Physics, Chemistry..."
+                                className="h-9 text-sm" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label className="text-[10px] font-bold text-muted-foreground uppercase">Icon</Label>
+                                <select value={prog.icon}
+                                  onChange={e => updateProgram(prog.id, 'icon', e.target.value)}
+                                  className="w-full border rounded-md px-2 h-9 text-sm bg-background">
+                                  <option value="Cog">⚙️ Gear</option>
+                                  <option value="Microscope">🔬 Microscope</option>
+                                  <option value="Laptop">💻 Laptop</option>
+                                  <option value="TrendingUp">📈 Graph</option>
+                                  <option value="BookOpen">📖 Book</option>
+                                  <option value="FlaskConical">🧪 Flask</option>
+                                  <option value="Calculator">🧮 Calculator</option>
+                                  <option value="Star">⭐ Star</option>
+                                  <option value="Palette">🎨 Palette</option>
+                                  <option value="Music">🎵 Music</option>
+                                </select>
+                              </div>
+                              <div className="flex items-end">
+                                <Button onClick={() => saveProgram(prog)} variant="primary" size="sm" className="w-full h-9">
+                                  <Save className="w-3.5 h-3.5 mr-2" /> Save
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      <button onClick={addProgram}
+                        className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-primary/20 text-primary rounded-2xl p-6 hover:bg-primary/5 transition-all group">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                          <Plus className="w-5 h-5" />
+                        </div>
+                        <span className="font-bold text-sm tracking-tight text-primary">Add New Program</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6">
+                  <Button type="submit" disabled={loading} className="w-full md:w-auto bg-primary text-white shadow-lg hover:shadow-xl transition-all">
+                    {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    Save All Hero & Text Changes
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
