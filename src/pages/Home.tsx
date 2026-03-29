@@ -421,37 +421,39 @@ const Home: React.FC = () => {
               const value = numMatch ? parseInt(numMatch[1], 10) : parseInt(stat.number, 10) || 0;
               const suffix = numMatch ? numMatch[2] : '';
               return (
-              <motion.div
-                key={index}
-                className="flex flex-col items-center text-center p-6 lg:p-8 bg-secondary rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all w-[calc(50%-1.5rem)] lg:w-[calc(25%-2rem)] min-w-[160px] max-w-[280px]"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <div
-                  className={`mb-4 ${stat.color} flex items-center justify-center h-12 w-12`}
+                <motion.div
+                  key={index}
+                  className="flex flex-col items-center text-center p-6 lg:p-8 bg-secondary rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all w-[calc(50%-1.5rem)] lg:w-[calc(25%-2rem)] min-w-[160px] max-w-[280px]"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  viewport={{ once: true }}
                 >
-                  {stat.iconUrl ? (
-                    <img
-                      src={stat.iconUrl}
-                      alt={stat.label || "stat icon"}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    stat.icon
-                  )}
-                </div>
-                <AnimatedStat value={value} suffix={suffix} isVisible={statsVisible} />
-                <span className="text-sm lg:text-base text-muted-foreground">
-                  {stat.label}
-                </span>
-              </motion.div>
-            )})}
+                  <div
+                    className={`mb-4 ${stat.color} flex items-center justify-center h-12 w-12`}
+                  >
+                    {stat.iconUrl ? (
+                      <img
+                        src={stat.iconUrl}
+                        alt={stat.label || "stat icon"}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      stat.icon
+                    )}
+                  </div>
+                  <AnimatedStat value={value} suffix={suffix} isVisible={statsVisible} />
+                  <span className="text-sm lg:text-base text-muted-foreground">
+                    {stat.label}
+                  </span>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
 
+      {/* Academic Programs Section */}
       {content?.academicSectionEnabled && programs.length > 0 && (
         <section className="py-16 lg:py-24 px-4 bg-background border-y border-border/50">
           <div className="max-w-6xl mx-auto">

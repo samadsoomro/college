@@ -235,7 +235,16 @@ const AdminHome: React.FC = () => {
   // Exam Paper State
   const [examPaper, setExamPaper] = useState<ExamPaper | null>(null);
   useEffect(() => {
-    if (dbExamPaper) setExamPaper(dbExamPaper);
+    if (dbExamPaper && Object.keys(dbExamPaper).length > 0) {
+      setExamPaper(prev => ({
+        ...prev,
+        ...dbExamPaper,
+        is_enabled: dbExamPaper.is_enabled ?? false,
+        title: dbExamPaper.title || '',
+        button_text: dbExamPaper.button_text || '',
+        pdf_url: dbExamPaper.pdf_url || ''
+      }));
+    }
   }, [dbExamPaper]);
 
   const [uploadingPaper, setUploadingPaper] = useState(false);

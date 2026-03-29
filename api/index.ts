@@ -620,7 +620,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!colId) return res.status(404).json({ error: 'Not found' });
       const { data } = await supabase.from('home_exam_papers')
         .select('*').eq('college_id', colId).maybeSingle();
-      return res.json(data || {});
+      return res.json(data || { is_enabled: false, title: '', button_text: '', pdf_url: '' });
     }
 
     // 2. Site Settings (for CollegeContext)
@@ -1097,7 +1097,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (isApi && resource === 'admin' && sub1 === 'exam-paper' && !sub2 && req.method === 'PATCH') {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
     const colId = await getCollegeId(slug);
-    const { title, buttonText, pdfUrl, isEnabled } = req.body || {};
+    const body = req.body || {};
+    const title = body.title;
+    const buttonText = body.buttonText || body.button_text;
+    const pdfUrl = body.pdfUrl || body.pdf_url;
+    const isEnabled = body.isEnabled !== undefined ? body.isEnabled : body.is_enabled;
     const { data: existing } = await supabase.from('home_exam_papers')
       .select('id').eq('college_id', colId).maybeSingle();
     if (existing) {
