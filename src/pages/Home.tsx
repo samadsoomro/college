@@ -468,9 +468,13 @@ const Home: React.FC = () => {
             </AnimatedSection>
 
             {/* Program Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="flex flex-wrap justify-center gap-6">
               {programs.map((program, index) => (
-                <AnimatedSection key={program.id} delay={index * 120}>
+                <AnimatedSection 
+                  key={program.id} 
+                  delay={index * 120}
+                  className="w-full sm:w-[calc(50%-1rem)] lg:w-[calc(25%-1.2rem)] min-w-[240px]"
+                >
                   <div
                     className="group bg-card border-2 border-border/50 rounded-2xl p-6 text-center hover:border-primary/40 hover:shadow-xl transition-all duration-300 cursor-default h-full flex flex-col items-center"
                     style={{ transform: 'translateY(0)', transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease' }}

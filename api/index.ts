@@ -1098,20 +1098,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
     const colId = await getCollegeId(slug);
     const body = req.body || {};
-    const title = body.title;
-    const buttonText = body.buttonText || body.button_text;
-    const pdfUrl = body.pdfUrl || body.pdf_url;
-    const isEnabled = body.isEnabled !== undefined ? body.isEnabled : body.is_enabled;
-    const { data: existing } = await supabase.from('home_exam_papers')
-      .select('id').eq('college_id', colId).maybeSingle();
-    if (existing) {
-      await supabase.from('home_exam_papers')
-        .update({ title, button_text: buttonText, pdf_url: pdfUrl, is_enabled: isEnabled, updated_at: new Date().toISOString() })
-        .eq('college_id', colId);
-    } else {
-      await supabase.from('home_exam_papers')
-        .insert({ college_id: colId, title, button_text: buttonText, pdf_url: pdfUrl, is_enabled: isEnabled });
+    
+    // Unified mapping for both camelCase and snake_case
+    const title = body.title || '';
+    const button_text = body.buttonText || body.button_text || '';
+    const pdf_url = body.pdfUrl || body.pdf_url || '';
+    const is_enabled = body.isEnabled !== undefined ? body.isEnabled : (body.is_enabled ?? false);
+
+    console.log('[DEBUG EXAM PAPER]', { colId, title, is_enabled });
+
+    const { error } = await supabase.from('home_exam_papers')
+      .upsert({ 
+        college_id: colId, 
+        title, 
+        button_text, 
+        pdf_url, 
+        is_enabled,
+        updated_at: new Date().toISOString() 
+      }, { onConflict: 'college_id' });
+
+    if (error) {
+      console.error('[EXAM PAPER UPSERT ERROR]', error);
+      return res.status(500).json({ error: error.message });
     }
+
     return res.json({ success: true });
   }
 

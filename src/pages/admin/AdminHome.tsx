@@ -357,8 +357,11 @@ const AdminHome: React.FC = () => {
         body: JSON.stringify({
           title: examPaper.title,
           buttonText: examPaper.button_text,
+          button_text: examPaper.button_text,
           pdfUrl: examPaper.pdf_url,
-          isEnabled: examPaper.is_enabled
+          pdf_url: examPaper.pdf_url,
+          isEnabled: examPaper.is_enabled,
+          is_enabled: examPaper.is_enabled
         })
       });
       if (res.ok) {
