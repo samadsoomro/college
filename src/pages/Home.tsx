@@ -453,7 +453,7 @@ const Home: React.FC = () => {
               <h2
                 className="text-3xl lg:text-4xl font-bold text-foreground mb-4"
               >
-                Affiliations & Authorities
+                {content.affiliationsHeading || "Affiliations & Authorities"}
               </h2>
             </AnimatedSection>
           </div>
