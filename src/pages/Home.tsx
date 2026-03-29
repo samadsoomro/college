@@ -22,6 +22,7 @@ import {
   Calculator, 
   Palette, 
   Music,
+  ArrowRight
 } from "lucide-react";
 import { useCollege } from "@/contexts/CollegeContext";
 import { useQuery } from "@tanstack/react-query";
@@ -399,18 +400,9 @@ const Home: React.FC = () => {
         heading={content.heroHeading}
         subheading={content.heroSubheading}
         overlayText={content.heroOverlayText}
+        tagline={content.heroTagline}
+        taglineEnabled={content.heroTaglineEnabled}
       />
-
-      {content?.heroTaglineEnabled && content?.heroTagline && (
-        <div
-          className="text-center mt-[-40px] relative z-10"
-          style={{ animation: 'fadeInUp 0.8s ease 0.5s forwards', opacity: 0 }}
-        >
-          <span className="inline-block bg-white/15 backdrop-blur-md border border-white/30 text-white font-semibold px-6 py-2.5 rounded-full text-sm md:text-base tracking-wide shadow-xl">
-            ⭐ {content.heroTagline}
-          </span>
-        </div>
-      )}
 
       {/* Image Slider Section */}
       {slider.length > 0 && (
@@ -460,16 +452,15 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Academic Programs Section */}
       {content?.academicSectionEnabled && programs.length > 0 && (
-        <section className="py-16 lg:py-24 px-4 bg-white">
+        <section className="py-16 lg:py-24 px-4 bg-background border-y border-border/50">
           <div className="max-w-6xl mx-auto">
             {/* Heading */}
             <AnimatedSection className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-neutral-800">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground">
                 {content?.academicSectionHeading || 'Academic Programs'}
               </h2>
-              <p className="text-neutral-500 mt-2 text-lg">
+              <p className="text-muted-foreground mt-2 text-lg">
                 {content?.academicSectionSubheading || 'Excellence in Education'}
               </p>
             </AnimatedSection>
@@ -479,7 +470,7 @@ const Home: React.FC = () => {
               {programs.map((program, index) => (
                 <AnimatedSection key={program.id} delay={index * 120}>
                   <div
-                    className="group bg-white border-2 border-neutral-100 rounded-2xl p-6 text-center hover:border-primary/30 hover:shadow-xl transition-all duration-300 cursor-default h-full flex flex-col items-center"
+                    className="group bg-card border-2 border-border/50 rounded-2xl p-6 text-center hover:border-primary/40 hover:shadow-xl transition-all duration-300 cursor-default h-full flex flex-col items-center"
                     style={{ transform: 'translateY(0)', transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-8px)'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}
@@ -489,13 +480,13 @@ const Home: React.FC = () => {
                       <ProgramIcon name={program.icon} className="w-8 h-8 text-primary" />
                     </div>
                     {/* Title */}
-                    <h3 className="font-bold text-neutral-800 text-lg mb-3">
+                    <h3 className="font-bold text-foreground text-lg mb-3">
                       {program.title}
                     </h3>
                     {/* Subjects */}
                     <div className="flex flex-wrap justify-center gap-1.5 mt-auto">
                       {program.subjects.split(',').map((subject: string, i: number) => (
-                        <span key={i} className="text-[10px] bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-full font-medium">
+                        <span key={i} className="text-[10px] bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full font-medium">
                           {subject.trim()}
                         </span>
                       ))}
@@ -509,28 +500,34 @@ const Home: React.FC = () => {
       )}
 
       {/* Exam Paper Download Button */}
-      {examPaper?.is_enabled && examPaper?.pdf_url && (
-        <section className="py-10 px-4 bg-neutral-50">
+      {examPaper && examPaper.is_enabled && examPaper.pdf_url && (
+        <section className="py-12 px-4 bg-secondary/20 border-y border-border/50">
           <div className="max-w-2xl mx-auto text-center">
             <AnimatedSection>
               <a
                 href={examPaper.pdf_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="exam-paper-btn group inline-flex items-center gap-4 bg-primary text-white px-8 py-5 rounded-2xl font-semibold text-base shadow-lg hover:shadow-xl transition-all duration-300"
+                className="exam-paper-btn group inline-flex items-center gap-5 bg-primary text-primary-foreground px-10 py-6 rounded-[2rem] font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-white/10"
                 style={{ animation: 'fadeInUp 0.6s ease forwards' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.04)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+                onMouseEnter={e => { 
+                  (e.currentTarget as HTMLElement).style.transform = 'scale(1.04) translateY(-4px)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 20px 40px -10px hsl(var(--primary) / 0.4)';
+                }}
+                onMouseLeave={e => { 
+                  (e.currentTarget as HTMLElement).style.transform = 'scale(1) translateY(0)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-xl)';
+                }}
               >
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
+                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-3xl shadow-inner backdrop-blur-sm">
                   📄
                 </div>
                 <div className="text-left">
-                  <p className="text-xs uppercase tracking-widest opacity-80 mb-0.5 font-bold">{examPaper.title}</p>
-                  <p className="text-lg font-extrabold leading-tight">{examPaper.button_text}</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] opacity-90 mb-1 font-black">{examPaper.title}</p>
+                  <p className="text-xl font-black leading-tight tracking-tight">{examPaper.button_text}</p>
                 </div>
-                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 group-hover:translate-x-1 transition-transform">
-                  →
+                <div className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 group-hover:bg-white/30 group-hover:translate-x-1.5 transition-all">
+                  <ArrowRight className="w-6 h-6" />
                 </div>
               </a>
             </AnimatedSection>

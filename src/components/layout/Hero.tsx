@@ -10,9 +10,11 @@ interface HeroProps {
   heading?: string;
   subheading?: string;
   overlayText?: string;
+  tagline?: string;
+  taglineEnabled?: boolean;
 }
 
-const Hero: React.FC<HeroProps> = ({ heading, subheading, overlayText }) => {
+const Hero: React.FC<HeroProps> = ({ heading, subheading, overlayText, tagline, taglineEnabled }) => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const { settings } = useCollege();
   const defaultHeading =
@@ -275,6 +277,21 @@ const Hero: React.FC<HeroProps> = ({ heading, subheading, overlayText }) => {
                 </Button>
               </Link>
             </div>
+
+            {taglineEnabled && tagline && (
+              <motion.div
+                className="mt-6 w-fit"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 1 }}
+              >
+                <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm shadow-sm transition-all hover:bg-primary/15">
+                  <span className="text-sm md:text-base font-bold text-foreground">
+                    ⭐ {tagline}
+                  </span>
+                </div>
+              </motion.div>
+            )}
           </motion.div>
 
           {/* Feature Cards */}
