@@ -506,7 +506,7 @@ const Home: React.FC = () => {
       )}
 
       {/* Exam Paper Download Button */}
-      {examPaper && examPaper.is_enabled && examPaper.pdf_url && (
+      {examPaper && examPaper.is_enabled && (
         <section className="py-12 px-4 bg-secondary/20 border-y border-border/50">
           <div className="max-w-2xl mx-auto text-center">
             <AnimatedSection>

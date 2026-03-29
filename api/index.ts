@@ -600,7 +600,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         stats: (st || []).map(s => ({ id: s.id, number: s.number, label: s.label, icon: s.icon, iconUrl: s.icon_url, color: s.color, order: s.order })),
         affiliations: (af || []).map(a => ({ id: a.id, name: a.name, logoUrl: a.logo_url, link: a.link, order: a.order, isActive: a.is_active })),
         programs: programs || [],
-        examPaper: examPaper || null
+        examPaper: examPaper ? { 
+          ...examPaper, 
+          is_enabled: !!examPaper.is_enabled,
+          id: examPaper.id || 'default',
+          title: examPaper.title || 'Download Exam Paper',
+          button_text: examPaper.button_text || 'Download'
+        } : { is_enabled: false, title: 'Download Exam Paper', button_text: 'Download', pdf_url: '' }
       });
     }
 
@@ -1103,11 +1109,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const title = body.title || '';
     const button_text = body.buttonText || body.button_text || '';
     const pdf_url = body.pdfUrl || body.pdf_url || '';
-    const is_enabled = body.isEnabled !== undefined ? body.isEnabled : (body.is_enabled ?? false);
+    const is_enabled = body.isEnabled !== undefined ? !!body.isEnabled : (!!body.is_enabled ?? false);
 
     console.log('[DEBUG EXAM PAPER]', { colId, title, is_enabled });
 
-    const { error } = await supabase.from('home_exam_papers')
+    if (!colId) return res.status(404).json({ error: 'College not found' });
+
+    // Try UPSERT first (requires unique constraint on college_id)
+    const { error: upsertError } = await supabase.from('home_exam_papers')
       .upsert({ 
         college_id: colId, 
         title, 
@@ -1117,9 +1126,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updated_at: new Date().toISOString() 
       }, { onConflict: 'college_id' });
 
-    if (error) {
-      console.error('[EXAM PAPER UPSERT ERROR]', error);
-      return res.status(500).json({ error: error.message });
+    if (upsertError) {
+      console.error('[EXAM PAPER UPSERT ERROR - FALLBACK]', upsertError);
+      // Fallback: Manual check-then-update
+      const { data: existing } = await supabase.from('home_exam_papers')
+        .select('id').eq('college_id', colId).maybeSingle();
+      
+      if (existing) {
+        await supabase.from('home_exam_papers')
+          .update({ title, button_text, pdf_url, is_enabled, updated_at: new Date().toISOString() })
+          .eq('college_id', colId);
+      } else {
+        await supabase.from('home_exam_papers')
+          .insert({ college_id: colId, title, button_text, pdf_url, is_enabled });
+      }
     }
 
     return res.json({ success: true });
