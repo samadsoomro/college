@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "react-router-dom";
 import {
@@ -262,10 +263,12 @@ const RareBooks: React.FC = () => {
         </div>
       </div>
 
-      {/* Book Detail Modal */}
-      <AnimatePresence>
+      {/* Book Detail Modal rendered via Portal to break out of z-index locking */}
+      {createPortal(
+        <AnimatePresence>
         {selectedBook && (
           <motion.div
+            key="rare-book-modal"
             className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-md"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -451,7 +454,9 @@ const RareBooks: React.FC = () => {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </motion.div>
   );
 };
