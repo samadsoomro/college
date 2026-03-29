@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   Save, Plus, Trash2, Layout, Image as ImageIcon, 
   BarChart3, Users, ExternalLink, RefreshCw, Upload,
-  XCircle, CheckCircle, Info
+  XCircle, CheckCircle, Info, Star, BookOpen
 } from "lucide-react";
 import {
   Card,
@@ -729,7 +729,7 @@ const AdminHome: React.FC = () => {
                             className="text-xs" />
                           <Button 
                             type="button" 
-                            variant="primary" 
+                            variant="default" 
                             size="sm"
                             onClick={saveExamPaper}
                             disabled={uploadingPaper}
@@ -827,7 +827,7 @@ const AdminHome: React.FC = () => {
                                 </select>
                               </div>
                               <div className="flex items-end">
-                                <Button onClick={() => saveProgram(prog)} variant="primary" size="sm" className="w-full h-9">
+                                <Button onClick={() => saveProgram(prog)} variant="default" size="sm" className="w-full h-9">
                                   <Save className="w-3.5 h-3.5 mr-2" /> Save
                                 </Button>
                               </div>
