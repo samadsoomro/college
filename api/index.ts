@@ -595,7 +595,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           affiliationsHeading: c?.affiliations_heading, ctaHeading: c?.cta_heading, ctaSubheading: c?.cta_subheading,
           heroTagline: c?.hero_tagline || '', heroTaglineEnabled: c?.hero_tagline_enabled || false,
           academicSectionEnabled: c?.academic_section_enabled ?? true, academicSectionHeading: c?.academic_section_heading || 'Academic Programs',
-          academicSectionSubheading: c?.academic_section_subheading || 'Excellence in Education'
+          academicSectionSubheading: c?.academic_section_subheading || 'Excellence in Education',
+          examSectionEnabled: c?.exam_section_enabled ?? true, examSectionHeading: c?.exam_section_heading || 'Examination Papers'
         },
         slider: (sl || []).map(s => ({ id: s.id, imageUrl: s.image_url, order: s.order, isActive: s.is_active })),
         stats: (st || []).map(s => ({ id: s.id, number: s.number, label: s.label, icon: s.icon, iconUrl: s.icon_url, color: s.color, order: s.order })),
@@ -1283,7 +1284,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           affiliationsHeading: data.affiliations_heading, ctaHeading: data.cta_heading, ctaSubheading: data.cta_subheading,
           heroTagline: data.hero_tagline, heroTaglineEnabled: data.hero_tagline_enabled,
           academicSectionEnabled: data.academic_section_enabled, academicSectionHeading: data.academic_section_heading,
-          academicSectionSubheading: data.academic_section_subheading
+          academicSectionSubheading: data.academic_section_subheading,
+          examSectionEnabled: data.exam_section_enabled, examSectionHeading: data.exam_section_heading
         } : {});
       }
       if (req.method === 'POST') {
@@ -1295,6 +1297,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           hero_tagline: req.body.heroTagline, hero_tagline_enabled: req.body.heroTaglineEnabled,
           academic_section_enabled: req.body.academicSectionEnabled, academic_section_heading: req.body.academicSectionHeading,
           academic_section_subheading: req.body.academicSectionSubheading,
+          exam_section_enabled: req.body.examSectionEnabled, exam_section_heading: req.body.examSectionHeading,
           updated_at: new Date().toISOString()
         };
         if (existing) await supabase.from('home_content').update(payload).eq('id', existing.id);

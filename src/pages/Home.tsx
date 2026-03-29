@@ -39,9 +39,11 @@ interface HomeContent {
   ctaSubheading?: string;
   heroTagline?: string;
   heroTaglineEnabled?: boolean;
-  academicSectionEnabled?: boolean;
-  academicSectionHeading?: string;
-  academicSectionSubheading?: string;
+  academicSectionEnabled: boolean;
+  academicSectionHeading: string;
+  academicSectionSubheading: string;
+  examSectionEnabled: boolean;
+  examSectionHeading: string;
 }
 
 interface AcademicProgram {
@@ -240,7 +242,23 @@ const Home: React.FC = () => {
     }
   });
 
-  const content = homeData?.content || {};
+  const content: HomeContent = (homeData?.content as HomeContent) || {
+    heroHeading: "",
+    heroSubheading: "",
+    heroOverlayText: "",
+    featuresHeading: "",
+    featuresSubheading: "",
+    affiliationsHeading: "",
+    ctaHeading: "",
+    ctaSubheading: "",
+    heroTagline: "",
+    heroTaglineEnabled: false,
+    academicSectionEnabled: true,
+    academicSectionHeading: "Academic Programs",
+    academicSectionSubheading: "Excellence in Education",
+    examSectionEnabled: true,
+    examSectionHeading: "Examination Papers"
+  };
   const slider = homeData?.slider || [];
   const stats = homeData?.stats || [];
   const affiliations = homeData?.affiliations || [];
@@ -516,43 +534,51 @@ const Home: React.FC = () => {
       )}
 
       {/* Multi-Link Exam Paper Section */}
-      {examLinks && examLinks.filter(l => l.is_enabled).length > 0 && (
-        <section className="py-12 bg-background border-y border-border/40">
-          <div className="container px-4">
-            <div className="flex flex-wrap justify-center gap-6">
+      {content?.examSectionEnabled && examLinks && examLinks.filter(l => l.is_enabled).length > 0 && (
+        <section className="py-16 lg:py-24 bg-background relative overflow-hidden">
+          {/* Subtle background decoration */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl translate-y-1/2" />
+
+          <div className="container px-4 relative z-10">
+            <AnimatedSection className="text-center mb-12 lg:mb-16">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground tracking-tight">
+                {content?.examSectionHeading || 'Examination Papers'}
+              </h2>
+              <div className="w-20 h-1.5 bg-primary/20 mx-auto mt-6 rounded-full" />
+            </AnimatedSection>
+
+            <div className="flex flex-wrap justify-center gap-6 lg:gap-8">
               {examLinks.filter(l => l.is_enabled).map((link, idx) => (
-                <div key={link.id} className="w-full md:w-auto min-w-[320px] max-w-sm">
-                  <AnimatedSection delay={idx * 100}>
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex items-center gap-5 p-6 rounded-[2rem] bg-primary text-primary-foreground shadow-xl transition-all duration-500 hover:brightness-110 active:scale-95 border-4 border-white/10"
-                      style={{
-                        background: `linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8))`,
-                      }}
-                      onMouseEnter={e => { 
-                        (e.currentTarget as HTMLElement).style.transform = 'scale(1.04) translateY(-4px)';
-                        (e.currentTarget as HTMLElement).style.boxShadow = '0 20px 40px -10px hsl(var(--primary) / 0.4)';
-                      }}
-                      onMouseLeave={e => { 
-                        (e.currentTarget as HTMLElement).style.transform = 'scale(1) translateY(0)';
-                        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-xl)';
-                      }}
-                    >
-                      <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-3xl shadow-inner backdrop-blur-sm">
-                        📄
-                      </div>
-                      <div className="text-left flex-1">
-                        <p className="text-[11px] uppercase tracking-[0.2em] opacity-90 mb-1 font-black">{link.title}</p>
-                        <p className="text-xl font-black leading-tight tracking-tight">{link.buttonText}</p>
-                      </div>
-                      <div className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 group-hover:bg-white/30 group-hover:translate-x-1.5 transition-all">
-                        <ArrowRight className="w-6 h-6" />
-                      </div>
-                    </a>
-                  </AnimatedSection>
-                </div>
+                <motion.div 
+                  key={link.id} 
+                  className="w-full md:w-auto min-w-[320px] max-w-sm"
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                  viewport={{ once: true }}
+                >
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-5 p-7 rounded-[2.5rem] bg-primary/5 text-foreground border-2 border-primary/10 shadow-sm transition-all duration-300 hover:border-primary/30 hover:bg-primary/10 relative overflow-hidden"
+                  >
+                    {/* Animated background glow */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-3xl shadow-sm group-hover:scale-110 transition-transform duration-500 relative z-10">
+                      📄
+                    </div>
+                    <div className="text-left flex-1 relative z-10">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-primary/70 mb-1.5 font-black">{link.title}</p>
+                      <p className="text-xl font-black leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors duration-300">{link.buttonText}</p>
+                    </div>
+                    <div className="w-11 h-11 flex items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-500 relative z-10 group-hover:translate-x-2">
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                  </a>
+                </motion.div>
               ))}
             </div>
           </div>

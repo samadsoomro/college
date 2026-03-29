@@ -42,6 +42,8 @@ interface HomeContent {
   academicSectionEnabled: boolean;
   academicSectionHeading: string;
   academicSectionSubheading: string;
+  examSectionEnabled: boolean;
+  examSectionHeading: string;
 }
 
 interface AcademicProgram {
@@ -550,19 +552,36 @@ const AdminHome: React.FC = () => {
 
                   {/* Section C — Multi-Link Examination System */}
                   <div className="border rounded-xl p-5 space-y-5 bg-card shadow-sm">
-                    <div className="flex items-center justify-between border-b pb-4">
-                      <div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-5 gap-4">
+                      <div className="space-y-1">
                         <h4 className="font-bold flex items-center gap-2 text-lg text-primary">
                           <ExternalLink className="w-5 h-5" /> Examination Links
                         </h4>
-                        <p className="text-xs text-muted-foreground">Add multiple buttons (e.g. Google Drive links) to the homepage.</p>
+                        <div className="flex items-center gap-4 mt-2 bg-primary/5 p-2 rounded-lg border border-primary/10">
+                          <label className="flex items-center gap-2 cursor-pointer border-r pr-4">
+                            <span className="text-[10px] text-neutral-500 uppercase font-black">Section Visible</span>
+                            <Switch 
+                              checked={editedContent?.examSectionEnabled ?? true} 
+                              onCheckedChange={checked => updateContent('examSectionEnabled', checked)} 
+                            />
+                          </label>
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="text-[10px] text-neutral-500 uppercase font-black whitespace-nowrap">Heading:</span>
+                            <Input 
+                              value={editedContent?.examSectionHeading || ''}
+                              onChange={e => updateContent('examSectionHeading', e.target.value)}
+                              placeholder="e.g. Examination Papers"
+                              className="h-7 text-[11px] bg-transparent border-none focus-visible:ring-0 p-0 font-bold text-primary"
+                            />
+                          </div>
+                        </div>
                       </div>
                       <Button 
                         type="button" 
                         onClick={addExamLink} 
                         variant="outline" 
                         size="sm" 
-                        className="border-primary text-primary hover:bg-primary/5 font-bold"
+                        className="border-primary text-primary hover:bg-primary/5 font-bold h-9"
                       >
                         <Plus className="w-4 h-4 mr-2" /> Add Button
                       </Button>
