@@ -60,6 +60,16 @@ interface ExamPaper {
   is_enabled: boolean;
 }
 
+interface ExamLink {
+  id: string;
+  title: string;
+  buttonText: string;
+  url: string;
+  isEnabled: boolean;
+  displayOrder: number;
+  isNew?: boolean;
+}
+
 interface SliderImage {
   id: string;
   imageUrl: string;
@@ -144,117 +154,151 @@ const AdminHome: React.FC = () => {
     }
   });
 
-  const { data: dbExamPaper, isLoading: examLoading } = useQuery<ExamPaper>({
-    queryKey: [`/api/${collegeSlug}/home/exam-paper`],
+  const { data: dbExamLinks = [], isLoading: linksLoading } = useQuery<ExamLink[]>({
+    queryKey: [`/api/${collegeSlug}/admin/exam-links`],
     queryFn: async () => {
       const ts = Date.now();
-      const res = await fetch(`/api/${collegeSlug}/home/exam-paper?t=${ts}`, { headers: adminHeaders() });
-      if (!res.ok) throw new Error("Failed to fetch exam paper");
+      const res = await fetch(`/api/${collegeSlug}/admin/exam-links?t=${ts}`, { headers: adminHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch exam links");
       return res.json();
     }
   });
 
   // Local state for editing hero content
   const [editedContent, setEditedContent] = useState<HomeContent | null>(null);
-
   const [faqs, setFaqs] = useState<any[]>([]);
+  const [examLinks, setExamLinks] = useState<ExamLink[]>([]);
+  const [programs, setPrograms] = useState<any[]>([]);
 
-  // Load FAQs:
+  // Sync with Query Data
+  useEffect(() => { if (content) setEditedContent(content); }, [content]);
+  useEffect(() => { if (dbExamLinks) setExamLinks(dbExamLinks); }, [dbExamLinks]);
+  useEffect(() => { if (dbPrograms) setPrograms(dbPrograms); }, [dbPrograms]);
+
+  // Synchronize FAQs
   const fetchFaqs = async () => {
-    const res = await fetch(`/api/${collegeSlug}/admin/faqs`, {
-      headers: adminHeaders()
-    });
+    const res = await fetch(`/api/${collegeSlug}/admin/faqs`, { headers: adminHeaders() });
     if (res.ok) setFaqs(await res.json());
   };
+  useEffect(() => { if (collegeSlug && isAdmin) fetchFaqs(); }, [collegeSlug, isAdmin]);
 
-  useEffect(() => {
-    if (collegeSlug && isAdmin) {
-      fetchFaqs();
-    }
-  }, [collegeSlug, isAdmin]);
-
-  // Add blank FAQ:
+  // FAQ Handlers
   const addFaq = () => {
-    setFaqs(prev => [...prev, {
-      id: `new-${Date.now()}`,
-      question: '',
-      answer: '',
-      display_order: prev.length + 1,
-      isNew: true
-    }]);
+    setFaqs(prev => [...prev, { id: `new-${Date.now()}`, question: '', answer: '', display_order: prev.length + 1, isNew: true }]);
   };
-
-  // Update locally:
   const updateFaqLocal = (id: string, field: string, value: string) => {
     setFaqs(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
   };
-
-  // Save to DB:
   const saveFaq = async (faq: any) => {
-    const method = faq.isNew ? 'POST' : 'PATCH';
-    const url = faq.isNew
-      ? `/api/${collegeSlug}/admin/faqs`
-      : `/api/${collegeSlug}/admin/faqs/${faq.id}`;
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', ...adminHeaders() },
-      body: JSON.stringify({ question: faq.question, answer: faq.answer, displayOrder: faq.display_order })
-    });
-    if (res.ok) {
-      toast({ title: '✅ FAQ saved!' });
-      fetchFaqs(); // refresh
-    }
+    try {
+      const method = faq.isNew ? 'POST' : 'PATCH';
+      const url = faq.isNew ? `/api/${collegeSlug}/admin/faqs` : `/api/${collegeSlug}/admin/faqs/${faq.id}`;
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...adminHeaders() },
+        body: JSON.stringify({ question: faq.question, answer: faq.answer, displayOrder: faq.display_order })
+      });
+      if (res.ok) {
+        toast({ title: '✅ FAQ saved!' });
+        fetchFaqs();
+      }
+    } catch (err) { toast({ title: "Error saving FAQ", variant: "destructive" }); }
   };
-
-  // Delete:
   const deleteFaq = async (id: string) => {
-    if (id.startsWith('new-')) {
-      setFaqs(prev => prev.filter(f => f.id !== id));
-      return;
-    }
-    await fetch(`/api/${collegeSlug}/admin/faqs/${id}`, {
-      method: 'DELETE',
-      headers: adminHeaders()
-    });
+    if (id.startsWith('new-')) { setFaqs(prev => prev.filter(f => f.id !== id)); return; }
+    if (!confirm("Delete this FAQ?")) return;
+    await fetch(`/api/${collegeSlug}/admin/faqs/${id}`, { method: 'DELETE', headers: adminHeaders() });
     toast({ title: 'FAQ deleted' });
     fetchFaqs();
   };
 
-  useEffect(() => {
-    if (content) {
-      setEditedContent(content);
+  // Multi-Link Exam System Handlers
+  const addExamLink = () => {
+    setExamLinks(prev => [...prev, {
+      id: `new-${Date.now()}`,
+      title: 'New Examination Paper',
+      buttonText: 'Access Papers',
+      url: '',
+      isEnabled: true,
+      displayOrder: prev.length + 1,
+      isNew: true
+    }]);
+  };
+  const updateExamLinkLocal = (id: string, field: string, value: any) => {
+    setExamLinks(prev => prev.map(l => l.id === id ? { ...l, [field]: value } : l));
+  };
+  const saveExamLink = async (link: any) => {
+    try {
+      const method = link.isNew ? 'POST' : 'PATCH';
+      const url = link.isNew ? `/api/${collegeSlug}/admin/exam-links` : `/api/${collegeSlug}/admin/exam-links/${link.id}`;
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...adminHeaders() },
+        body: JSON.stringify({ ...link, displayOrder: link.displayOrder })
+      });
+      if (res.ok) {
+        toast({ title: '✅ Link saved!' });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/exam-links`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
+      }
+    } catch (err) { toast({ title: "Error saving link", variant: "destructive" }); }
+  };
+  const deleteExamLink = async (id: string) => {
+    if (id.startsWith('new-')) { setExamLinks(prev => prev.filter(l => l.id !== id)); return; }
+    if (!confirm("Delete this examination link?")) return;
+    const res = await fetch(`/api/${collegeSlug}/admin/exam-links/${id}`, { method: 'DELETE', headers: adminHeaders() });
+    if (res.ok) {
+      toast({ title: 'Link deleted' });
+      queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/exam-links`] });
+      queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
     }
-  }, [content]);
+  };
 
-  // Academic Programs State
-  const [programs, setPrograms] = useState<AcademicProgram[]>([]);
-  useEffect(() => {
-    if (dbPrograms) setPrograms(dbPrograms);
-  }, [dbPrograms]);
-
-  // Exam Paper State
-  const [examPaper, setExamPaper] = useState<ExamPaper | null>(null);
-  useEffect(() => {
-    if (dbExamPaper && Object.keys(dbExamPaper).length > 0) {
-      setExamPaper(prev => ({
-        ...prev,
-        ...dbExamPaper,
-        is_enabled: dbExamPaper.is_enabled ?? false,
-        title: dbExamPaper.title || '',
-        button_text: dbExamPaper.button_text || '',
-        pdf_url: dbExamPaper.pdf_url || ''
-      }));
+  // Academic Programs Handlers
+  const addProgram = () => {
+    setPrograms(prev => [...prev, { id: `new-${Date.now()}`, title: '', subjects: '', icon: 'BookOpen', display_order: prev.length + 1 }]);
+  };
+  const updateProgram = (id: string, field: string, value: any) => {
+    setPrograms(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+  const saveProgram = async (prog: any) => {
+    try {
+      const isNew = prog.id.toString().startsWith('new-');
+      const url = isNew ? `/api/${collegeSlug}/admin/academic-programs` : `/api/${collegeSlug}/admin/academic-programs/${prog.id}`;
+      const res = await fetch(url, {
+        method: isNew ? "POST" : "PATCH",
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ title: prog.title, subjects: prog.subjects, icon: prog.icon, displayOrder: prog.display_order })
+      });
+      if (res.ok) {
+        toast({ title: "Success", description: "Program saved" });
+        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/academic-programs`] });
+        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
+      }
+    } catch (err) { toast({ title: "Error saving program", variant: "destructive" }); }
+  };
+  const deleteProgram = async (id: string) => {
+    if (id.toString().startsWith('new-')) { setPrograms(prev => prev.filter(p => p.id !== id)); return; }
+    if (!confirm("Remove this program?")) return;
+    const res = await fetch(`/api/${collegeSlug}/admin/academic-programs/${id}`, { method: "DELETE", headers: adminHeaders() });
+    if (res.ok) {
+      toast({ title: "Deleted", description: "Program removed" });
+      queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/academic-programs`] });
+      queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
     }
-  }, [dbExamPaper]);
+  };
 
-  const [uploadingPaper, setUploadingPaper] = useState(false);
+  // Global State Helpers
+  const updateContent = (field: keyof HomeContent, value: any) => {
+    if (!editedContent) return;
+    setEditedContent({ ...editedContent, [field]: value });
+  };
 
   // Form states for new items
   const [sliderFile, setSliderFile] = useState<File | null>(null);
   const [affiliationFile, setAffiliationFile] = useState<File | null>(null);
   const [affiliationName, setAffiliationName] = useState("");
   const [affiliationLink, setAffiliationLink] = useState("");
-  
   const [newStatLabel, setNewStatLabel] = useState("");
   const [newStatNumber, setNewStatNumber] = useState("");
   const [newStatIcon, setNewStatIcon] = useState("BookOpen");
@@ -262,119 +306,14 @@ const AdminHome: React.FC = () => {
   const [newStatFile, setNewStatFile] = useState<File | null>(null);
 
   const ICON_OPTIONS = ["BookOpen", "Users", "Award", "TrendingUp", "Search", "Star", "Heart", "Clock"];
-  const COLOR_OPTIONS = [
-    { label: "Green", value: "text-pakistan-green" },
-    { label: "Light Green", value: "text-pakistan-green-light" },
-    { label: "Emerald", value: "text-pakistan-emerald" },
-    { label: "Accent", value: "text-accent" },
-    { label: "Primary", value: "text-primary" },
-  ];
+  const COLOR_OPTIONS = [ { label: "Green", value: "text-pakistan-green" }, { label: "Light Green", value: "text-pakistan-green-light" }, { label: "Emerald", value: "text-pakistan-emerald" }, { label: "Accent", value: "text-accent" }, { label: "Primary", value: "text-primary" } ];
 
   const getPositionLabel = (index: number) => {
     const labels = ["First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth"];
     return labels[index] || `#${index + 1}`;
   };
 
-  // Helper for updating content locally
-  const updateContent = (field: keyof HomeContent, value: any) => {
-    if (!editedContent) return;
-    setEditedContent({ ...editedContent, [field]: value });
-  };
-
-  // Academic Programs Handlers
-  const addProgram = () => {
-    setPrograms(prev => [...prev, {
-      id: `new-${Date.now()}`,
-      title: '',
-      subjects: '',
-      icon: 'BookOpen',
-      display_order: prev.length + 1
-    }]);
-  };
-
-  const updateProgram = (id: string, field: string, value: any) => {
-    setPrograms(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
-  };
-
-  const saveProgram = async (prog: any) => {
-    const isNew = prog.id.toString().startsWith('new-');
-    const method = isNew ? "POST" : "PATCH";
-    const url = isNew 
-      ? `/api/${collegeSlug}/admin/academic-programs`
-      : `/api/${collegeSlug}/admin/academic-programs/${prog.id}`;
-    
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { ...adminHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          title: prog.title, 
-          subjects: prog.subjects, 
-          icon: prog.icon,
-          displayOrder: prog.display_order 
-        })
-      });
-      if (res.ok) {
-        toast({ title: "Success", description: "Program saved" });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/academic-programs`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to save program", variant: "destructive" });
-    }
-  };
-
-  const deleteProgram = async (id: string) => {
-    if (id.toString().startsWith('new-')) {
-      setPrograms(prev => prev.filter(p => p.id !== id));
-      return;
-    }
-    if (!confirm("Remove this program?")) return;
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/academic-programs/${id}`, {
-        method: "DELETE",
-        headers: adminHeaders()
-      });
-      if (res.ok) {
-        toast({ title: "Deleted", description: "Program removed" });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/academic-programs`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {}
-  };
-
-  // Exam Paper Handlers
-  const updateExamPaper = (field: string, value: any) => {
-    setExamPaper(prev => prev ? { ...prev, [field]: value } : { id: '', title: '', button_text: '', pdf_url: '', is_enabled: false, [field]: value });
-  };
-
-  const saveExamPaper = async () => {
-    if (!examPaper) return;
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/exam-paper`, {
-        method: "PATCH",
-        headers: { ...adminHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: examPaper.title,
-          buttonText: examPaper.button_text,
-          button_text: examPaper.button_text,
-          pdfUrl: examPaper.pdf_url,
-          pdf_url: examPaper.pdf_url,
-          isEnabled: examPaper.is_enabled,
-          is_enabled: examPaper.is_enabled
-        })
-      });
-      if (res.ok) {
-        toast({ title: "Success", description: "Exam paper settings updated" });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/home/exam-paper`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Save failed", variant: "destructive" });
-    }
-  };
-
-  // Handlers
+  // Submission Handlers
   const handleContentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editedContent) return;
@@ -390,11 +329,8 @@ const AdminHome: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/content`] });
         queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to update content", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { toast({ title: "Error", description: "Failed to update content", variant: "destructive" }); }
+    finally { setLoading(false); }
   };
 
   const handleUploadSlider = async (e: React.FormEvent) => {
@@ -402,75 +338,49 @@ const AdminHome: React.FC = () => {
     if (!sliderFile) return;
     setLoading(true);
     try {
-      // 1. Upload to Supabase
       const imageUrl = await uploadToSupabase(sliderFile, 'home', collegeSlug!);
-      if (!imageUrl) throw new Error("Upload failed");
-
-      // 2. Save to DB via JSON
       const res = await fetch(`/api/${collegeSlug}/admin/home/slider`, { 
         method: "POST", 
         headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl })
       });
-      
       if (res.ok) {
         toast({ title: "Success", description: "Image uploaded" });
         setSliderFile(null);
-        const fileInput = document.getElementById("slider-upload") as HTMLInputElement;
-        if (fileInput) fileInput.value = "";
+        if (document.getElementById("slider-upload")) (document.getElementById("slider-upload") as HTMLInputElement).value = "";
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
         queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
-    } catch (error) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Upload failed", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { toast({ title: "Error", variant: "destructive" }); }
+    finally { setLoading(false); }
   };
 
   const handleDeleteSlider = async (id: string) => {
     if (!confirm("Are you sure?")) return;
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, { 
-        method: "DELETE",
-        headers: adminHeaders()
-      });
-      if (res.ok) {
-        toast({ title: "Deleted", description: "Image removed" });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Delete failed", variant: "destructive" });
+    const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, { method: "DELETE", headers: adminHeaders() });
+    if (res.ok) {
+      toast({ title: "Deleted", description: "Image removed" });
+      queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
+      queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
     }
   };
 
   const toggleSliderStatus = async (id: string, currentStatus: boolean) => {
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, {
-        method: "PATCH",
-        headers: { ...adminHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !currentStatus }),
-      });
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {}
+    await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, {
+      method: "PATCH",
+      headers: { ...adminHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: !currentStatus }),
+    });
+    queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
   };
 
   const updateSliderOrder = async (id: string, order: number) => {
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, {
-        method: "PATCH",
-        headers: { ...adminHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ order }),
-      });
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {}
+    await fetch(`/api/${collegeSlug}/admin/home/slider/${id}`, {
+      method: "PATCH",
+      headers: { ...adminHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
+    queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/slider`] });
   };
 
   const handleUploadAffiliation = async (e: React.FormEvent) => {
@@ -479,74 +389,47 @@ const AdminHome: React.FC = () => {
     setLoading(true);
     try {
       const logoUrl = await uploadToSupabase(affiliationFile, 'home', collegeSlug!);
-      if (!logoUrl) throw new Error("Upload failed");
-
       const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations`, { 
         method: "POST", 
         headers: { ...adminHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ name: affiliationName, link: affiliationLink, logoUrl })
       });
-
       if (res.ok) {
         toast({ title: "Success", description: "Affiliation added" });
-        setAffiliationFile(null);
-        setAffiliationName("");
-        setAffiliationLink("");
-        const fileInput = document.getElementById("affiliation-upload") as HTMLInputElement;
-        if (fileInput) fileInput.value = "";
+        setAffiliationFile(null); setAffiliationName(""); setAffiliationLink("");
+        if (document.getElementById("affiliation-upload")) (document.getElementById("affiliation-upload") as HTMLInputElement).value = "";
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
         queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
-    } catch (error) {
-      toast({ title: "Error", description: "Add failed", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { toast({ title: "Error", variant: "destructive" }); }
+    finally { setLoading(false); }
   };
 
   const handleDeleteAffiliation = async (id: string) => {
     if (!confirm("Delete affiliation?")) return;
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, { 
-        method: "DELETE",
-        headers: adminHeaders()
-      });
-      if (res.ok) {
-        toast({ title: "Deleted", description: "Affiliation removed" });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Delete failed", variant: "destructive" });
+    const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, { method: "DELETE", headers: adminHeaders() });
+    if (res.ok) {
+      toast({ title: "Deleted" });
+      queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
     }
   };
 
   const toggleAffiliationStatus = async (id: string, currentStatus: boolean) => {
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, {
-        method: "PATCH",
-        headers: { ...adminHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !currentStatus }),
-      });
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {}
+    await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, {
+      method: "PATCH",
+      headers: { ...adminHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: !currentStatus }),
+    });
+    queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
   };
 
   const updateAffiliationOrder = async (id: string, order: number) => {
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, {
-        method: "PATCH",
-        headers: { ...adminHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ order }),
-      });
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {}
+    await fetch(`/api/${collegeSlug}/admin/home/affiliations/${id}`, {
+      method: "PATCH",
+      headers: { ...adminHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
+    queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/affiliations`] });
   };
 
   const handleAddStat = async (e: React.FormEvent) => {
@@ -555,54 +438,27 @@ const AdminHome: React.FC = () => {
     setLoading(true);
     try {
       let iconUrl = "";
-      if (newStatFile) {
-        iconUrl = await uploadToSupabase(newStatFile, 'home', collegeSlug!) || "";
-      }
-
+      if (newStatFile) iconUrl = await uploadToSupabase(newStatFile, 'home', collegeSlug!) || "";
       const res = await fetch(`/api/${collegeSlug}/admin/home/stats`, { 
         method: "POST", 
         headers: { ...adminHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          label: newStatLabel, 
-          number: newStatNumber, 
-          icon: newStatIcon, 
-          color: newStatColor,
-          iconUrl
-        })
+        body: JSON.stringify({ label: newStatLabel, number: newStatNumber, icon: newStatIcon, color: newStatColor, iconUrl })
       });
-
       if (res.ok) {
-        toast({ title: "Success", description: "Stat added" });
-        setNewStatLabel("");
-        setNewStatNumber("");
-        setNewStatFile(null);
-        const fileInput = document.getElementById("new-stat-icon") as HTMLInputElement;
-        if (fileInput) fileInput.value = "";
+        toast({ title: "Success" });
+        setNewStatLabel(""); setNewStatNumber(""); setNewStatFile(null);
+        if (document.getElementById("new-stat-icon")) (document.getElementById("new-stat-icon") as HTMLInputElement).value = "";
         queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/stats`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
       }
-    } catch (error) {
-      toast({ title: "Error", description: "Add failed", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { toast({ title: "Error", variant: "destructive" }); }
+    finally { setLoading(false); }
   };
 
   const handleDeleteStat = async (id: string) => {
     if (!confirm("Delete statistic?")) return;
-    try {
-      const res = await fetch(`/api/${collegeSlug}/admin/home/stats/${id}`, { 
-        method: "DELETE",
-        headers: adminHeaders()
-      });
-      if (res.ok) {
-        toast({ title: "Deleted", description: "Stat removed" });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/stats`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Delete failed", variant: "destructive" });
-    }
+    await fetch(`/api/${collegeSlug}/admin/home/stats/${id}`, { method: "DELETE", headers: adminHeaders() });
+    toast({ title: "Deleted" });
+    queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/home/stats`] });
   };
 
   if (contentLoading || !editedContent) return <div className="p-8 text-center text-muted-foreground">Loading Home Settings...</div>;
@@ -692,70 +548,83 @@ const AdminHome: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Section C — Exam Paper Button */}
-                  <div className="border rounded-xl p-4 space-y-3 bg-secondary/10">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold flex items-center gap-2 text-primary">
-                        <Upload className="w-4 h-4" /> Exam Paper Button
-                      </h4>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <span className="text-xs text-neutral-500 uppercase font-bold tracking-wider">Show on homepage</span>
-                        <Switch checked={examPaper?.is_enabled || false}
-                          onCheckedChange={checked => updateExamPaper('is_enabled', checked)} />
-                      </label>
+                  {/* Section C — Multi-Link Examination System */}
+                  <div className="border rounded-xl p-5 space-y-5 bg-card shadow-sm">
+                    <div className="flex items-center justify-between border-b pb-4">
+                      <div>
+                        <h4 className="font-bold flex items-center gap-2 text-lg text-primary">
+                          <ExternalLink className="w-5 h-5" /> Examination Links
+                        </h4>
+                        <p className="text-xs text-muted-foreground">Add multiple buttons (e.g. Google Drive links) to the homepage.</p>
+                      </div>
+                      <Button 
+                        type="button" 
+                        onClick={addExamLink} 
+                        variant="outline" 
+                        size="sm" 
+                        className="border-primary text-primary hover:bg-primary/5 font-bold"
+                      >
+                        <Plus className="w-4 h-4 mr-2" /> Add Button
+                      </Button>
                     </div>
 
-                    <div className="space-y-2">
-                      <div>
-                        <Label className="text-xs font-bold text-muted-foreground uppercase">Small Label Text</Label>
-                        <Input value={examPaper?.title || ''}
-                          onChange={e => updateExamPaper('title', e.target.value)}
-                          placeholder="Past Examination Papers 2026"
-                          className="mt-1" />
-                      </div>
-                      <div>
-                        <Label className="text-xs font-bold text-muted-foreground uppercase">Button Text</Label>
-                        <Input value={examPaper?.button_text || ''}
-                          onChange={e => updateExamPaper('button_text', e.target.value)}
-                          placeholder="Access Past Examination Papers 2026"
-                          className="mt-1" />
-                      </div>
-                      <div className="pt-1">
-                        <Label className="text-xs font-bold text-muted-foreground uppercase">Upload PDF</Label>
-                        <div className="flex gap-2 mt-1">
-                          <Input type="file" accept=".pdf"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              setUploadingPaper(true);
-                              try {
-                                const url = await uploadToSupabase(file, 'exam-papers', collegeSlug!);
-                                updateExamPaper('pdf_url', url);
-                                toast({ title: '✅ PDF uploaded!' });
-                              } catch (err: any) {
-                                toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
-                              } finally {
-                                setUploadingPaper(false);
-                              }
-                            }}
-                            className="text-xs" />
-                          <Button 
-                            type="button" 
-                            variant="default" 
-                            size="sm"
-                            onClick={saveExamPaper}
-                            disabled={uploadingPaper}
-                          >
-                            {uploadingPaper ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          </Button>
+                    <div className="grid grid-cols-1 gap-4 mt-2">
+                      {examLinks.map((link, index) => (
+                        <div key={link.id} className="border-2 border-dashed border-neutral-100 rounded-2xl p-4 bg-neutral-50/50 space-y-4 relative group">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-tighter">Button #{index + 1}</span>
+                            <div className="flex items-center gap-4">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <span className="text-[10px] text-neutral-500 uppercase font-black">Active</span>
+                                <Switch checked={link.isEnabled} 
+                                  onCheckedChange={checked => updateExamLinkLocal(link.id, 'isEnabled', checked)} />
+                              </label>
+                              <button onClick={() => deleteExamLink(link.id)}
+                                className="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Trash2 className="w-3 h-3" /> Remove
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Small Label (e.g. Past Papers 2026)</Label>
+                              <Input value={link.title}
+                                onChange={e => updateExamLinkLocal(link.id, 'title', e.target.value)}
+                                placeholder="Enter label..."
+                                className="h-9 text-sm" />
+                            </div>
+                            
+                            <div>
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Button Text (e.g. Access Now)</Label>
+                              <Input value={link.buttonText}
+                                onChange={e => updateExamLinkLocal(link.id, 'buttonText', e.target.value)}
+                                placeholder="Enter button text..."
+                                className="h-9 text-sm" />
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Target URL (Google Drive, Dropbox, etc.)</Label>
+                              <div className="flex gap-2">
+                                <Input value={link.url}
+                                  onChange={e => updateExamLinkLocal(link.id, 'url', e.target.value)}
+                                  placeholder="https://drive.google.com/..."
+                                  className="h-9 text-sm flex-1" />
+                                <Button onClick={() => saveExamLink(link)} variant="default" size="sm" className="h-9 px-6 font-bold shadow-md">
+                                  <Save className="w-3.5 h-3.5 mr-2" /> Save
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        {examPaper?.pdf_url && (
-                          <a href={examPaper.pdf_url} target="_blank" rel="noreferrer"
-                            className="text-[10px] text-primary underline mt-1.5 block font-medium">
-                            ✅ PDF uploaded — click to preview
-                          </a>
-                        )}
-                      </div>
+                      ))}
+
+                      {examLinks.length === 0 && (
+                        <div className="text-center py-12 text-neutral-400 text-sm border-2 border-dashed rounded-2xl bg-neutral-50/30">
+                          No examination links added yet. <br/>
+                          <span className="text-[10px] uppercase font-bold text-primary cursor-pointer hover:underline" onClick={addExamLink}>Click here to add your first button</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

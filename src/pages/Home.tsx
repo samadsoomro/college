@@ -60,6 +60,14 @@ interface ExamPaper {
   is_enabled: boolean;
 }
 
+interface ExamLink {
+  id: string;
+  title: string;
+  buttonText: string;
+  url: string;
+  is_enabled: boolean;
+}
+
 interface SliderImage {
   id: string;
   imageUrl: string;
@@ -222,6 +230,7 @@ const Home: React.FC = () => {
     affiliations: Affiliation[];
     programs: AcademicProgram[];
     examPaper: ExamPaper;
+    examLinks: ExamLink[];
   }>({
     queryKey: [`/api/${collegeSlug}/home`],
     queryFn: async () => {
@@ -237,6 +246,7 @@ const Home: React.FC = () => {
   const affiliations = homeData?.affiliations || [];
   const programs = homeData?.programs || [];
   const examPaper = homeData?.examPaper || null;
+  const examLinks = homeData?.examLinks || [];
   const loading = isLoading;
 
   const [faqs, setFaqs] = useState<any[]>([]);
@@ -505,38 +515,46 @@ const Home: React.FC = () => {
         </section>
       )}
 
-      {/* Exam Paper Download Button */}
-      {examPaper && examPaper.is_enabled && (
-        <section className="py-12 px-4 bg-secondary/20 border-y border-border/50">
-          <div className="max-w-2xl mx-auto text-center">
-            <AnimatedSection>
-              <a
-                href={examPaper.pdf_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="exam-paper-btn group inline-flex items-center gap-5 bg-primary text-primary-foreground px-10 py-6 rounded-[2rem] font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-500 border-2 border-white/10"
-                style={{ animation: 'fadeInUp 0.6s ease forwards' }}
-                onMouseEnter={e => { 
-                  (e.currentTarget as HTMLElement).style.transform = 'scale(1.04) translateY(-4px)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 20px 40px -10px hsl(var(--primary) / 0.4)';
-                }}
-                onMouseLeave={e => { 
-                  (e.currentTarget as HTMLElement).style.transform = 'scale(1) translateY(0)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-xl)';
-                }}
-              >
-                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-3xl shadow-inner backdrop-blur-sm">
-                  📄
+      {/* Multi-Link Exam Paper Section */}
+      {examLinks && examLinks.filter(l => l.is_enabled).length > 0 && (
+        <section className="py-12 bg-background border-y border-border/40">
+          <div className="container px-4">
+            <div className="flex flex-wrap justify-center gap-6">
+              {examLinks.filter(l => l.is_enabled).map((link, idx) => (
+                <div key={link.id} className="w-full md:w-auto min-w-[320px] max-w-sm">
+                  <AnimatedSection delay={idx * 100}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-5 p-6 rounded-[2rem] bg-primary text-primary-foreground shadow-xl transition-all duration-500 hover:brightness-110 active:scale-95 border-4 border-white/10"
+                      style={{
+                        background: `linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8))`,
+                      }}
+                      onMouseEnter={e => { 
+                        (e.currentTarget as HTMLElement).style.transform = 'scale(1.04) translateY(-4px)';
+                        (e.currentTarget as HTMLElement).style.boxShadow = '0 20px 40px -10px hsl(var(--primary) / 0.4)';
+                      }}
+                      onMouseLeave={e => { 
+                        (e.currentTarget as HTMLElement).style.transform = 'scale(1) translateY(0)';
+                        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-xl)';
+                      }}
+                    >
+                      <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-3xl shadow-inner backdrop-blur-sm">
+                        📄
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className="text-[11px] uppercase tracking-[0.2em] opacity-90 mb-1 font-black">{link.title}</p>
+                        <p className="text-xl font-black leading-tight tracking-tight">{link.buttonText}</p>
+                      </div>
+                      <div className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 group-hover:bg-white/30 group-hover:translate-x-1.5 transition-all">
+                        <ArrowRight className="w-6 h-6" />
+                      </div>
+                    </a>
+                  </AnimatedSection>
                 </div>
-                <div className="text-left">
-                  <p className="text-[11px] uppercase tracking-[0.2em] opacity-90 mb-1 font-black">{examPaper.title}</p>
-                  <p className="text-xl font-black leading-tight tracking-tight">{examPaper.button_text}</p>
-                </div>
-                <div className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 group-hover:bg-white/30 group-hover:translate-x-1.5 transition-all">
-                  <ArrowRight className="w-6 h-6" />
-                </div>
-              </a>
-            </AnimatedSection>
+              ))}
+            </div>
           </div>
         </section>
       )}

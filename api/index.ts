@@ -579,13 +579,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 1. Full Home Data (content, slider, stats, affiliations)
     if (resource === 'home' && !subResource) {
-      const [{ data: c }, { data: sl }, { data: st }, { data: af }, { data: programs }, { data: examPaper }] = await Promise.all([
+      const [{ data: c }, { data: sl }, { data: st }, { data: af }, { data: programs }, { data: examPaper }, { data: examLinks }] = await Promise.all([
         supabase.from('home_content').select('*').eq('college_id', colId).maybeSingle(),
         supabase.from('home_slider_images').select('*').eq('college_id', colId).eq('is_active', true).order('order'),
         supabase.from('home_stats').select('*').eq('college_id', colId).order('order'),
         supabase.from('home_affiliations').select('*').eq('college_id', colId).eq('is_active', true).order('order'),
         supabase.from('home_academic_programs').select('*').eq('college_id', colId).order('display_order', { ascending: true }),
-        supabase.from('home_exam_papers').select('*').eq('college_id', colId).maybeSingle()
+        supabase.from('home_exam_papers').select('*').eq('college_id', colId).maybeSingle(),
+        supabase.from('home_exam_links').select('*').eq('college_id', colId).order('display_order')
       ]);
       return res.json({
         content: {
@@ -606,7 +607,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id: examPaper.id || 'default',
           title: examPaper.title || 'Download Exam Paper',
           button_text: examPaper.button_text || 'Download'
-        } : { is_enabled: false, title: 'Download Exam Paper', button_text: 'Download', pdf_url: '' }
+        } : { is_enabled: false, title: 'Download Exam Paper', button_text: 'Download', pdf_url: '' },
+        examLinks: (examLinks || []).map(l => ({
+          ...l,
+          title: l.title || 'Exam Paper',
+          buttonText: l.button_text,
+          url: l.url || l.pdf_url // Handle mixed field names during transition
+        }))
       });
     }
 
@@ -1148,6 +1155,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: error.message });
     }
 
+    return res.json({ success: true });
+  }
+
+  // --- NEW: Multi-Link Exam Paper Management ---
+
+  // GET /api/:slug/admin/exam-links
+  if (isApi && resource === 'admin' && sub1 === 'exam-links' && !sub2 && req.method === 'GET') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    const { data } = await supabase.from('home_exam_links').select('*').eq('college_id', colId).order('display_order');
+    return res.json(data || []);
+  }
+
+  // POST /api/:slug/admin/exam-links
+  if (isApi && resource === 'admin' && sub1 === 'exam-links' && !sub2 && req.method === 'POST') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    const { title, buttonText, url, isEnabled, displayOrder } = req.body || {};
+    const { data, error } = await supabase.from('home_exam_links').insert({
+      college_id: colId,
+      title: title || 'Examination Paper',
+      button_text: buttonText || 'Access Papers',
+      url: url || '',
+      is_enabled: isEnabled !== undefined ? isEnabled : true,
+      display_order: displayOrder || 0
+    }).select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  // PATCH /api/:slug/admin/exam-links/:id
+  if (isApi && resource === 'admin' && sub1 === 'exam-links' && sub2 && req.method === 'PATCH') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    const { title, buttonText, url, isEnabled, displayOrder } = req.body || {};
+    const updatePayload: any = {};
+    if (title !== undefined) updatePayload.title = title;
+    if (buttonText !== undefined) updatePayload.button_text = buttonText;
+    if (url !== undefined) updatePayload.url = url;
+    if (isEnabled !== undefined) updatePayload.is_enabled = isEnabled;
+    if (displayOrder !== undefined) updatePayload.display_order = displayOrder;
+    updatePayload.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase.from('home_exam_links')
+      .update(updatePayload)
+      .eq('id', sub2).eq('college_id', colId).select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  // DELETE /api/:slug/admin/exam-links/:id
+  if (isApi && resource === 'admin' && sub1 === 'exam-links' && sub2 && req.method === 'DELETE') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    await supabase.from('home_exam_links').delete().eq('id', sub2).eq('college_id', colId);
     return res.json({ success: true });
   }
 
