@@ -220,7 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // GET /api/:slug/library-card-applications/by-card/:cardNumber
   if (resource === 'library-card-applications' && subResource === 'by-card' && sub2 && req.method === 'GET') {
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     if (!colId) return res.status(404).json({ error: 'College not found' });
 
     const { data } = await supabase
@@ -612,7 +612,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET /api/:slug/home/academic-programs
     if (isApi && resource === 'home' && sub1 === 'academic-programs' && req.method === 'GET') {
-      const colId = await getCollegeId(slug);
+      const colId = col.id;
       if (!colId) return res.status(404).json({ error: 'Not found' });
       const { data } = await supabase.from('home_academic_programs')
         .select('*').eq('college_id', colId)
@@ -622,7 +622,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET /api/:slug/home/exam-paper
     if (isApi && resource === 'home' && sub1 === 'exam-paper' && req.method === 'GET') {
-      const colId = await getCollegeId(slug);
+      const colId = col.id;
       if (!colId) return res.status(404).json({ error: 'Not found' });
       const { data } = await supabase.from('home_exam_papers')
         .select('*').eq('college_id', colId).maybeSingle();
@@ -1001,7 +1001,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // GET /api/:slug/home/faqs — public route
   if (isApi && resource === 'home' && sub1 === 'faqs' && !sub2 && req.method === 'GET') {
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     if (!colId) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase
       .from('home_faqs').select('id, question, answer, display_order')
@@ -1015,7 +1015,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // GET /api/:slug/admin/faqs — admin route
   if (isApi && resource === 'admin' && sub1 === 'faqs' && !sub2 && req.method === 'GET') {
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     if (!colId) return res.status(404).json({ error: 'College not found' });
     const { data } = await supabase
       .from('home_faqs').select('*')
@@ -1026,7 +1026,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // POST /api/:slug/admin/faqs — add new FAQ
   if (isApi && resource === 'admin' && sub1 === 'faqs' && !sub2 && req.method === 'POST') {
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     if (!colId) return res.status(404).json({ error: 'College not found' });
     const { question, answer, displayOrder } = req.body || {};
     if (!question || !answer) return res.status(400).json({ error: 'Question and answer required' });
@@ -1039,7 +1039,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // PATCH /api/:slug/admin/faqs/:id — update FAQ
   if (isApi && resource === 'admin' && sub1 === 'faqs' && sub2 && !sub3 && req.method === 'PATCH') {
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     if (!colId) return res.status(404).json({ error: 'College not found' });
     const { question, answer } = req.body || {};
     const { data, error } = await supabase.from('home_faqs')
@@ -1052,7 +1052,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // DELETE /api/:slug/admin/faqs/:id — delete FAQ
   if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'faqs' && sub2 && !sub3) {
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     if (!colId) return res.status(404).json({ error: 'College not found' });
     await supabase.from('home_faqs').delete().eq('id', sub2).eq('college_id', colId);
     return res.json({ success: true });
@@ -1061,7 +1061,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // GET /api/:slug/admin/academic-programs
   if (isApi && resource === 'admin' && sub1 === 'academic-programs' && !sub2 && req.method === 'GET') {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     const { data } = await supabase.from('home_academic_programs')
       .select('*').eq('college_id', colId).order('display_order');
     return res.json(data || []);
@@ -1070,7 +1070,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // POST /api/:slug/admin/academic-programs
   if (isApi && resource === 'admin' && sub1 === 'academic-programs' && !sub2 && req.method === 'POST') {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     const { title, subjects, icon, displayOrder } = req.body || {};
     const { data, error } = await supabase.from('home_academic_programs')
       .insert({ college_id: colId, title, subjects, icon: icon || 'BookOpen', display_order: displayOrder || 0 })
@@ -1082,7 +1082,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // PATCH /api/:slug/admin/academic-programs/:id
   if (isApi && resource === 'admin' && sub1 === 'academic-programs' && sub2 && req.method === 'PATCH') {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     const { title, subjects, icon } = req.body || {};
     const { data, error } = await supabase.from('home_academic_programs')
       .update({ title, subjects, icon })
@@ -1094,7 +1094,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // DELETE /api/:slug/admin/academic-programs/:id
   if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'academic-programs' && sub2) {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     await supabase.from('home_academic_programs').delete().eq('id', sub2).eq('college_id', colId);
     return res.json({ success: true });
   }
@@ -1102,14 +1102,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // PATCH /api/:slug/admin/exam-paper
   if (isApi && resource === 'admin' && sub1 === 'exam-paper' && !sub2 && req.method === 'PATCH') {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
-    const colId = await getCollegeId(slug);
+    const colId = col.id;
     const body = req.body || {};
     
     // Unified mapping for both camelCase and snake_case
     const title = body.title || '';
     const button_text = body.buttonText || body.button_text || '';
     const pdf_url = body.pdfUrl || body.pdf_url || '';
-    const is_enabled = body.isEnabled !== undefined ? !!body.isEnabled : (!!body.is_enabled ?? false);
+    const is_enabled = body.isEnabled !== undefined ? !!body.isEnabled : (!!body.is_enabled);
 
     console.log('[DEBUG EXAM PAPER]', { colId, title, is_enabled });
 
