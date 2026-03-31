@@ -262,32 +262,27 @@ const AdminHome: React.FC = () => {
       if (!file) return;
 
       toast({ title: "Uploading PDF..." });
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("type", "pdf");
 
       try {
-        const uploadRes = await fetch(`/api/${collegeSlug}/admin/upload`, {
-          method: "POST",
-          headers: adminHeaders(),
-          body: formData
-        });
-
-        if (!uploadRes.ok) throw new Error("Upload failed");
-        const { url, sizeKb } = await uploadRes.json();
+        // Use the utility which handles base64 conversion and JSON fetch correctly
+        const url = await uploadToSupabase(file, 'exam-papers', collegeSlug!);
+        const sizeKb = Math.round(file.size / 1024);
 
         const name = newSubjectName[classId] || file.name.replace(".pdf", "");
 
-        await fetch(`/api/${collegeSlug}/admin/exam-subjects`, {
+        const res = await fetch(`/api/${collegeSlug}/admin/exam-subjects`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...adminHeaders() },
           body: JSON.stringify({ classId, subjectName: name, pdfUrl: url, fileSizeKb: sizeKb })
         });
 
+        if (!res.ok) throw new Error("Failed to save subject metadata");
+
         toast({ title: "PDF Added Successfully!" });
         setNewSubjectName(p => ({...p, [classId]: ""}));
         fetchExamGroups();
       } catch (err) {
+        console.error('[UPLOAD ERROR]', err);
         toast({ title: "Error uploading PDF", variant: "destructive" });
       }
     };
