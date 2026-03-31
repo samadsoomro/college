@@ -149,9 +149,14 @@ export default function Register() {
             </select>
           </div>
 
-          <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50">
-            📌 Students can also register here for basic access. For College Card access and Card ID login, apply through the <Link to={`/${collegeSlug}/college-card`} className="text-primary font-semibold">College Card menu</Link>.
-          </p>
+          <div className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-900/50 space-y-2 shadow-sm animate-pulse-soft">
+            <p className="font-bold flex items-center gap-2">
+              <span className="text-lg">⚠️</span> ATTENTION STUDENTS
+            </p>
+            <p className="text-[13px] leading-relaxed italic opacity-90">
+              Basic registration here provides generic access only. To get your <strong>Official College Card</strong> and <strong>ID-based Login</strong>, you MUST apply through the <Link to={`/${collegeSlug}/college-card`} className="underline decoration-2 underline-offset-2 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">College Card Application System</Link>.
+            </p>
+          </div>
 
           <button type="submit" disabled={loading || emailStatus === 'taken'}
             className="w-full bg-primary text-white py-2.5 rounded-lg font-bold text-sm hover:bg-primary/90 transition disabled:opacity-50">
