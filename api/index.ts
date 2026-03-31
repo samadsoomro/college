@@ -100,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { data: college } = await supabase
       .from('colleges').select('id, name')
-      .eq('slug', ogSlug.toLowerCase()).eq('is_active', true).maybeSingle();
+      .eq('slug', ogSlug.toLowerCase()).maybeSingle();
 
     if (!college) return res.status(404).send('College not found');
 
@@ -213,7 +213,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!col && collegeSlug !== 'super-admin') {
     return res.status(404).json({ error: 'College not found' });
   }
-  const colId = col?.id;
+  let colId = col?.id;
 
   const isAdmin = isAdminRequest(req);
   const slug = collegeSlug; // Alias for standard logic
@@ -375,7 +375,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Safety check: for all other routes, we MUST have a valid college
   if (!col) return res.status(404).json({ error: 'College context required' });
-  const colId = col.id;
+  colId = col.id;
 
   // ── AUTH ──────────────────────────────────────────────────────────────────
   // Handle Student/Visitor Login via Email OR Library Card
@@ -2022,7 +2022,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // PUT /api/:slug/admin/library-card-fields - Save hybrid fields (System + Custom)
   if (req.method === 'PUT' && resource === 'admin' && subResource === 'library-card-fields') {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
-    const colId = await getCollegeId(collegeSlug);
+    colId = await getCollegeId(collegeSlug);
     if (!colId) return res.status(404).json({ error: 'College not found' });
 
     const { systemFields, customFields } = req.body || {};
