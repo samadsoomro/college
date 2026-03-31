@@ -233,13 +233,32 @@ const AdminHome: React.FC = () => {
     fetchExamGroups();
   };
 
-  const updateGroup = async (id: string, field: string, value: any) => {
-    await fetch(`/api/${collegeSlug}/admin/exam-papers/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", ...adminHeaders() },
-      body: JSON.stringify({ [field]: value })
-    });
-    fetchExamGroups();
+  const updateGroupLocal = (id: string, field: string, value: any) => {
+    setExamGroups(prev => prev.map(g => g.id === id ? { ...g, [field]: value } : g));
+  };
+
+  const saveAllExamGroups = async () => {
+    setLoading(true);
+    try {
+      await Promise.all(examGroups.map(group => 
+        fetch(`/api/${collegeSlug}/admin/exam-papers/${group.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...adminHeaders() },
+          body: JSON.stringify({ 
+            title: group.title, 
+            buttonText: group.button_text, 
+            isEnabled: group.is_enabled,
+            displayOrder: group.display_order 
+          })
+        })
+      ));
+      toast({ title: "✅ All exam groups saved successfully!" });
+      fetchExamGroups();
+    } catch (err) {
+      toast({ title: "Error saving groups", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addExamClass = async (groupId: string) => {
@@ -577,82 +596,104 @@ const AdminHome: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2 mt-6">
-                  {/* Section A — Hero Tagline Toggle */}
-                  <div className="border rounded-xl p-4 space-y-3 bg-secondary/10">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold flex items-center gap-2 text-primary">
+                <div className="space-y-6 mt-6">
+                  {/* Section A — Hero Tagline Toggle (Wide & Short) */}
+                  <div className="border rounded-xl p-4 bg-secondary/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 flex-1">
+                      <h4 className="font-semibold flex items-center gap-2 text-primary whitespace-nowrap">
                         <Star className="w-4 h-4 fill-primary" /> Hero Tagline
                       </h4>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <span className="text-xs text-neutral-500 uppercase font-bold tracking-wider">Show on homepage</span>
-                        <Switch checked={editedContent.heroTaglineEnabled} 
-                          onCheckedChange={checked => updateContent('heroTaglineEnabled', checked)} />
-                      </label>
+                      <div className="flex-1 flex flex-col sm:flex-row items-center gap-4">
+                        <div className="w-full sm:flex-1 space-y-1">
+                          <Input value={editedContent.heroTagline || ''}
+                            onChange={e => updateContent('heroTagline', e.target.value)}
+                            placeholder="e.g. Highest Merit Commerce College in Karachi"
+                            className="h-9 bg-white" />
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer bg-white/50 px-3 py-1.5 rounded-lg border">
+                          <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider">Show on homepage</span>
+                          <Switch checked={editedContent.heroTaglineEnabled} 
+                            onCheckedChange={checked => updateContent('heroTaglineEnabled', checked)} />
+                        </label>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase">Tagline Text</Label>
-                      <Input value={editedContent.heroTagline || ''}
-                        onChange={e => updateContent('heroTagline', e.target.value)}
-                        placeholder="e.g. Highest Merit Commerce College in Karachi" />
-                    </div>
-                    <p className="text-[10px] text-neutral-400 italic">
-                      Appears at the bottom of the hero section as a highlighted glass badge.
-                    </p>
                   </div>
 
-                  {/* Section C — Multi-Link Examination System */}
+                  {/* Section C — Multi-Link Examination System (Full Width) */}
                   {/* Examination Papers Manager */}
-                  <div className="border rounded-xl p-5 space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 gap-4">
+                  <div className="border rounded-xl p-5 space-y-4 bg-card shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-4 gap-4">
                       <div>
-                        <h4 className="font-bold flex items-center gap-2 text-lg text-primary">
-                          <FolderPlus className="w-5 h-5" /> Examination Papers Manager
+                        <h4 className="font-bold flex items-center gap-2 text-xl text-primary">
+                          <FolderPlus className="w-6 h-6" /> Examination Papers Manager
                         </h4>
-                        <p className="text-xs text-muted-foreground">Manage groups, classes, and assign PDFs.</p>
+                        <p className="text-xs text-muted-foreground">Detailed category-wise management for Examination PDFs.</p>
                       </div>
                       
-                      {/* Global Settings */}
-                      <div className="flex items-center gap-4 bg-primary/5 p-2 rounded-lg border border-primary/10">
-                        <label className="flex items-center gap-2 cursor-pointer border-r pr-4">
-                          <span className="text-[10px] text-neutral-500 uppercase font-black">Visible</span>
-                          <Switch 
-                            checked={editedContent?.examSectionEnabled ?? true} 
-                            onCheckedChange={checked => updateContent('examSectionEnabled', checked)} 
-                          />
-                        </label>
-                        <div className="flex items-center gap-2 flex-1">
-                          <span className="text-[10px] text-neutral-500 uppercase font-black">Heading:</span>
-                          <Input 
-                            value={editedContent?.examSectionHeading || ''}
-                            onChange={e => updateContent('examSectionHeading', e.target.value)}
-                            placeholder="e.g. Examination Papers"
-                            className="h-7 text-[11px] bg-transparent border-none focus-visible:ring-0 p-0 font-bold text-primary"
-                          />
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* Global Settings */}
+                        <div className="flex items-center gap-4 bg-primary/5 p-2 rounded-lg border border-primary/10">
+                          <label className="flex items-center gap-2 cursor-pointer border-r pr-4">
+                            <span className="text-[10px] text-neutral-500 uppercase font-black tracking-widest">Visible</span>
+                            <Switch 
+                              checked={editedContent?.examSectionEnabled ?? true} 
+                              onCheckedChange={checked => updateContent('examSectionEnabled', checked)} 
+                            />
+                          </label>
+                          <div className="flex items-center gap-2 pr-2">
+                            <span className="text-[10px] text-neutral-500 uppercase font-black tracking-widest whitespace-nowrap">Section Heading:</span>
+                            <Input 
+                              value={editedContent?.examSectionHeading || ''}
+                              onChange={e => updateContent('examSectionHeading', e.target.value)}
+                              placeholder="e.g. Examination Papers"
+                              className="h-8 text-[13px] bg-white border-primary/20 w-[200px] font-bold text-primary"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button type="button" onClick={addExamGroup} variant="outline" className="font-bold border-primary text-primary hover:bg-primary/5">
+                            <Plus className="w-4 h-4 mr-2" /> Add Group
+                          </Button>
+                          <Button type="button" onClick={saveAllExamGroups} disabled={loading} className="font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                            {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Save All Changes
+                          </Button>
                         </div>
                       </div>
-
-                      <Button type="button" onClick={addExamGroup} size="sm" className="font-bold">
-                        <Plus className="w-4 h-4 mr-2" /> Add Group
-                      </Button>
                     </div>
 
                     <div className="space-y-4">
                       {examGroups.map((group, gIdx) => (
                         <div key={group.id} className="border-2 border-primary/20 bg-primary/5 p-4 rounded-xl space-y-3">
                           {/* Group Header */}
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1 flex gap-2">
-                              <Input 
-                                value={group.title} 
-                                onChange={e => updateGroup(group.id, 'title', e.target.value)}
-                                className="font-bold bg-white text-primary text-sm h-8"
-                                placeholder="Group Name (e.g. Preliminary 2026)"
-                              />
+                          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div className="flex-1 flex items-center gap-4 w-full">
+                              <div className="flex-1">
+                                <Label className="text-[10px] font-black uppercase text-primary/60 mb-1 ml-1 block">Group Title</Label>
+                                <Input 
+                                  value={group.title} 
+                                  onChange={e => updateGroupLocal(group.id, 'title', e.target.value)}
+                                  className="font-bold bg-white text-primary text-sm h-9 border-primary/20 shadow-sm focus:border-primary"
+                                  placeholder="Group Name (e.g. Preliminary 2026)"
+                                />
+                              </div>
+                              <div className="w-[100px]">
+                                <Label className="text-[10px] font-black uppercase text-primary/60 mb-1 ml-1 block">Order</Label>
+                                <Input 
+                                  type="number"
+                                  value={group.display_order || 0} 
+                                  onChange={e => updateGroupLocal(group.id, 'display_order', parseInt(e.target.value))}
+                                  className="font-bold bg-white text-center text-primary text-sm h-9 border-primary/20 shadow-sm"
+                                />
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <Switch checked={group.is_enabled} onCheckedChange={c => updateGroup(group.id, 'is_enabled', c)} />
-                              <Button type="button" variant="ghost" size="icon" onClick={() => deleteGroup(group.id)} className="h-8 w-8 text-red-500 hover:bg-red-50">
+                            <div className="flex items-center gap-4 bg-white/50 p-2 rounded-lg border border-primary/10">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <span className="text-[10px] font-black uppercase text-primary/60">Enabled</span>
+                                <Switch checked={group.is_enabled} onCheckedChange={c => updateGroupLocal(group.id, 'is_enabled', c)} />
+                              </label>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => deleteGroup(group.id)} className="h-9 w-9 text-red-500 hover:bg-red-50 rounded-full transition-colors">
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
