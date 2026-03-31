@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useCollege } from '@/contexts/CollegeContext';
+import { motion } from 'framer-motion';
+import { AlertTriangle } from 'lucide-react';
 
 export default function Register() {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
+  const { settings } = useCollege();
   const [form, setForm] = useState({
     fullName: '', email: '', password: '', confirmPassword: '',
     phone: '', role: 'visitor'
@@ -149,14 +153,18 @@ export default function Register() {
             </select>
           </div>
 
-          <div className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-900/50 space-y-2 shadow-sm animate-pulse-soft">
-            <p className="font-bold flex items-center gap-2">
-              <span className="text-lg">⚠️</span> ATTENTION STUDENTS
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-sm text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-900/50 space-y-2 shadow-sm"
+          >
+            <p className="font-bold flex items-center gap-2 uppercase tracking-wide">
+              <AlertTriangle className="w-5 h-5 text-amber-600 animate-pulse" /> Attention Students
             </p>
             <p className="text-[13px] leading-relaxed italic opacity-90">
-              Basic registration here provides generic access only. To get your <strong>Official College Card</strong> and <strong>ID-based Login</strong>, you MUST apply through the <Link to={`/${collegeSlug}/college-card`} className="underline decoration-2 underline-offset-2 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">College Card Application System</Link>.
+              Basic registration here provides generic access only. To get your <strong>Official {settings.termCardMenu}</strong> and <strong>ID-based Login</strong>, you MUST apply through the <Link to={`/${collegeSlug}/college-card`} className="underline decoration-2 underline-offset-2 font-bold hover:text-amber-600 dark:hover:text-amber-400 transition-colors">{settings.termCardMenu} Application System</Link>.
             </p>
-          </div>
+          </motion.div>
 
           <button type="submit" disabled={loading || emailStatus === 'taken'}
             className="w-full bg-primary text-white py-2.5 rounded-lg font-bold text-sm hover:bg-primary/90 transition disabled:opacity-50">
