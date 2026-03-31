@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   Save, Plus, Trash2, Layout, Image as ImageIcon, 
   BarChart3, Users, ExternalLink, RefreshCw, Upload,
-  XCircle, CheckCircle, Info, Star, BookOpen
+  XCircle, CheckCircle, Info, Star, BookOpen, FolderPlus, UploadCloud, ChevronDown
 } from "lucide-react";
 import {
   Card,
@@ -156,25 +156,34 @@ const AdminHome: React.FC = () => {
     }
   });
 
-  const { data: dbExamLinks = [], isLoading: linksLoading } = useQuery<ExamLink[]>({
-    queryKey: [`/api/${collegeSlug}/admin/exam-links`],
-    queryFn: async () => {
-      const ts = Date.now();
-      const res = await fetch(`/api/${collegeSlug}/admin/exam-links?t=${ts}`, { headers: adminHeaders() });
-      if (!res.ok) throw new Error("Failed to fetch exam links");
-      return res.json();
-    }
-  });
 
   // Local state for editing hero content
   const [editedContent, setEditedContent] = useState<HomeContent | null>(null);
   const [faqs, setFaqs] = useState<any[]>([]);
-  const [examLinks, setExamLinks] = useState<ExamLink[]>([]);
+  
+  // Examination Papers Manager
+  const [examGroups, setExamGroups] = useState<any[]>([]);
+  const [newClassName, setNewClassName] = useState<Record<string, string>>({});
+  const [newSubjectName, setNewSubjectName] = useState<Record<string, string>>({});
+
   const [programs, setPrograms] = useState<any[]>([]);
 
   // Sync with Query Data
   useEffect(() => { if (content) setEditedContent(content); }, [content]);
-  useEffect(() => { if (dbExamLinks) setExamLinks(dbExamLinks); }, [dbExamLinks]);
+
+  const fetchExamGroups = async () => {
+    const res = await fetch(`/api/${collegeSlug}/admin/exam-papers`, { headers: adminHeaders() });
+    if (!res.ok) return;
+    const groups = await res.json();
+    const withClasses = await Promise.all(groups.map(async (g: any) => {
+      const r = await fetch(`/api/${collegeSlug}/admin/exam-papers/${g.id}/classes`, { headers: adminHeaders() });
+      const classes = r.ok ? await r.json() : [];
+      return { ...g, classes };
+    }));
+    setExamGroups(withClasses);
+  };
+  useEffect(() => { if (collegeSlug && isAdmin) fetchExamGroups(); }, [collegeSlug, isAdmin]);
+
   useEffect(() => { if (dbPrograms) setPrograms(dbPrograms); }, [dbPrograms]);
 
   // Synchronize FAQs
@@ -214,46 +223,93 @@ const AdminHome: React.FC = () => {
     fetchFaqs();
   };
 
-  // Multi-Link Exam System Handlers
-  const addExamLink = () => {
-    setExamLinks(prev => [...prev, {
-      id: `new-${Date.now()}`,
-      title: 'New Examination Paper',
-      buttonText: 'Access Papers',
-      url: '',
-      isEnabled: true,
-      displayOrder: prev.length + 1,
-      isNew: true
-    }]);
+  // Examination Papers Handlers
+  const addExamGroup = async () => {
+    await fetch(`/api/${collegeSlug}/admin/exam-papers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...adminHeaders() },
+      body: JSON.stringify({ title: "New Group", buttonText: "Access Papers" })
+    });
+    fetchExamGroups();
   };
-  const updateExamLinkLocal = (id: string, field: string, value: any) => {
-    setExamLinks(prev => prev.map(l => l.id === id ? { ...l, [field]: value } : l));
+
+  const updateGroup = async (id: string, field: string, value: any) => {
+    await fetch(`/api/${collegeSlug}/admin/exam-papers/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...adminHeaders() },
+      body: JSON.stringify({ [field]: value })
+    });
+    fetchExamGroups();
   };
-  const saveExamLink = async (link: any) => {
-    try {
-      const method = link.isNew ? 'POST' : 'PATCH';
-      const url = link.isNew ? `/api/${collegeSlug}/admin/exam-links` : `/api/${collegeSlug}/admin/exam-links/${link.id}`;
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json', ...adminHeaders() },
-        body: JSON.stringify({ ...link, displayOrder: link.displayOrder })
-      });
-      if (res.ok) {
-        toast({ title: '✅ Link saved!' });
-        queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/exam-links`] });
-        queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
+
+  const addExamClass = async (groupId: string) => {
+    const name = newClassName[groupId] || "New Class";
+    await fetch(`/api/${collegeSlug}/admin/exam-papers/${groupId}/classes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...adminHeaders() },
+      body: JSON.stringify({ className: name })
+    });
+    setNewClassName(p => ({...p, [groupId]: ""}));
+    fetchExamGroups();
+  };
+
+  const handleUploadPDF = async (classId: string) => {
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "application/pdf";
+    fileInput.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      toast({ title: "Uploading PDF..." });
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "pdf");
+
+      try {
+        const uploadRes = await fetch(`/api/${collegeSlug}/admin/upload`, {
+          method: "POST",
+          headers: adminHeaders(),
+          body: formData
+        });
+
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        const { url, sizeKb } = await uploadRes.json();
+
+        const name = newSubjectName[classId] || file.name.replace(".pdf", "");
+
+        await fetch(`/api/${collegeSlug}/admin/exam-subjects`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...adminHeaders() },
+          body: JSON.stringify({ classId, subjectName: name, pdfUrl: url, fileSizeKb: sizeKb })
+        });
+
+        toast({ title: "PDF Added Successfully!" });
+        setNewSubjectName(p => ({...p, [classId]: ""}));
+        fetchExamGroups();
+      } catch (err) {
+        toast({ title: "Error uploading PDF", variant: "destructive" });
       }
-    } catch (err) { toast({ title: "Error saving link", variant: "destructive" }); }
+    };
+    fileInput.click();
   };
-  const deleteExamLink = async (id: string) => {
-    if (id.startsWith('new-')) { setExamLinks(prev => prev.filter(l => l.id !== id)); return; }
-    if (!confirm("Delete this examination link?")) return;
-    const res = await fetch(`/api/${collegeSlug}/admin/exam-links/${id}`, { method: 'DELETE', headers: adminHeaders() });
-    if (res.ok) {
-      toast({ title: 'Link deleted' });
-      queryClient.invalidateQueries({ queryKey: [`/api/${collegeSlug}/admin/exam-links`] });
-      queryClient.invalidateQueries({ queryKey: ["home-content", collegeSlug] });
-    }
+
+  const deleteSubject = async (subjectId: string) => {
+    if(!confirm("Remove this PDF?")) return;
+    await fetch(`/api/${collegeSlug}/admin/exam-subjects/${subjectId}`, { method: "DELETE", headers: adminHeaders() });
+    fetchExamGroups();
+  };
+
+  const deleteClass = async (classId: string) => {
+    if(!confirm("Remove this class and ALL its PDFs?")) return;
+    await fetch(`/api/${collegeSlug}/admin/exam-classes/${classId}`, { method: "DELETE", headers: adminHeaders() });
+    fetchExamGroups();
+  };
+
+  const deleteGroup = async (groupId: string) => {
+    if(!confirm("Delete this entire group?")) return;
+    await fetch(`/api/${collegeSlug}/admin/exam-papers/${groupId}`, { method: "DELETE", headers: adminHeaders() });
+    fetchExamGroups();
   };
 
   // Academic Programs Handlers
@@ -551,97 +607,117 @@ const AdminHome: React.FC = () => {
                   </div>
 
                   {/* Section C — Multi-Link Examination System */}
-                  <div className="border rounded-xl p-5 space-y-5 bg-card shadow-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-5 gap-4">
-                      <div className="space-y-1">
+                  {/* Examination Papers Manager */}
+                  <div className="border rounded-xl p-5 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 gap-4">
+                      <div>
                         <h4 className="font-bold flex items-center gap-2 text-lg text-primary">
-                          <ExternalLink className="w-5 h-5" /> Examination Links
+                          <FolderPlus className="w-5 h-5" /> Examination Papers Manager
                         </h4>
-                        <div className="flex items-center gap-4 mt-2 bg-primary/5 p-2 rounded-lg border border-primary/10">
-                          <label className="flex items-center gap-2 cursor-pointer border-r pr-4">
-                            <span className="text-[10px] text-neutral-500 uppercase font-black">Section Visible</span>
-                            <Switch 
-                              checked={editedContent?.examSectionEnabled ?? true} 
-                              onCheckedChange={checked => updateContent('examSectionEnabled', checked)} 
-                            />
-                          </label>
-                          <div className="flex items-center gap-2 flex-1">
-                            <span className="text-[10px] text-neutral-500 uppercase font-black whitespace-nowrap">Heading:</span>
-                            <Input 
-                              value={editedContent?.examSectionHeading || ''}
-                              onChange={e => updateContent('examSectionHeading', e.target.value)}
-                              placeholder="e.g. Examination Papers"
-                              className="h-7 text-[11px] bg-transparent border-none focus-visible:ring-0 p-0 font-bold text-primary"
-                            />
-                          </div>
+                        <p className="text-xs text-muted-foreground">Manage groups, classes, and assign PDFs.</p>
+                      </div>
+                      
+                      {/* Global Settings */}
+                      <div className="flex items-center gap-4 bg-primary/5 p-2 rounded-lg border border-primary/10">
+                        <label className="flex items-center gap-2 cursor-pointer border-r pr-4">
+                          <span className="text-[10px] text-neutral-500 uppercase font-black">Visible</span>
+                          <Switch 
+                            checked={editedContent?.examSectionEnabled ?? true} 
+                            onCheckedChange={checked => updateContent('examSectionEnabled', checked)} 
+                          />
+                        </label>
+                        <div className="flex items-center gap-2 flex-1">
+                          <span className="text-[10px] text-neutral-500 uppercase font-black">Heading:</span>
+                          <Input 
+                            value={editedContent?.examSectionHeading || ''}
+                            onChange={e => updateContent('examSectionHeading', e.target.value)}
+                            placeholder="e.g. Examination Papers"
+                            className="h-7 text-[11px] bg-transparent border-none focus-visible:ring-0 p-0 font-bold text-primary"
+                          />
                         </div>
                       </div>
-                      <Button 
-                        type="button" 
-                        onClick={addExamLink} 
-                        variant="outline" 
-                        size="sm" 
-                        className="border-primary text-primary hover:bg-primary/5 font-bold h-9"
-                      >
-                        <Plus className="w-4 h-4 mr-2" /> Add Button
+
+                      <Button type="button" onClick={addExamGroup} size="sm" className="font-bold">
+                        <Plus className="w-4 h-4 mr-2" /> Add Group
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 mt-2">
-                      {examLinks.map((link, index) => (
-                        <div key={link.id} className="border-2 border-dashed border-neutral-100 rounded-2xl p-4 bg-neutral-50/50 space-y-4 relative group">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-tighter">Button #{index + 1}</span>
-                            <div className="flex items-center gap-4">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <span className="text-[10px] text-neutral-500 uppercase font-black">Active</span>
-                                <Switch checked={link.isEnabled} 
-                                  onCheckedChange={checked => updateExamLinkLocal(link.id, 'isEnabled', checked)} />
-                              </label>
-                              <button onClick={() => deleteExamLink(link.id)}
-                                className="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Trash2 className="w-3 h-3" /> Remove
-                              </button>
+                    <div className="space-y-4">
+                      {examGroups.map((group, gIdx) => (
+                        <div key={group.id} className="border-2 border-primary/20 bg-primary/5 p-4 rounded-xl space-y-3">
+                          {/* Group Header */}
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 flex gap-2">
+                              <Input 
+                                value={group.title} 
+                                onChange={e => updateGroup(group.id, 'title', e.target.value)}
+                                className="font-bold bg-white text-primary text-sm h-8"
+                                placeholder="Group Name (e.g. Preliminary 2026)"
+                              />
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Switch checked={group.is_enabled} onCheckedChange={c => updateGroup(group.id, 'is_enabled', c)} />
+                              <Button type="button" variant="ghost" size="icon" onClick={() => deleteGroup(group.id)} className="h-8 w-8 text-red-500 hover:bg-red-50">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
                             </div>
                           </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Small Label (e.g. Past Papers 2026)</Label>
-                              <Input value={link.title}
-                                onChange={e => updateExamLinkLocal(link.id, 'title', e.target.value)}
-                                placeholder="Enter label..."
-                                className="h-9 text-sm" />
-                            </div>
-                            
-                            <div>
-                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Button Text (e.g. Access Now)</Label>
-                              <Input value={link.buttonText}
-                                onChange={e => updateExamLinkLocal(link.id, 'buttonText', e.target.value)}
-                                placeholder="Enter button text..."
-                                className="h-9 text-sm" />
-                            </div>
 
-                            <div className="md:col-span-2">
-                              <Label className="text-[10px] font-bold text-muted-foreground uppercase">Target URL (Google Drive, Dropbox, etc.)</Label>
-                              <div className="flex gap-2">
-                                <Input value={link.url}
-                                  onChange={e => updateExamLinkLocal(link.id, 'url', e.target.value)}
-                                  placeholder="https://drive.google.com/..."
-                                  className="h-9 text-sm flex-1" />
-                                <Button onClick={() => saveExamLink(link)} variant="default" size="sm" className="h-9 px-6 font-bold shadow-md">
-                                  <Save className="w-3.5 h-3.5 mr-2" /> Save
-                                </Button>
+                          {/* Classes within Group */}
+                          <div className="pl-6 border-l-2 border-primary/20 space-y-3 mt-2">
+                            {group.classes?.map((cls: any) => (
+                              <div key={cls.id} className="bg-white border p-3 rounded-lg space-y-2">
+                                <div className="flex justify-between items-center text-sm font-bold text-slate-700">
+                                  <span>📚 {cls.class_name}</span>
+                                  <button type="button" onClick={() => deleteClass(cls.id)} className="text-red-500 hover:underline text-xs">Remove Class</button>
+                                </div>
+                                
+                                {/* Subjects in Class */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                  {cls.subjects?.map((sub: any) => (
+                                    <div key={sub.id} className="flex items-center justify-between bg-slate-50 border p-2 rounded text-xs">
+                                      <span className="font-semibold line-clamp-1 flex-1">{sub.subject_name}</span>
+                                      <button type="button" onClick={() => deleteSubject(sub.id)} className="text-red-500 hover:text-red-700 ml-2">
+                                        <XCircle className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Add Subject/Upload PDF */}
+                                <div className="flex gap-2 mt-2 pt-2 border-t">
+                                  <Input 
+                                    value={newSubjectName[cls.id] || ""}
+                                    onChange={e => setNewSubjectName(p => ({...p, [cls.id]: e.target.value}))}
+                                    placeholder="Subject Name (e.g. Physics)"
+                                    className="h-7 text-xs flex-1"
+                                  />
+                                  <Button type="button" size="sm" variant="secondary" className="h-7 text-xs font-bold" onClick={() => handleUploadPDF(cls.id)}>
+                                    <UploadCloud className="w-3 h-3 mr-1" /> Upload PDF
+                                  </Button>
+                                </div>
                               </div>
+                            ))}
+
+                            {/* Add Class */}
+                            <div className="flex gap-2 mt-2">
+                              <Input 
+                                value={newClassName[group.id] || ""}
+                                onChange={e => setNewClassName(p => ({...p, [group.id]: e.target.value}))}
+                                placeholder="New Class Name (e.g. Class 11)"
+                                className="h-8 text-sm max-w-[200px]"
+                              />
+                              <Button type="button" size="sm" variant="outline" className="h-8 text-xs font-bold bg-white" onClick={() => addExamClass(group.id)}>
+                                <Plus className="w-3 h-3 mr-1" /> Add Class
+                              </Button>
                             </div>
                           </div>
                         </div>
                       ))}
-
-                      {examLinks.length === 0 && (
-                        <div className="text-center py-12 text-neutral-400 text-sm border-2 border-dashed rounded-2xl bg-neutral-50/30">
-                          No examination links added yet. <br/>
-                          <span className="text-[10px] uppercase font-bold text-primary cursor-pointer hover:underline" onClick={addExamLink}>Click here to add your first button</span>
+                      
+                      {examGroups.length === 0 && (
+                        <div className="text-center p-6 text-muted-foreground text-sm border-2 border-dashed rounded-xl">
+                          No exam groups added. Start by creating your first group above.
                         </div>
                       )}
                     </div>

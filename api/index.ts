@@ -1038,6 +1038,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json(data || []);
   }
 
+  // GET /api/:slug/exam-papers — all groups for public
+  if (isApi && resource === 'exam-papers' && !sub1 && req.method === 'GET') {
+    const colId = col.id;
+    if (!colId) return res.status(404).json({ error: 'Not found' });
+
+    const { data: groups } = await supabase
+      .from('exam_paper_groups').select('*')
+      .eq('college_id', colId).eq('is_enabled', true)
+      .order('display_order');
+
+    return res.json(groups || []);
+  }
+
+  // GET /api/:slug/exam-papers/:groupId/classes — get classes + subjects for popup
+  if (isApi && resource === 'exam-papers' && sub1 && !sub2 && req.method === 'GET') {
+    const colId = col.id;
+    if (!colId) return res.status(404).json({ error: 'Not found' });
+
+    const { data: classes } = await supabase
+      .from('exam_paper_classes').select('*')
+      .eq('group_id', sub1).eq('college_id', colId)
+      .order('display_order');
+
+    // Get subjects for each class:
+    const classesWithSubjects = await Promise.all(
+      (classes || []).map(async (cls: any) => {
+        const { data: subjects } = await supabase
+          .from('exam_paper_subjects').select('*')
+          .eq('class_id', cls.id).eq('college_id', colId);
+        return { ...cls, subjects: subjects || [] };
+      })
+    );
+
+    return res.json(classesWithSubjects);
+  }
+
   // ── ADMIN PROTECTED ROUTES ────────────────────────────────────────────────
   if (!isAdmin) return res.status(403).json({ error: 'Unauthorized' });
 
@@ -1231,6 +1267,107 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
     const colId = col.id;
     await supabase.from('home_exam_links').delete().eq('id', sub2).eq('college_id', colId);
+    return res.json({ success: true });
+  }
+
+  // ── Admin Exam Papers ──
+
+  // GET /api/:slug/admin/exam-papers — all groups for admin
+  if (isApi && resource === 'admin' && sub1 === 'exam-papers' && !sub2 && req.method === 'GET') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    const { data } = await supabase.from('exam_paper_groups').select('*')
+      .eq('college_id', colId).order('display_order');
+    return res.json(data || []);
+  }
+
+  // POST /api/:slug/admin/exam-papers — add new group
+  if (isApi && resource === 'admin' && sub1 === 'exam-papers' && !sub2 && req.method === 'POST') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    const { title, buttonText, displayOrder } = req.body || {};
+    const { data, error } = await supabase.from('exam_paper_groups')
+      .insert({ college_id: colId, title: title || 'New Group', button_text: buttonText || 'Access Now', is_enabled: true, display_order: displayOrder || 0 })
+      .select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  // PATCH /api/:slug/admin/exam-papers/:id — update group
+  if (isApi && resource === 'admin' && sub1 === 'exam-papers' && sub2 && sub3 !== 'classes' && req.method === 'PATCH') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    const { title, buttonText, isEnabled } = req.body || {};
+    await supabase.from('exam_paper_groups')
+      .update({ title, button_text: buttonText, is_enabled: isEnabled, updated_at: new Date().toISOString() })
+      .eq('id', sub2).eq('college_id', colId);
+    return res.json({ success: true });
+  }
+
+  // DELETE /api/:slug/admin/exam-papers/:id
+  if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'exam-papers' && sub2 && !sub3) {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    await supabase.from('exam_paper_groups').delete().eq('id', sub2).eq('college_id', colId);
+    return res.json({ success: true });
+  }
+
+  // GET /api/:slug/admin/exam-papers/:groupId/classes
+  if (isApi && resource === 'admin' && sub1 === 'exam-papers' && sub2 && sub3 === 'classes' && req.method === 'GET') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    const { data: classes } = await supabase.from('exam_paper_classes').select('*')
+      .eq('group_id', sub2).eq('college_id', colId).order('display_order');
+    const withSubjects = await Promise.all((classes || []).map(async (cls: any) => {
+      const { data: subjects } = await supabase.from('exam_paper_subjects').select('*')
+        .eq('class_id', cls.id).eq('college_id', colId);
+      return { ...cls, subjects: subjects || [] };
+    }));
+    return res.json(withSubjects);
+  }
+
+  // POST /api/:slug/admin/exam-papers/:groupId/classes — add class
+  if (isApi && resource === 'admin' && sub1 === 'exam-papers' && sub2 && sub3 === 'classes' && req.method === 'POST') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    const { className, displayOrder } = req.body || {};
+    const { data, error } = await supabase.from('exam_paper_classes')
+      .insert({ group_id: sub2, college_id: colId, class_name: className, display_order: displayOrder || 0 })
+      .select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  // DELETE /api/:slug/admin/exam-classes/:classId
+  if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'exam-classes' && sub2) {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    await supabase.from('exam_paper_classes').delete().eq('id', sub2).eq('college_id', colId);
+    return res.json({ success: true });
+  }
+
+  // POST /api/:slug/admin/exam-subjects — add subject with PDF
+  if (isApi && resource === 'admin' && sub1 === 'exam-subjects' && !sub2 && req.method === 'POST') {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    const { classId, subjectName, pdfUrl, fileSizeKb } = req.body || {};
+    const { data, error } = await supabase.from('exam_paper_subjects')
+      .insert({ class_id: classId, college_id: colId, subject_name: subjectName, pdf_url: pdfUrl, file_size_kb: fileSizeKb || 0 })
+      .select('*').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
+
+  // DELETE /api/:slug/admin/exam-subjects/:subjectId
+  if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'exam-subjects' && sub2) {
+    if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    const colId = col.id;
+    // Delete PDF from Cloudinary:
+    const { data: subject } = await supabase.from('exam_paper_subjects')
+      .select('pdf_url').eq('id', sub2).maybeSingle();
+    // Assuming deleteStorageFile is already imported/in-scope
+    if (subject?.pdf_url) await deleteStorageFile(subject.pdf_url);
+    await supabase.from('exam_paper_subjects').delete().eq('id', sub2).eq('college_id', colId);
     return res.json({ success: true });
   }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useInView } from 'react-intersection-observer';
 import { useCountUp } from '@/hooks/useCountUp';
 import { AnimatedSection } from '@/components/AnimatedSection';
@@ -22,7 +22,9 @@ import {
   Calculator, 
   Palette, 
   Music,
-  ArrowRight
+  ArrowRight,
+  XCircle,
+  RefreshCw
 } from "lucide-react";
 import { useCollege } from "@/contexts/CollegeContext";
 import { useQuery } from "@tanstack/react-query";
@@ -269,6 +271,36 @@ const Home: React.FC = () => {
 
   const [faqs, setFaqs] = useState<any[]>([]);
   const [openFaq, setOpenFaq] = useState<string | null>(null);
+
+  const [examGroups, setExamGroups] = useState<any[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
+  const [examClasses, setExamClasses] = useState<any[]>([]);
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [showExamPopup, setShowExamPopup] = useState(false);
+  const [loadingExam, setLoadingExam] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/${collegeSlug}/exam-papers`)
+      .then(r => r.json())
+      .then(data => setExamGroups(data || []))
+      .catch(() => {});
+  }, [collegeSlug]);
+
+  const handleExamButtonClick = async (group: any) => {
+    setSelectedGroup(group);
+    setSelectedClass(null);
+    setShowExamPopup(true);
+    setLoadingExam(true);
+    try {
+      const res = await fetch(`/api/${collegeSlug}/exam-papers/${group.id}/classes`);
+      const data = await res.json();
+      setExamClasses(data || []);
+    } catch {
+      setExamClasses([]);
+    } finally {
+      setLoadingExam(false);
+    }
+  };
 
   const { ref: statsRef, inView: statsVisible } = useInView({
     threshold: 0.3,
@@ -534,7 +566,7 @@ const Home: React.FC = () => {
       )}
 
       {/* Multi-Link Exam Paper Section */}
-      {content?.examSectionEnabled && examLinks && examLinks.filter(l => l.is_enabled).length > 0 && (
+      {content?.examSectionEnabled && examGroups.length > 0 && (
         <section className="py-16 lg:py-24 bg-background relative overflow-hidden">
           {/* Subtle background decoration */}
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2" />
@@ -549,20 +581,18 @@ const Home: React.FC = () => {
             </AnimatedSection>
 
             <div className="flex flex-wrap justify-center gap-6 lg:gap-8">
-              {examLinks.filter(l => l.is_enabled).map((link, idx) => (
+              {examGroups.map((group, idx) => (
                 <motion.div 
-                  key={link.id} 
+                  key={group.id} 
                   className="w-full md:w-auto min-w-[320px] max-w-sm"
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
                   viewport={{ once: true }}
                 >
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-5 p-7 rounded-[2.5rem] bg-primary/5 text-foreground border-2 border-primary/10 shadow-sm transition-all duration-300 hover:border-primary/30 hover:bg-primary/10 relative overflow-hidden"
+                  <button
+                    onClick={() => handleExamButtonClick(group)}
+                    className="w-full text-left group flex items-center gap-5 p-7 rounded-[2.5rem] bg-primary/5 text-foreground border-2 border-primary/10 shadow-sm transition-all duration-300 hover:border-primary/30 hover:bg-primary/10 relative overflow-hidden"
                   >
                     {/* Animated background glow */}
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -571,13 +601,13 @@ const Home: React.FC = () => {
                       📄
                     </div>
                     <div className="text-left flex-1 relative z-10">
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-primary/70 mb-1.5 font-black">{link.title}</p>
-                      <p className="text-xl font-black leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors duration-300">{link.buttonText}</p>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-primary/70 mb-1.5 font-black">Examinations</p>
+                      <p className="text-xl font-black leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors duration-300">{group.title}</p>
                     </div>
                     <div className="w-11 h-11 flex items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all duration-500 relative z-10 group-hover:translate-x-2">
                       <ArrowRight className="w-5 h-5" />
                     </div>
-                  </a>
+                  </button>
                 </motion.div>
               ))}
             </div>
@@ -736,6 +766,135 @@ const Home: React.FC = () => {
           </AnimatedSection>
         </div>
       </section>
+      {/* Exam Popup Modal */}
+      <AnimatePresence>
+        {showExamPopup && selectedGroup && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-background border border-border/50 rounded-2xl shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              <div className="bg-primary/5 border-b border-primary/10 px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-lg text-primary flex items-center gap-2">📄 {selectedGroup.title}</h3>
+                  <p className="text-sm text-muted-foreground">Select your class to download papers</p>
+                </div>
+                <button 
+                  onClick={() => { setShowExamPopup(false); setSelectedClass(null); }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-auto p-6 space-y-4">
+                {loadingExam ? (
+                  <div className="text-center py-12 flex flex-col items-center flex-1 justify-center opacity-50">
+                    <RefreshCw className="w-8 h-8 animate-spin text-primary mb-4" />
+                    <p>Loading papers...</p>
+                  </div>
+                ) : examClasses.length === 0 ? (
+                  <div className="text-center py-12 flex flex-col items-center text-muted-foreground">
+                    <p>No papers available yet.</p>
+                  </div>
+                ) : (
+                  <>
+                    {!selectedClass && (
+                      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+                        <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+                          Step 1: Select your class
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {examClasses.map((cls, i) => (
+                            <motion.button
+                              key={cls.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.05 }}
+                              onClick={() => setSelectedClass(cls)}
+                              className="border-2 border-border/50 hover:border-primary hover:bg-primary/5 rounded-xl p-4 text-center font-bold text-foreground transition-all group"
+                            >
+                              <div className="w-10 h-10 bg-primary/10 text-primary mx-auto rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                📚
+                              </div>
+                              {cls.class_name}
+                              <p className="text-xs text-muted-foreground font-medium mt-1">
+                                {cls.subjects?.length || 0} papers
+                              </p>
+                            </motion.button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {selectedClass && (
+                      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+                        <div className="flex items-center gap-2 mb-6 bg-secondary/50 p-2 rounded-lg inline-flex">
+                          <button onClick={() => setSelectedClass(null)} className="text-sm font-bold text-primary hover:bg-primary/10 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1">
+                            ← Back
+                          </button>
+                          <span className="text-border">|</span>
+                          <p className="text-sm font-bold text-foreground px-2">
+                            {selectedClass.class_name}
+                          </p>
+                        </div>
+
+                        {selectedClass.subjects?.length === 0 ? (
+                          <div className="text-center py-8 border-2 border-dashed border-border/50 rounded-xl text-muted-foreground font-medium">
+                            No papers uploaded for this class yet.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {selectedClass.subjects.map((subject: any, i: number) => (
+                              <motion.a
+                                key={subject.id}
+                                href={subject.pdf_url}
+                                download
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                className="flex items-center justify-between bg-card border-2 border-border/50 hover:border-primary hover:shadow-md hover:bg-primary/5 rounded-xl p-4 transition-all group"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="text-2xl group-hover:scale-110 transition-transform">📝</div>
+                                  <div>
+                                    <p className="font-bold text-foreground text-sm line-clamp-1">
+                                      {subject.subject_name}
+                                    </p>
+                                    {subject.file_size_kb > 0 && (
+                                      <p className="text-[10px] font-bold uppercase text-muted-foreground mt-0.5">
+                                        {subject.file_size_kb < 1024
+                                          ? `${subject.file_size_kb} KB`
+                                          : `${(subject.file_size_kb / 1024).toFixed(1)} MB`}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="bg-primary/10 text-primary w-8 h-8 rounded-full flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                  ↓
+                                </div>
+                              </motion.a>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
