@@ -280,10 +280,11 @@ const Home: React.FC = () => {
   const [loadingExam, setLoadingExam] = useState(false);
 
   useEffect(() => {
+    if (!collegeSlug) return;
     fetch(`/api/${collegeSlug}/exam-papers`)
       .then(r => r.json())
-      .then(data => setExamGroups(data || []))
-      .catch(() => {});
+      .then(data => setExamGroups(Array.isArray(data) ? data : []))
+      .catch(() => setExamGroups([]));
   }, [collegeSlug]);
 
   const handleExamButtonClick = async (group: any) => {
@@ -294,7 +295,7 @@ const Home: React.FC = () => {
     try {
       const res = await fetch(`/api/${collegeSlug}/exam-papers/${group.id}/classes`);
       const data = await res.json();
-      setExamClasses(data || []);
+      setExamClasses(Array.isArray(data) ? data : []);
     } catch {
       setExamClasses([]);
     } finally {
@@ -308,10 +309,11 @@ const Home: React.FC = () => {
   });
 
   useEffect(() => {
+    if (!collegeSlug) return;
     fetch(`/api/${collegeSlug}/home/faqs`)
       .then(r => r.json())
-      .then(data => setFaqs(data || []))
-      .catch(() => {});
+      .then(data => setFaqs(Array.isArray(data) ? data : []))
+      .catch(() => setFaqs([]));
   }, [collegeSlug]);
 
   // Default Stats configuration to map with DB data or use as fallback
