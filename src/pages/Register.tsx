@@ -79,10 +79,10 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4 pt-20">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-2xl font-black text-neutral-900 mb-1">Create Account</h1>
-        <p className="text-neutral-500 text-sm mb-6">Register as Staff or Visitor</p>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 pt-24 pb-12 transition-colors duration-300">
+      <div className="w-full max-w-md bg-card rounded-2xl shadow-xl p-8 border border-border">
+        <h1 className="text-2xl font-black text-foreground mb-1">Create Account</h1>
+        <p className="text-muted-foreground text-sm mb-6">Register as Staff or Visitor</p>
 
         {error && (
           <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4 font-medium">
@@ -92,14 +92,14 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-sm font-semibold text-neutral-700">Full Name *</label>
+            <label className="text-sm font-semibold text-foreground">Full Name *</label>
             <input type="text" required value={form.fullName}
               onChange={e => setForm({...form, fullName: e.target.value})}
-              className="w-full mt-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full mt-1 px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               placeholder="Your full name" />
           </div>
           <div>
-            <label className="text-sm font-semibold text-neutral-700">Email Address *</label>
+            <label className="text-sm font-semibold text-foreground">Email Address *</label>
             <input type="email" required value={form.email}
               onChange={e => {
                 const val = e.target.value;
@@ -107,10 +107,10 @@ export default function Register() {
                 if (emailDebounce) clearTimeout(emailDebounce);
                 setEmailDebounce(setTimeout(() => checkEmail(val), 600));
               }}
-              className={`w-full mt-1 px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors ${
+              className={`w-full mt-1 px-4 py-2 bg-background border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 transition-all ${
                 emailStatus === 'taken' ? 'border-red-400 focus:ring-red-300' :
                 emailStatus === 'available' ? 'border-green-400 focus:ring-green-300' :
-                'border-neutral-200 focus:ring-primary'
+                'border-border focus:ring-primary'
               }`}
               placeholder="your@email.com" />
             {emailStatus === 'taken' && <p className="text-red-500 text-[10px] mt-1 font-bold">❌ Email already registered. Use a different email.</p>}
@@ -118,38 +118,38 @@ export default function Register() {
             {emailStatus === 'checking' && <p className="text-neutral-400 text-[10px] mt-1 italic">Checking availability...</p>}
           </div>
           <div>
-            <label className="text-sm font-semibold text-neutral-700">Password *</label>
+            <label className="text-sm font-semibold text-foreground">Password *</label>
             <input type="password" required value={form.password}
               onChange={e => setForm({...form, password: e.target.value})}
-              className="w-full mt-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full mt-1 px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               placeholder="Min 6 characters" />
           </div>
           <div>
-            <label className="text-sm font-semibold text-neutral-700">Confirm Password *</label>
+            <label className="text-sm font-semibold text-foreground">Confirm Password *</label>
             <input type="password" required value={form.confirmPassword}
               onChange={e => setForm({...form, confirmPassword: e.target.value})}
-              className="w-full mt-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full mt-1 px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               placeholder="Repeat password" />
           </div>
           <div>
-            <label className="text-sm font-semibold text-neutral-700">Phone (optional)</label>
+            <label className="text-sm font-semibold text-foreground">Phone (optional)</label>
             <input type="tel" value={form.phone}
               onChange={e => setForm({...form, phone: e.target.value})}
-              className="w-full mt-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full mt-1 px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               placeholder="+92 300 0000000" />
           </div>
           <div>
-            <label className="text-sm font-semibold text-neutral-700">Role *</label>
+            <label className="text-sm font-semibold text-foreground">Role *</label>
             <select value={form.role}
               onChange={e => setForm({...form, role: e.target.value})}
-              className="w-full mt-1 px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+              className="w-full mt-1 px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all">
               <option value="visitor">Visitor</option>
               <option value="staff">Staff</option>
               <option value="student">Student</option>
             </select>
           </div>
 
-          <p className="text-xs text-neutral-400 bg-neutral-50 p-3 rounded-lg">
+          <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50">
             📌 Students can also register here for basic access. For College Card access and Card ID login, apply through the <Link to={`/${collegeSlug}/college-card`} className="text-primary font-semibold">College Card menu</Link>.
           </p>
 
@@ -160,9 +160,9 @@ export default function Register() {
         </form>
 
 
-        <p className="text-center text-sm text-neutral-500 mt-4">
+        <p className="text-center text-sm text-muted-foreground mt-4">
           Already have an account?{' '}
-          <Link to={`/${collegeSlug}/login`} className="text-primary font-semibold">Sign in</Link>
+          <Link to={`/${collegeSlug}/login`} className="text-primary font-semibold hover:underline">Sign in</Link>
         </p>
       </div>
     </div>
