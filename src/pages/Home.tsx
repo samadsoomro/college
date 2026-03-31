@@ -858,7 +858,7 @@ const Home: React.FC = () => {
                               <motion.a
                                 key={subject.id}
                                 href={subject.pdf_url}
-                                download
+                                download={`${subject.subject_name.replace(/[/\\?%*:|"<>]/g, '-')}.pdf`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 initial={{ opacity: 0, y: 10 }}
