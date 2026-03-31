@@ -1035,6 +1035,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json(data || []);
   }
 
+  // GET /api/:slug/download-file?url=...&filename=...
+  if (isApi && resource === 'download-file' && req.method === 'GET') {
+    const { url, filename } = req.query as { url: string, filename: string };
+    if (!url) return res.status(400).json({ error: 'URL is required' });
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch from remote URL');
+
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      
+      // Clean filename and ensure it ends with .pdf
+      let cleanName = (filename || 'document').replace(/[/\\?%*:|"<>]/g, '-');
+      if (!cleanName.toLowerCase().endsWith('.pdf')) cleanName += '.pdf';
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${cleanName}"`);
+      return res.send(buffer);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   // GET /api/:slug/exam-papers — all groups for public
   if (isApi && resource === 'exam-papers' && !sub1 && req.method === 'GET') {
     if (!colId) return res.status(404).json({ error: 'Not found' });

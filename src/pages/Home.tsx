@@ -857,7 +857,7 @@ const Home: React.FC = () => {
                             {selectedClass.subjects.map((subject: any, i: number) => (
                               <motion.a
                                 key={subject.id}
-                                href={subject.pdf_url}
+                                href={`/api/${collegeSlug}/download-file?url=${encodeURIComponent(subject.pdf_url)}\&filename=${encodeURIComponent(subject.subject_name)}`}
                                 download={`${subject.subject_name.replace(/[/\\?%*:|"<>]/g, '-')}.pdf`}
                                 target="_blank"
                                 rel="noopener noreferrer"
