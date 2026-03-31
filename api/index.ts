@@ -179,7 +179,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Special handle for /api/colleges/:slug (branding/initial load)
   if (collegeSlug === 'colleges' && parts[2]) {
     const slug = parts[2];
-    const { data: college } = await supabase.from('colleges').select('*').eq('slug', slug).eq('is_active', true).maybeSingle();
+    const { data: college } = await supabase.from('colleges').select('*').eq('slug', slug).maybeSingle();
     if (!college) return res.status(404).json({ error: 'College not found' });
     const { data: s } = await supabase.from('site_settings').select('*').eq('college_id', college.id).maybeSingle();
     return res.json({
