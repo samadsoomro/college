@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useInView } from 'react-intersection-observer';
 import { useCountUp } from '@/hooks/useCountUp';
@@ -452,7 +452,12 @@ const Home: React.FC = () => {
     );
   }
 
-    const notificationGroups = examGroups.filter(g => g.isEnabled && g.showNotification);
+    const notificationGroups = useMemo(() => {
+      return examGroups.filter(g => 
+        (g.isEnabled === true || g.isEnabled === 'true' || g.is_enabled === true) && 
+        (g.showNotification === true || g.showNotification === 'true' || g.show_notification === true)
+      );
+    }, [examGroups]);
 
     return (
       <motion.div
@@ -461,7 +466,7 @@ const Home: React.FC = () => {
         exit={{ opacity: 0 }}
       >
         {notificationGroups.length > 0 && (
-          <div className="w-full bg-primary text-white py-2 px-4 overflow-hidden relative z-[60]">
+          <div className="w-full bg-primary text-white py-3 px-4 shadow-xl relative z-[60] mt-16 lg:mt-20 border-b border-white/10">
             <div className="max-w-7xl mx-auto flex items-center gap-3 flex-wrap justify-center">
               {notificationGroups.map(group => (
                 <button
