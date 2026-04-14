@@ -286,6 +286,27 @@ const Home: React.FC = () => {
     );
   }, [examGroups]);
 
+  useEffect(() => {
+    if (!collegeSlug) return;
+    fetch(`/api/${collegeSlug}/exam-papers`)
+      .then(r => r.json())
+      .then(data => setExamGroups(Array.isArray(data) ? data : []))
+      .catch(() => setExamGroups([]));
+  }, [collegeSlug]);
+
+  const { ref: statsRef, inView: statsVisible } = useInView({
+    threshold: 0.3,
+    triggerOnce: true
+  });
+
+  useEffect(() => {
+    if (!collegeSlug) return;
+    fetch(`/api/${collegeSlug}/home/faqs`)
+      .then(r => r.json())
+      .then(data => setFaqs(Array.isArray(data) ? data : []))
+      .catch(() => setFaqs([]));
+  }, [collegeSlug]);
+
   if (loading) {
     return (
       <div className="min-h-screen pt-20">
@@ -335,14 +356,6 @@ const Home: React.FC = () => {
     );
   }
 
-  useEffect(() => {
-    if (!collegeSlug) return;
-    fetch(`/api/${collegeSlug}/exam-papers`)
-      .then(r => r.json())
-      .then(data => setExamGroups(Array.isArray(data) ? data : []))
-      .catch(() => setExamGroups([]));
-  }, [collegeSlug]);
-
   const handleExamButtonClick = async (group: any) => {
     setSelectedGroup(group);
     setSelectedClass(null);
@@ -358,19 +371,6 @@ const Home: React.FC = () => {
       setLoadingExam(false);
     }
   };
-
-  const { ref: statsRef, inView: statsVisible } = useInView({
-    threshold: 0.3,
-    triggerOnce: true
-  });
-
-  useEffect(() => {
-    if (!collegeSlug) return;
-    fetch(`/api/${collegeSlug}/home/faqs`)
-      .then(r => r.json())
-      .then(data => setFaqs(Array.isArray(data) ? data : []))
-      .catch(() => setFaqs([]));
-  }, [collegeSlug]);
 
   // Default Stats configuration to map with DB data or use as fallback
   const defaultStats = [
