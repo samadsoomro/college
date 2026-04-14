@@ -284,11 +284,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('id', sub2).maybeSingle();
 
     if (!college) return res.status(404).json({ error: 'College not found' });
-    
-    const protectedSlugs = ['gcfm', 'dj', 'agsc', 'os', 'superadmin'];
-    if (protectedSlugs.includes(college.slug)) {
-      return res.status(403).json({ error: 'Cannot delete primary college protected by Rule Zero' });
-    }
 
     console.log('[SUPER ADMIN DELETE COLLEGE]', college.name, sub2);
 
@@ -390,11 +385,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .eq('id', sub1).maybeSingle();
 
       if (!college) return res.status(404).json({ error: 'College not found' });
-      
-      const protectedSlugs = ['gcfm', 'dj', 'agsc', 'os', 'superadmin'];
-      if (protectedSlugs.includes(college.slug)) {
-        return res.status(403).json({ error: 'Cannot delete primary college protected by Rule Zero' });
-      }
 
       console.log('[SUPER ADMIN DELETE COLLEGE]', college.name, sub1);
 
