@@ -63,6 +63,7 @@ const SuperAdminDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isNavOpen, setIsNavOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -147,17 +148,36 @@ const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteCollege = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete ${name}? All data will be permanently removed.`)) return;
+  const handleDeleteCollege = async (college: College) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${college.name}"?\n\nThis will permanently remove:\n- All books, notes, rare books\n- All student cards and borrows\n- All faculty, events, blog posts\n- All settings and data\n\nThis action CANNOT be undone.`
+    );
+    if (!confirmed) return;
 
     try {
-      const res = await fetch(`/api/super-admin/colleges/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast({ title: "Deleted", description: "College removed from system" });
-        fetchColleges();
+      setDeletingId(college.id); // show loading state
+
+      const res = await fetch(`/api/${college.slug}/super-admin/colleges/${college.id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-token': import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026' }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: "Delete Failed", description: data.error || "Unknown error", variant: "destructive" });
+        return;
       }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to delete college", variant: "destructive" });
+
+      toast({ title: "Success", description: `${college.name} deleted successfully` });
+
+      // Remove from local state immediately:
+      setColleges(prev => prev.filter(c => c.id !== college.id));
+
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -379,11 +399,12 @@ const SuperAdminDashboard: React.FC = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDeleteCollege(college.id, college.name)}
-                                className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-all"
+                                onClick={() => handleDeleteCollege(college)}
+                                disabled={deletingId === college.id}
+                                className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-all disabled:opacity-50"
                                 title="Delete College"
                               >
-                                <Trash2 size={16} />
+                                {deletingId === college.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                               </Button>
                           </TableCell>
                         </TableRow>
