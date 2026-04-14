@@ -237,6 +237,24 @@ const AdminHome: React.FC = () => {
     setExamGroups(prev => prev.map(g => g.id === id ? { ...g, [field]: value } : g));
   };
 
+  const saveExamGroup = async (group: any) => {
+    try {
+      await fetch(`/api/${collegeSlug}/admin/exam-papers/${group.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...adminHeaders() },
+        body: JSON.stringify({ 
+          title: group.title, 
+          buttonText: group.button_text || "Access Papers", 
+          isEnabled: group.is_enabled,
+          showNotification: group.show_notification || false,
+          displayOrder: group.display_order 
+        })
+      });
+      toast({ title: '✅ Group saved!' });
+      fetchExamGroups();
+    } catch (err) { toast({ title: "Error saving group", variant: "destructive" }); }
+  };
+
   const saveAllExamGroups = async () => {
     setLoading(true);
     try {
@@ -246,8 +264,9 @@ const AdminHome: React.FC = () => {
           headers: { "Content-Type": "application/json", ...adminHeaders() },
           body: JSON.stringify({ 
             title: group.title, 
-            buttonText: group.button_text, 
+            buttonText: group.button_text || "Access Papers", 
             isEnabled: group.is_enabled,
+            showNotification: group.show_notification || false,
             displayOrder: group.display_order 
           })
         })
@@ -688,14 +707,28 @@ const AdminHome: React.FC = () => {
                                 />
                               </div>
                             </div>
-                            <div className="flex items-center gap-4 bg-white/50 p-2 rounded-lg border border-primary/10">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <span className="text-[10px] font-black uppercase text-primary/60">Enabled</span>
+                            <div className="flex items-center gap-3 bg-white/50 p-2 rounded-lg border border-primary/10">
+                              <label className="flex items-center gap-2 cursor-pointer border-r pr-3">
+                                <span className="text-[10px] font-black uppercase text-primary/60">Visible</span>
                                 <Switch checked={group.is_enabled} onCheckedChange={c => updateGroupLocal(group.id, 'is_enabled', c)} />
                               </label>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => deleteGroup(group.id)} className="h-9 w-9 text-red-500 hover:bg-red-50 rounded-full transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+
+                              <label className="flex items-center gap-2 cursor-pointer text-amber-600 border-r pr-3">
+                                <span className="text-[10px] font-black uppercase">🔔 Notification</span>
+                                <Switch 
+                                  checked={group.show_notification || false} 
+                                  onCheckedChange={c => updateGroupLocal(group.id, 'show_notification', c)} 
+                                />
+                              </label>
+
+                              <div className="flex items-center gap-1">
+                                <Button type="button" onClick={() => saveExamGroup(group)} className="h-8 px-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold">
+                                  <Save className="w-3 h-3 mr-1" /> Save
+                                </Button>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => deleteGroup(group.id)} className="h-8 w-8 text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
 

@@ -452,13 +452,39 @@ const Home: React.FC = () => {
     );
   }
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <Hero
+    const notificationGroups = examGroups.filter(g => g.isEnabled && g.showNotification);
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        {notificationGroups.length > 0 && (
+          <div className="w-full bg-primary text-white py-2 px-4 overflow-hidden relative z-[60]">
+            <div className="max-w-7xl mx-auto flex items-center gap-3 flex-wrap justify-center">
+              {notificationGroups.map(group => (
+                <button
+                  key={group.id}
+                  onClick={() => {
+                    const examSection = document.getElementById('exam-papers-section');
+                    if (examSection) {
+                      examSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }}
+                  className="flex items-center gap-2 text-sm font-medium hover:underline cursor-pointer transition-opacity hover:opacity-80"
+                >
+                  <span className="animate-pulse text-yellow-300">🔔</span>
+                  <span>{group.title}</span>
+                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
+                    Click to view →
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <Hero
         heading={content.heroHeading}
         subheading={content.heroSubheading}
         overlayText={content.heroOverlayText}
@@ -569,7 +595,7 @@ const Home: React.FC = () => {
 
       {/* Multi-Link Exam Paper Section */}
       {content?.examSectionEnabled && examGroups.length > 0 && (
-        <section className="py-16 lg:py-24 bg-background relative overflow-hidden">
+        <section id="exam-papers-section" className="py-16 lg:py-24 bg-background relative overflow-hidden">
           {/* Subtle background decoration */}
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl translate-y-1/2" />
@@ -771,36 +797,37 @@ const Home: React.FC = () => {
       {/* Exam Popup Modal */}
       <AnimatePresence>
         {showExamPopup && selectedGroup && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          >
+          // Backdrop — must be z-[100] minimum
+          <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+            {/* Modal box — margin top ensures it never goes behind navbar */}
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-background border border-border/50 rounded-2xl shadow-2xl w-full max-w-2xl mx-auto max-h-[90vh] overflow-hidden flex flex-col"
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-auto mt-20 mb-8 overflow-hidden"
             >
-              <div className="bg-primary/5 border-b border-primary/10 px-6 py-4 flex items-center justify-between">
+              {/* Header — sticky inside modal */}
+              <div className="sticky top-0 z-10 bg-primary px-6 py-4 text-white flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-lg text-primary flex items-center gap-2">📄 {selectedGroup.title}</h3>
-                  <p className="text-sm text-muted-foreground">Select your class to download papers</p>
+                  <h3 className="font-bold text-lg">📄 {selectedGroup.title}</h3>
+                  <p className="text-sm opacity-75">
+                    {selectedClass ? selectedClass.class_name : 'Select your class to download papers'}
+                  </p>
                 </div>
-                <button 
+                <button
                   onClick={() => { setShowExamPopup(false); setSelectedClass(null); }}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors"
+                  className="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white font-bold text-lg transition-colors"
                 >
-                  <XCircle className="w-5 h-5" />
+                  ✕
                 </button>
               </div>
 
-              <div className="flex-1 overflow-auto p-6 space-y-4">
+              {/* Scrollable Content */}
+              <div className="p-6 space-y-4 overflow-y-auto max-h-[60vh]">
                 {loadingExam ? (
                   <div className="text-center py-12 flex flex-col items-center flex-1 justify-center opacity-50">
                     <RefreshCw className="w-8 h-8 animate-spin text-primary mb-4" />
-                    <p>Loading papers...</p>
+                    <p className="text-muted-foreground">Loading papers...</p>
                   </div>
                 ) : examClasses.length === 0 ? (
                   <div className="text-center py-12 flex flex-col items-center text-muted-foreground">
@@ -821,7 +848,7 @@ const Home: React.FC = () => {
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: i * 0.05 }}
                               onClick={() => setSelectedClass(cls)}
-                              className="border-2 border-border/50 hover:border-primary hover:bg-primary/5 rounded-xl p-4 text-center font-bold text-foreground transition-all group"
+                              className="border-2 border-slate-200 hover:border-primary hover:bg-primary/5 rounded-xl p-4 text-center font-bold text-slate-800 transition-all group"
                             >
                               <div className="w-10 h-10 bg-primary/10 text-primary mx-auto rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                                 📚
@@ -838,18 +865,18 @@ const Home: React.FC = () => {
 
                     {selectedClass && (
                       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                        <div className="flex items-center gap-2 mb-6 bg-secondary/50 p-2 rounded-lg inline-flex">
+                        <div className="flex items-center gap-2 mb-6 bg-slate-100 p-2 rounded-lg inline-flex">
                           <button onClick={() => setSelectedClass(null)} className="text-sm font-bold text-primary hover:bg-primary/10 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1">
                             ← Back
                           </button>
-                          <span className="text-border">|</span>
-                          <p className="text-sm font-bold text-foreground px-2">
+                          <span className="text-slate-300">|</span>
+                          <p className="text-sm font-bold text-slate-800 px-2">
                             {selectedClass.class_name}
                           </p>
                         </div>
 
                         {selectedClass.subjects?.length === 0 ? (
-                          <div className="text-center py-8 border-2 border-dashed border-border/50 rounded-xl text-muted-foreground font-medium">
+                          <div className="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl text-muted-foreground font-medium">
                             No papers uploaded for this class yet.
                           </div>
                         ) : (
@@ -857,19 +884,19 @@ const Home: React.FC = () => {
                             {selectedClass.subjects.map((subject: any, i: number) => (
                               <motion.a
                                 key={subject.id}
-                                href={`/api/${collegeSlug}/download-file?url=${encodeURIComponent(subject.pdf_url)}\&filename=${encodeURIComponent(subject.subject_name)}`}
+                                href={`/api/${collegeSlug}/download-file?url=${encodeURIComponent(subject.pdf_url)}&filename=${encodeURIComponent(subject.subject_name)}`}
                                 download={`${subject.subject_name.replace(/[/\\?%*:|"<>]/g, '-')}.pdf`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.05 }}
-                                className="flex items-center justify-between bg-card border-2 border-border/50 hover:border-primary hover:shadow-md hover:bg-primary/5 rounded-xl p-4 transition-all group"
+                                className="flex items-center justify-between bg-white border-2 border-slate-200 hover:border-primary hover:shadow-md hover:bg-primary/5 rounded-xl p-4 transition-all group"
                               >
                                 <div className="flex items-center gap-3">
                                   <div className="text-2xl group-hover:scale-110 transition-transform">📝</div>
                                   <div>
-                                    <p className="font-bold text-foreground text-sm line-clamp-1">
+                                    <p className="font-bold text-slate-800 text-sm line-clamp-1">
                                       {subject.subject_name}
                                     </p>
                                     {subject.file_size_kb > 0 && (
@@ -894,7 +921,7 @@ const Home: React.FC = () => {
                 )}
               </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </motion.div>

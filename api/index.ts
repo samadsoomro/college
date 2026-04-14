@@ -1123,7 +1123,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('college_id', colId).eq('is_enabled', true)
       .order('display_order');
 
-    return res.json(groups || []);
+    return res.json((groups || []).map((g: any) => ({
+      id: g.id,
+      title: g.title,
+      buttonText: g.button_text,
+      isEnabled: g.is_enabled,
+      showNotification: g.show_notification || false,
+      displayOrder: g.display_order
+    })));
   }
 
   // GET /api/:slug/exam-papers/:groupId/classes — get classes + subjects for popup
@@ -1355,9 +1362,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // PATCH /api/:slug/admin/exam-papers/:id — update group
   if (isApi && resource === 'admin' && sub1 === 'exam-papers' && sub2 && sub3 !== 'classes' && req.method === 'PATCH') {
     if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
-    const { title, buttonText, isEnabled, displayOrder } = req.body || {};
+    const { title, buttonText, isEnabled, showNotification, displayOrder } = req.body || {};
     await supabase.from('exam_paper_groups')
-      .update({ title, button_text: buttonText, is_enabled: isEnabled, display_order: displayOrder || 0, updated_at: new Date().toISOString() })
+      .update({ 
+        title, 
+        button_text: buttonText, 
+        is_enabled: isEnabled, 
+        show_notification: showNotification,
+        display_order: displayOrder || 0, 
+        updated_at: new Date().toISOString() 
+      })
       .eq('id', sub2).eq('college_id', colId);
     return res.json({ success: true });
   }
