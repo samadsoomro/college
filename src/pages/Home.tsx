@@ -279,6 +279,62 @@ const Home: React.FC = () => {
   const [showExamPopup, setShowExamPopup] = useState(false);
   const [loadingExam, setLoadingExam] = useState(false);
 
+  const notificationGroups = useMemo(() => {
+    return examGroups.filter(g => 
+      (g.isEnabled === true || g.isEnabled === 'true' || g.is_enabled === true) && 
+      (g.showNotification === true || g.showNotification === 'true' || g.show_notification === true)
+    );
+  }, [examGroups]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-20">
+        {/* Skeleton Hero */}
+        <section className="relative h-[80vh] flex items-center bg-neutral-100 overflow-hidden">
+          <div className="container relative z-10">
+            <div className="max-w-xl space-y-6">
+              <Skeleton className="h-10 w-48 rounded-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-6 w-3/4" />
+              <div className="flex gap-4">
+                <Skeleton className="h-12 w-36" />
+                <Skeleton className="h-12 w-36" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Skeleton Stats */}
+        <div className="container py-24">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="flex flex-col items-center gap-4">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton Features */}
+        <div className="bg-neutral-50 py-24">
+          <div className="container">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="p-8 bg-white rounded-2xl border border-neutral-100 space-y-4">
+                  <Skeleton className="h-12 w-12" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     if (!collegeSlug) return;
     fetch(`/api/${collegeSlug}/exam-papers`)
@@ -403,62 +459,6 @@ const Home: React.FC = () => {
     },
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen pt-20">
-        {/* Skeleton Hero */}
-        <section className="relative h-[80vh] flex items-center bg-neutral-100 overflow-hidden">
-          <div className="container relative z-10">
-            <div className="max-w-xl space-y-6">
-              <Skeleton className="h-10 w-48 rounded-full" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-6 w-3/4" />
-              <div className="flex gap-4">
-                <Skeleton className="h-12 w-36" />
-                <Skeleton className="h-12 w-36" />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Skeleton Stats */}
-        <div className="container py-24">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="flex flex-col items-center gap-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Skeleton Features */}
-        <div className="bg-neutral-50 py-24">
-          <div className="container">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="p-8 bg-white rounded-2xl border border-neutral-100 space-y-4">
-                  <Skeleton className="h-12 w-12" />
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-    const notificationGroups = useMemo(() => {
-      return examGroups.filter(g => 
-        (g.isEnabled === true || g.isEnabled === 'true' || g.is_enabled === true) && 
-        (g.showNotification === true || g.showNotification === 'true' || g.show_notification === true)
-      );
-    }, [examGroups]);
-
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -466,8 +466,8 @@ const Home: React.FC = () => {
         exit={{ opacity: 0 }}
       >
         {notificationGroups.length > 0 && (
-          <div className="w-full bg-primary text-white py-3 px-4 shadow-xl relative z-[60] mt-16 lg:mt-20 border-b border-white/10">
-            <div className="max-w-7xl mx-auto flex items-center gap-3 flex-wrap justify-center">
+          <div className="w-full bg-primary text-white py-5 px-4 shadow-xl relative z-[51] mt-[85px] lg:mt-[110px] border-b border-white/10">
+            <div className="max-w-7xl mx-auto flex items-center gap-4 flex-wrap justify-center text-center">
               {notificationGroups.map(group => (
                 <button
                   key={group.id}
