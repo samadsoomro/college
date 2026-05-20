@@ -1,7 +1,7 @@
-# GCFM Library Management System
+# College & Library Management System
 
 ## Project Overview
-This is the complete source code for the Gov. College Formen Nazimabad (GCFM) Library Management System. It features book management, library card applications, study notes, and an admin dashboard.
+This is the complete source code for the Gov. College Formen Nazimabad (GCFM) & Library Management System. It features book management, College card applications, study notes, and an admin dashboard.
 
 ## Quick Start
 1. **Install Dependencies**: `npm install`
