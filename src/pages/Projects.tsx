@@ -9,10 +9,16 @@ const Projects = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/${collegeSlug}/projects`)
-      .then(r => r.json())
-      .then(data => { setProjects(data || []); setLoading(false); })
-      .catch(() => setLoading(false));
+    const loadProjects = async () => {
+      try {
+        const res = await fetch(`/api/${collegeSlug}/projects`);
+        if (!res.ok) { setProjects([]); setLoading(false); return; }
+        const data = await res.json();
+        setProjects(Array.isArray(data) ? data : []);
+      } catch { setProjects([]); }
+      setLoading(false);
+    };
+    loadProjects();
   }, [collegeSlug]);
 
   return (
