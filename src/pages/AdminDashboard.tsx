@@ -32,6 +32,7 @@ import {
   History,
   Sun,
   Moon,
+  Folder,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth, adminHeaders } from "@/contexts/AuthContext";
@@ -56,6 +57,7 @@ import AdminHome from "./admin/AdminHome";
 import AdminHistory from "./admin/AdminHistory";
 import ThemeBranding from "./admin/ThemeBranding";
 import InstituteAddress from "./admin/InstituteAddress";
+import AdminProjects from "./admin/AdminProjects";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 
@@ -1269,6 +1271,7 @@ export default function AdminDashboard() {
     { id: "events", label: "Events", icon: Calendar, count: events?.length || 0 },
     { id: "blog", label: "Blog", icon: PenTool, count: 0 },
     { id: "notifications", label: "Notifications", icon: Bell, count: 0 },
+    { id: "projects", label: "Projects", icon: Folder, count: 0 },
   ];
 
   const aboutModules = [
@@ -2461,6 +2464,13 @@ export default function AdminDashboard() {
           )}
 
           {activeModule === "registered-people" && <RegisteredPeople />}
+
+          {/* Projects Module */}
+          {activeModule === "projects" && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <AdminProjects />
+            </div>
+          )}
 
           {/* History Module */}
           {activeModule === "history" && (

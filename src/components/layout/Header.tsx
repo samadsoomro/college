@@ -48,6 +48,7 @@ const Header: React.FC = () => {
 
   const navLinks = [
     { path: `/${collegeSlug}`, label: "Home" },
+    ...(settings?.showProjectsMenu ? [{ path: `/${collegeSlug}/projects`, label: "Projects" }] : []),
     { path: `/${collegeSlug}/blog`, label: "Blog" },
     {
       label: "Our Library",

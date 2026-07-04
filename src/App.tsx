@@ -31,6 +31,8 @@ import History from "@/pages/History";
 import PrincipalMessage from "@/pages/PrincipalMessage";
 import Faculty from "@/pages/Faculty";
 import NotFound from "@/pages/NotFound";
+import Projects from "@/pages/Projects";
+import AIResearchStudy from "@/pages/AIResearchStudy";
 
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import CollegeLayout from "@/components/layout/CollegeLayout";
@@ -81,6 +83,8 @@ const App = () => (
               <Route path="about" element={<About />} />
               <Route path="donate" element={<Donate />} />
               <Route path="contact" element={<Contact />} />
+              <Route path="projects" element={<Projects />} />
+              <Route path="projects/ai-performance-study" element={<AIResearchStudy />} />
               <Route path="admin-dashboard/*" element={
                 <ProtectedRoute><AdminDashboard /></ProtectedRoute>
               } />

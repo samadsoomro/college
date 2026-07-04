@@ -2607,6 +2607,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true });
     }
 
+    // ── PROJECTS MODULE ─────────────────────────────────────────────────────────────
+    
+    // GET /api/:slug/projects — public
+    if (isApi && resource === 'projects' && !sub1 && req.method === 'GET') {
+      const colId = await getCollegeId(slug);
+      if (!colId) return res.status(404).json({ error: 'Not found' });
+      const { data } = await supabase
+        .from('projects').select('*')
+        .eq('college_id', colId).eq('is_visible', true)
+        .order('created_at', { ascending: false });
+      return res.json(data || []);
+    }
+    
+    // GET /api/:slug/admin/projects — admin
+    if (isApi && resource === 'admin' && sub1 === 'projects' && !sub2 && req.method === 'GET') {
+      if (!isAdminRequest(req)) return res.status(403).json({ error: 'Unauthorized' });
+      const colId = await getCollegeId(slug);
+      if (!colId) return res.status(404).json({ error: 'Not found' });
+      const { data } = await supabase
+        .from('projects').select('*')
+        .eq('college_id', colId)
+        .order('created_at', { ascending: false });
+      return res.json(data || []);
+    }
+    
+    // POST /api/:slug/admin/projects — admin
+    if (isApi && resource === 'admin' && sub1 === 'projects' && !sub2 && req.method === 'POST') {
+      if (!isAdminRequest(req)) return res.status(403).json({ error: 'Unauthorized' });
+      const colId = await getCollegeId(slug);
+      if (!colId) return res.status(404).json({ error: 'Not found' });
+      
+      const { title, researcherName, classBatch, supervisor, department, description, pdfUrl, publishDate } = req.body;
+      if (!title || !researcherName) return res.status(400).json({ error: 'Title and researcher name are required' });
+      
+      const { data, error } = await supabase.from('projects').insert([{
+        college_id: colId,
+        title, researcher_name: researcherName,
+        class_batch: classBatch, supervisor, department,
+        description, pdf_url: pdfUrl, publish_date: publishDate,
+        is_visible: true
+      }]);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ success: true, data });
+    }
+    
+    // PATCH /api/:slug/admin/projects/:id — admin
+    if (isApi && resource === 'admin' && sub1 === 'projects' && sub2 && req.method === 'PATCH') {
+      if (!isAdminRequest(req)) return res.status(403).json({ error: 'Unauthorized' });
+      const colId = await getCollegeId(slug);
+      if (!colId) return res.status(404).json({ error: 'Not found' });
+      
+      const updates: any = {};
+      const allowedFields = ['title', 'researcherName', 'classBatch', 'supervisor', 'department', 'description', 'pdfUrl', 'publishDate', 'isVisible'];
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          const dbField = field.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+          updates[dbField] = req.body[field];
+        }
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        const { error } = await supabase.from('projects')
+          .update(updates).eq('id', sub2).eq('college_id', colId);
+        if (error) return res.status(500).json({ error: error.message });
+      }
+      return res.json({ success: true });
+    }
+    
+    // DELETE /api/:slug/admin/projects/:id — admin
+    if (isApi && resource === 'admin' && sub1 === 'projects' && sub2 && req.method === 'DELETE') {
+      if (!isAdminRequest(req)) return res.status(403).json({ error: 'Unauthorized' });
+      const colId = await getCollegeId(slug);
+      if (!colId) return res.status(404).json({ error: 'Not found' });
+      
+      const { error } = await supabase.from('projects')
+        .delete().eq('id', sub2).eq('college_id', colId);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ success: true });
+    }
+
   return res.status(404).json({ error: 'Endpoint not found', path });
 }
 
