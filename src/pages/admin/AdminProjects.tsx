@@ -8,7 +8,12 @@ const AdminProjects = () => {
   const { toast } = useToast();
   const adminToken = import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026';
   const [projects, setProjects] = useState<any[]>([]);
-  const [settings, setSettings] = useState({ projectsDeptHeading: '', showMyResearch: true, showProjectsMenu: true });
+  const [settings, setSettings] = useState({ showProjectsMenu: true });
+  const [myResearchSettings, setMyResearchSettings] = useState({
+    showMyResearch: true,
+    supervisor: 'Prof. Munaf & Prof. M. Waqqar Qadri',
+    department: 'Statistics & Computer Science Dept.',
+  });
   const [showForm, setShowForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editProject, setEditProject] = useState<any>(null);
@@ -27,9 +32,12 @@ const AdminProjects = () => {
     if (settingsRes.ok) {
       const s = await settingsRes.json();
       setSettings({ 
-        projectsDeptHeading: s.projectsDeptHeading || '', 
-        showMyResearch: s.showMyResearch ?? true,
         showProjectsMenu: s.showProjectsMenu ?? true
+      });
+      setMyResearchSettings({
+        showMyResearch: s.showMyResearch ?? true,
+        supervisor: s.myResearchSupervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
+        department: s.projectsDeptHeading || 'Statistics & Computer Science Dept.',
       });
     }
   };
@@ -41,12 +49,23 @@ const AdminProjects = () => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
       body: JSON.stringify({ 
-        projectsDeptHeading: settings.projectsDeptHeading, 
-        showMyResearch: settings.showMyResearch,
         showProjectsMenu: settings.showProjectsMenu 
       })
     });
     toast({ title: '✅ Settings saved!' });
+  };
+
+  const saveMyResearchSettings = async () => {
+    await fetch(`/api/${collegeSlug}/admin/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+      body: JSON.stringify({
+        showMyResearch: myResearchSettings.showMyResearch,
+        myResearchSupervisor: myResearchSettings.supervisor,
+        projectsDeptHeading: myResearchSettings.department,
+      })
+    });
+    toast({ title: '✅ My Research settings saved!' });
   };
 
   const handleSubmit = async () => {
@@ -94,30 +113,7 @@ const AdminProjects = () => {
       <div className="border rounded-xl p-5 space-y-4 bg-white dark:bg-neutral-900">
         <h3 className="font-semibold text-lg">⚙️ Projects Settings</h3>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Department Heading</label>
-          <input type="text"
-            value={settings.projectsDeptHeading}
-            onChange={e => setSettings(prev => ({ ...prev, projectsDeptHeading: e.target.value }))}
-            placeholder="e.g. Statistics & Computer Science Dept."
-            className="w-full border rounded-lg px-3 py-2 text-sm bg-transparent" />
-        </div>
-
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 flex items-center justify-between border rounded-lg px-4 py-3">
-            <div>
-              <p className="font-medium text-sm">🔬 My Research (AI Study)</p>
-              <p className="text-xs text-neutral-400">Show Abdul Samad's live research as first card</p>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox"
-                checked={settings.showMyResearch}
-                onChange={e => setSettings(prev => ({ ...prev, showMyResearch: e.target.checked }))}
-                className="w-4 h-4" />
-              <span className="text-sm">{settings.showMyResearch ? 'ON' : 'OFF'}</span>
-            </label>
-          </div>
-
           <div className="flex-1 flex items-center justify-between border rounded-lg px-4 py-3">
             <div>
               <p className="font-medium text-sm">🔗 Show in Navbar</p>
@@ -135,8 +131,95 @@ const AdminProjects = () => {
 
         <button onClick={saveSettings}
           className="px-5 py-2 bg-primary text-white rounded-lg text-sm font-semibold">
-          💾 Save Settings
+          💾 Save Navbar Setting
         </button>
+      </div>
+
+      {/* My Research Section — Special Hardcoded Research */}
+      <div className="border-2 border-primary/20 rounded-xl p-5 space-y-4 bg-white dark:bg-neutral-900">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🔬</span>
+          <div>
+            <h3 className="font-bold text-base">My Research — AI Study</h3>
+            <p className="text-xs text-neutral-400">
+              This is a special hardcoded research page at /projects/ai-performance-study
+            </p>
+          </div>
+        </div>
+
+        {/* ON/OFF Toggle */}
+        <div className="flex items-center justify-between border rounded-lg px-4 py-3">
+          <div>
+            <p className="font-medium text-sm">Show on Projects page</p>
+            <p className="text-xs text-neutral-400">
+              When ON — appears as first card with "Live Research" badge
+            </p>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={myResearchSettings.showMyResearch}
+              onChange={e => setMyResearchSettings(prev => ({
+                ...prev, showMyResearch: e.target.checked
+              }))}
+              className="w-4 h-4"
+            />
+            <span className={`text-sm font-semibold ${myResearchSettings.showMyResearch ? 'text-green-600' : 'text-neutral-400'}`}>
+              {myResearchSettings.showMyResearch ? 'ON' : 'OFF'}
+            </span>
+          </label>
+        </div>
+
+        {/* Supervised By — editable */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium">
+            🎓 Supervised By
+          </label>
+          <input
+            type="text"
+            value={myResearchSettings.supervisor}
+            onChange={e => setMyResearchSettings(prev => ({
+              ...prev, supervisor: e.target.value
+            }))}
+            placeholder="e.g. Prof. Munaf & Prof. M. Waqqar Qadri"
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+
+        {/* Department — editable */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium">
+            🏛️ Department
+          </label>
+          <input
+            type="text"
+            value={myResearchSettings.department}
+            onChange={e => setMyResearchSettings(prev => ({
+              ...prev, department: e.target.value
+            }))}
+            placeholder="e.g. Statistics & Computer Science Dept."
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+
+        {/* Save button */}
+        <button
+          onClick={saveMyResearchSettings}
+          className="px-5 py-2 bg-primary text-white rounded-lg text-sm font-semibold"
+        >
+          💾 Save My Research Settings
+        </button>
+
+        {/* Preview info — non-editable hardcoded fields */}
+        <div className="bg-neutral-50 dark:bg-neutral-800 rounded-lg p-4 space-y-1">
+          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">
+            Hardcoded Info (not editable)
+          </p>
+          <p className="text-xs text-neutral-500">📌 Title: AI Tools & Academic Performance Among CS Students</p>
+          <p className="text-xs text-neutral-500">👤 Researcher: Abdul Samad — Class 12 (CS), Batch 2024–2026</p>
+          <p className="text-xs text-neutral-500">📅 Published: June 2026</p>
+          <p className="text-xs text-neutral-500">🔗 Page: /projects/ai-performance-study</p>
+        </div>
       </div>
 
       {/* Add Project Button */}

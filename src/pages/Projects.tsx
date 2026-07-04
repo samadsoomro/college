@@ -51,8 +51,8 @@ const Projects = () => {
 
                 <div className="text-xs text-neutral-500 space-y-1">
                   <p>👤 <span className="font-medium">Abdul Samad</span> — Class 12 (CS), Batch 2024–2026</p>
-                  <p>🎓 Supervised by: Prof. Munaf & Prof. M. Waqqar Qadri</p>
-                  <p>🏛️ Statistics & Computer Science Dept.</p>
+                  <p>🎓 Supervised by: {settings?.myResearchSupervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri'}</p>
+                  <p>🏛️ {settings?.projectsDeptHeading || 'Statistics & Computer Science Dept.'}</p>
                 </div>
 
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">

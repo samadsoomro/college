@@ -204,6 +204,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       notificationsDescription: s?.notifications_description || 'Official announcements and updates',
       contactHeading: s?.contact_heading || 'Contact Us',
       contactDescription: s?.contact_description || 'Get in touch with us for official information and student support',
+      showProjectsMenu: s?.show_projects_menu || false,
+      projectsDeptHeading: s?.projects_dept_heading || 'Statistics & Computer Science Dept.',
+      showMyResearch: s?.show_my_research ?? true,
+      myResearchSupervisor: s?.my_research_supervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
     });
   }
 
@@ -733,6 +737,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         notificationsDescription: d.notifications_description || 'Official announcements and updates',
         contactHeading: d.contact_heading || 'Contact Us',
         contactDescription: d.contact_description || 'Get in touch with us for official information and student support',
+        showProjectsMenu: d.show_projects_menu || false,
+        projectsDeptHeading: d.projects_dept_heading || 'Statistics & Computer Science Dept.',
+        showMyResearch: d.show_my_research ?? true,
+        myResearchSupervisor: d.my_research_supervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
       });
     }
 
@@ -1683,7 +1691,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       notificationsHeading: 'notifications_heading',
       notificationsDescription: 'notifications_description',
       contactHeading: 'contact_heading',
-      contactDescription: 'contact_description'
+      contactDescription: 'contact_description',
+      showProjectsMenu: 'show_projects_menu',
+      projectsDeptHeading: 'projects_dept_heading',
+      showMyResearch: 'show_my_research',
+      myResearchSupervisor: 'my_research_supervisor'
     };
     for (const [k, v] of Object.entries(req.body || {})) {
       if (!fieldMap[k]) continue; // Only allow mapped fields to be updated
@@ -1695,7 +1707,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (typeof val === 'number' && isNaN(val)) val = null;
       }
       // Handle Boolean fields
-      else if (k === 'cardQrEnabled' || k === 'rbWatermarkEnabled') {
+      else if (k === 'cardQrEnabled' || k === 'rbWatermarkEnabled' || k === 'showProjectsMenu' || k === 'showMyResearch') {
         if (v === 'true' || v === true) val = true;
         else if (v === 'false' || v === false) val = false;
         else val = null;

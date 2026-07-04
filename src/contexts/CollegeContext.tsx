@@ -61,6 +61,10 @@ interface SiteSettings {
   notificationsDescription: string;
   contactHeading: string;
   contactDescription: string;
+  showProjectsMenu: boolean;
+  projectsDeptHeading: string;
+  showMyResearch: boolean;
+  myResearchSupervisor: string;
   updatedAt: string;
 }
 
@@ -138,6 +142,10 @@ const defaultSettings: SiteSettings = {
   notificationsDescription: 'Official announcements and updates',
   contactHeading: 'Contact Us',
   contactDescription: 'Get in touch with us for official information and student support',
+  showProjectsMenu: false,
+  projectsDeptHeading: 'Statistics & Computer Science Dept.',
+  showMyResearch: true,
+  myResearchSupervisor: 'Prof. Munaf & Prof. M. Waqqar Qadri',
   updatedAt: new Date().toISOString(),
 };
 

@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
+import { useCollege } from '@/contexts/CollegeContext';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -48,6 +49,8 @@ const PIE_COLORS = ['#7c7fff', '#fa8c00', '#22c55e', '#ef4444'];
 
 const AIResearchStudy = () => {
   const { collegeSlug } = useParams();
+  const { settings } = useCollege();
+  const supervisor = settings?.myResearchSupervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri';
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -69,7 +72,7 @@ const AIResearchStudy = () => {
           </h1>
           <div className="flex flex-wrap justify-center gap-4 text-sm text-neutral-500">
             <span>👤 Abdul Samad — Class 12 (CS), Batch 2024–2026</span>
-            <span>🎓 Prof. Munaf & Prof. M. Waqqar Qadri</span>
+            <span>🎓 {supervisor}</span>
             <span>📅 Published: June 2026</span>
           </div>
         </div>
