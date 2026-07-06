@@ -62,6 +62,8 @@ interface SiteSettings {
   contactHeading: string;
   contactDescription: string;
   showProjectsMenu: boolean;
+  projectsPageHeading: string;
+  projectsPageSubheading: string;
   projectsDeptHeading: string;
   showMyResearch: boolean;
   myResearchSupervisor: string;
@@ -143,6 +145,8 @@ const defaultSettings: SiteSettings = {
   contactHeading: 'Contact Us',
   contactDescription: 'Get in touch with us for official information and student support',
   showProjectsMenu: false,
+  projectsPageHeading: 'Our College Projects',
+  projectsPageSubheading: 'Student & Faculty Research Projects',
   projectsDeptHeading: 'Statistics & Computer Science Dept.',
   showMyResearch: true,
   myResearchSupervisor: 'Prof. Munaf & Prof. M. Waqqar Qadri',

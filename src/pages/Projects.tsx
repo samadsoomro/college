@@ -22,16 +22,16 @@ const Projects = () => {
   }, [collegeSlug]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground pt-20 md:pt-24">
       <div className="max-w-6xl mx-auto px-4 py-12">
 
         {/* Department Heading */}
         <div className="text-center mb-10">
           <h1 className="text-3xl md:text-4xl font-bold text-neutral-800 dark:text-neutral-100">
-            {settings?.projectsDeptHeading || 'Statistics & Computer Science Dept.'}
+            {settings?.projectsPageHeading || 'Our College Projects'}
           </h1>
           <p className="text-neutral-500 mt-2">
-            Student & Faculty Research Projects
+            {settings?.projectsPageSubheading || 'Student & Faculty Research Projects'}
           </p>
         </div>
 
@@ -40,39 +40,61 @@ const Projects = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-            {/* My Research Card — always first when enabled */}
-            {settings?.showMyResearch && (
-              <div className="bg-white dark:bg-neutral-900 border-2 border-primary/30 rounded-2xl p-6 shadow-md flex flex-col gap-3 hover:shadow-lg transition-shadow">
-                {/* Special badge */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs bg-primary text-white px-3 py-1 rounded-full font-semibold">
-                    🔬 Live Research
-                  </span>
-                  <span className="text-xs text-neutral-400">June 2026</span>
+            {/* My Research card ONLY shows on gcfm slug: */}
+            {collegeSlug === 'gcfm' && settings?.showMyResearch && (
+              <div className="col-span-full">
+                <div className="relative bg-gradient-to-br from-primary/5 via-white to-primary/10 dark:from-primary/10 dark:via-neutral-900 dark:to-primary/5 border-2 border-primary/30 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                  <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start">
+                    <div className="flex-1 space-y-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 bg-primary text-white text-xs px-3 py-1.5 rounded-full font-semibold">
+                          🔬 Live Research
+                        </span>
+                        <span className="text-xs text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-full">
+                          📅 June 2026
+                        </span>
+                      </div>
+                      <h2 className="text-xl md:text-2xl font-bold text-neutral-800 dark:text-neutral-100 leading-tight">
+                        AI Tools & Academic Performance Among All Groups Students
+                      </h2>
+                      <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed max-w-2xl">
+                        A statistical study examining the relationship between AI tool usage
+                        and academic performance among students of all subject groups,
+                        using chi-square analysis, correlation methods, and regression modeling.
+                      </p>
+                      <Link
+                        to={`/${collegeSlug}/projects/ai-performance-study`}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all hover:shadow-lg hover:translate-y-[-1px]"
+                      >
+                        🔍 View Live Research <span className="text-lg">→</span>
+                      </Link>
+                    </div>
+                    <div className="flex-shrink-0 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 space-y-3 min-w-[220px] shadow-sm">
+                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Researcher</p>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <span>👤</span>
+                          <div>
+                            <p className="font-bold text-neutral-800 dark:text-neutral-100 text-sm">Abdul Samad</p>
+                            <p className="text-xs text-neutral-500">Class 12 (CS), Batch 2024–2026</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span>🎓</span>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                            {settings?.myResearchSupervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri'}
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span>🏛️</span>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">Statistics Dept. of GCFMN</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                <h3 className="font-bold text-neutral-800 dark:text-neutral-100 text-lg leading-snug">
-                  AI Tools & Academic Performance Among CS Students
-                </h3>
-
-                <div className="text-xs text-neutral-500 space-y-1">
-                  <p>👤 <span className="font-medium">Abdul Samad</span> — Class 12 (CS), Batch 2024–2026</p>
-                  <p>🎓 Supervised by: {settings?.myResearchSupervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri'}</p>
-                  <p>🏛️ {settings?.projectsDeptHeading || 'Statistics & Computer Science Dept.'}</p>
-                </div>
-
-                <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                  A statistical study examining the relationship between AI tool usage
-                  and academic performance among Computer Science students,
-                  using chi-square analysis and correlation methods.
-                </p>
-
-                <Link
-                  to={`/${collegeSlug}/projects/ai-performance-study`}
-                  className="mt-auto inline-flex items-center justify-center gap-2 w-full py-2.5 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors"
-                >
-                  🔍 View Live Research
-                </Link>
               </div>
             )}
 

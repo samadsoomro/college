@@ -205,8 +205,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contactHeading: s?.contact_heading || 'Contact Us',
       contactDescription: s?.contact_description || 'Get in touch with us for official information and student support',
       showProjectsMenu: s?.show_projects_menu || false,
+      projectsPageHeading: s?.projects_page_heading || 'Our College Projects',
+      projectsPageSubheading: s?.projects_page_subheading || 'Student & Faculty Research Projects',
       projectsDeptHeading: s?.projects_dept_heading || 'Statistics & Computer Science Dept.',
-      showMyResearch: s?.show_my_research ?? true,
+      showMyResearch: slug === 'gcfm' ? (s?.show_my_research ?? true) : false,
       myResearchSupervisor: s?.my_research_supervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
     });
   }
@@ -738,8 +740,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         contactHeading: d.contact_heading || 'Contact Us',
         contactDescription: d.contact_description || 'Get in touch with us for official information and student support',
         showProjectsMenu: d.show_projects_menu || false,
+        projectsPageHeading: d.projects_page_heading || 'Our College Projects',
+        projectsPageSubheading: d.projects_page_subheading || 'Student & Faculty Research Projects',
         projectsDeptHeading: d.projects_dept_heading || 'Statistics & Computer Science Dept.',
-        showMyResearch: d.show_my_research ?? true,
+        showMyResearch: slug === 'gcfm' ? (d.show_my_research ?? true) : false,
         myResearchSupervisor: d.my_research_supervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
       });
     }
@@ -1693,6 +1697,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contactHeading: 'contact_heading',
       contactDescription: 'contact_description',
       showProjectsMenu: 'show_projects_menu',
+      projectsPageHeading: 'projects_page_heading',
+      projectsPageSubheading: 'projects_page_subheading',
       projectsDeptHeading: 'projects_dept_heading',
       showMyResearch: 'show_my_research',
       myResearchSupervisor: 'my_research_supervisor'

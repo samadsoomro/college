@@ -727,6 +727,20 @@ const ThemeBranding: React.FC = () => {
                     <Textarea name="notificationsDescription" value={formData.notificationsDescription || ''} onChange={handleInputChange} placeholder="Official announcements, news..." rows={2} className="text-sm" />
                   </div>
                 </div>
+                {/* Projects Page */}
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="text-xs font-black uppercase text-secondary-foreground flex items-center gap-2">
+                    <BookOpen size={14} /> Projects Page
+                  </h4>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Heading</label>
+                    <Input name="projectsPageHeading" value={formData.projectsPageHeading || ''} onChange={handleInputChange} placeholder="Our College Projects" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Description Line</label>
+                    <Textarea name="projectsPageSubheading" value={formData.projectsPageSubheading || ''} onChange={handleInputChange} placeholder="Student & Faculty Research Projects" rows={2} className="text-sm" />
+                  </div>
+                </div>
 
                 {/* Contact Page */}
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30 md:col-span-2">

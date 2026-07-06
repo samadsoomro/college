@@ -136,6 +136,7 @@ const AdminProjects = () => {
       </div>
 
       {/* My Research Section — Special Hardcoded Research */}
+      {collegeSlug === 'gcfm' && (
       <div className="border-2 border-primary/20 rounded-xl p-5 space-y-4 bg-white dark:bg-neutral-900">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🔬</span>
@@ -221,6 +222,7 @@ const AdminProjects = () => {
           <p className="text-xs text-neutral-500">🔗 Page: /projects/ai-performance-study</p>
         </div>
       </div>
+      )}
 
       {/* Add Project Button */}
       <div className="flex justify-between items-center">
