@@ -3,49 +3,65 @@ import { useCollege } from '@/contexts/CollegeContext';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  ScatterChart, Scatter, LineChart, Line
+  ScatterChart, Scatter, ZAxis,
+  ComposedChart, Line
 } from 'recharts';
 
-// ─────────────────────────────────────────────
-// FILL IN AFTER SURVEY ANALYSIS
-// ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════
+// FINAL SURVEY DATA — 50 Students — GCFMN July 2026
+// ══════════════════════════════════════════════════
 
-const AI_USAGE_PIE_DATA = [
-  { name: 'Daily', value: 40 },
-  { name: 'Weekly', value: 30 },
-  { name: 'Rarely', value: 20 },
-  { name: 'Never', value: 10 },
+const TOTAL_STUDENTS = 50;
+const CHI_SQUARE_VALUE = 15.15;
+const CHI_SQUARE_P_VALUE = 0.004;
+const CORRELATION_R = 0.50;
+
+// Pie Chart — AI Usage Distribution
+const AI_USAGE_DATA = [
+  { name: 'Daily',     value: 25 },
+  { name: 'Sometimes', value: 18 },
+  { name: 'Never',     value: 7  },
 ];
 
-const PERFORMANCE_BAR_DATA = [
-  { group: 'Daily', avgGrade: 78 },
-  { group: 'Weekly', avgGrade: 72 },
-  { group: 'Rarely', avgGrade: 65 },
-  { group: 'Never', avgGrade: 60 },
+// Bar Chart 1 — Average Score by AI Usage Group
+const PERFORMANCE_DATA = [
+  { group: 'Never',     avgScore: 52 },
+  { group: 'Sometimes', avgScore: 65 },
+  { group: 'Daily',     avgScore: 74 },
 ];
 
+// Bar Chart 2 — Participants by College Group (NEW)
+const GROUP_DATA = [
+  { group: 'Computer Science', count: 14 },
+  { group: 'Pre-Engineering',  count: 13 },
+  { group: 'Pre-Medical',      count: 12 },
+  { group: 'Commerce',         count: 11 },
+];
+
+// Scatter Diagram — AI Usage vs Score
+// x: 1=Never, 2=Sometimes, 3=Daily | y: Score % | size: number of students
 const SCATTER_DATA = [
-  { aiUsageScore: 1, academicScore: 55 },
-  { aiUsageScore: 2, academicScore: 62 },
-  { aiUsageScore: 3, academicScore: 70 },
-  { aiUsageScore: 4, academicScore: 78 },
-  { aiUsageScore: 5, academicScore: 85 },
+  { x: 1, y: 40,  z: 3  },
+  { x: 1, y: 57,  z: 3  },
+  { x: 1, y: 72,  z: 1  },
+  { x: 2, y: 40,  z: 3  },
+  { x: 2, y: 57,  z: 3  },
+  { x: 2, y: 72,  z: 8  },
+  { x: 2, y: 85,  z: 4  },
+  { x: 3, y: 40,  z: 1  },
+  { x: 3, y: 57,  z: 2  },
+  { x: 3, y: 72,  z: 13 },
+  { x: 3, y: 85,  z: 9  },
 ];
 
-const REGRESSION_LINE_DATA = [
-  { aiUsageScore: 1, predicted: 56 },
-  { aiUsageScore: 5, predicted: 84 },
+// Regression line — ŷ = 42.9 + 10.3x — plot at x=1 and x=3
+const REGRESSION_LINE = [
+  { x: 1, y: 53.2  }, // 42.9 + 10.3*1
+  { x: 2, y: 63.5  }, // 42.9 + 10.3*2
+  { x: 3, y: 73.8  }, // 42.9 + 10.3*3
 ];
 
-// Chi-square result — FILL IN AFTER ANALYSIS:
-const CHI_SQUARE_VALUE = 0;    // FILL IN e.g. 12.45
-const CHI_SQUARE_P_VALUE = 0;  // FILL IN e.g. 0.014
-const CORRELATION_R = 0;       // FILL IN e.g. 0.62
-const TOTAL_STUDENTS = 0;      // FILL IN e.g. 50
-
-// ─────────────────────────────────────────────
-
-const PIE_COLORS = ['#7c7fff', '#fa8c00', '#22c55e', '#ef4444'];
+const COLORS = ['#7c7fff', '#fa8c00', '#22c55e', '#ef4444'];
 
 const AIResearchStudy = () => {
   const { collegeSlug } = useParams();
@@ -126,6 +142,21 @@ const AIResearchStudy = () => {
           </p>
         </section>
 
+        {/* Section 2 — Who We Asked */}
+        <section className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-700 p-6 space-y-3 shadow-sm">
+          <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-100 flex items-center gap-2">
+            <span className="text-green-500">👥</span> Who We Asked
+          </h2>
+          <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
+            We surveyed <strong className="text-neutral-800 dark:text-neutral-200">
+            50 students</strong> from all subject groups at Govt. College for Men
+            Nazimabad (GCFMN), Karachi. Students were from 11th and 12th class.
+            The survey was voluntary and anonymous — no names were recorded.
+            14 from Computer Science, 13 from Pre-Engineering, 12 from Pre-Medical,
+            and 11 from Commerce.
+          </p>
+        </section>
+
         {/* Section 3 — What We Found */}
         <section className="space-y-8">
           <h2 className="text-2xl font-bold text-neutral-800 dark:text-neutral-100 border-b pb-4">
@@ -140,9 +171,9 @@ const AIResearchStudy = () => {
               </h3>
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
-                  <Pie data={AI_USAGE_PIE_DATA} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                    {AI_USAGE_PIE_DATA.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  <Pie data={AI_USAGE_DATA} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {AI_USAGE_DATA.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -151,18 +182,50 @@ const AIResearchStudy = () => {
               </ResponsiveContainer>
             </div>
 
-            {/* Bar Chart — Performance by AI Usage Group */}
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-700 p-6 shadow-sm">
-              <h3 className="font-bold text-neutral-700 dark:text-neutral-300 mb-4 text-center">
-                Average Score by AI Usage
+            {/* Bar Chart 1 — Avg Score by AI Usage Group */}
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6">
+              <h3 className="font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                Average Exam Score by AI Usage Frequency
               </h3>
+              <p className="text-xs text-neutral-400 mb-4">
+                Students who use AI daily scored 22 marks higher than non-users on average
+              </p>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={PERFORMANCE_DATA} margin={{ bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="group" tick={{ fontSize: 12 }} />
+                  <YAxis domain={[0, 100]}
+                    label={{ value: 'Score (%)', angle: -90, position: 'insideLeft', fontSize: 11 }} />
+                  <Tooltip formatter={(v: any) => [`${v}%`, 'Avg Score']} />
+                  <Bar dataKey="avgScore" radius={[8, 8, 0, 0]}>
+                    {PERFORMANCE_DATA.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Bar Chart 2 — Participants by College Group */}
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6">
+              <h3 className="font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                Participants by College Group
+              </h3>
+              <p className="text-xs text-neutral-400 mb-4">
+                50 students surveyed across all 4 subject groups at GCFMN
+              </p>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={PERFORMANCE_BAR_DATA}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="group" axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{fill: 'transparent'}} />
-                  <Bar dataKey="avgGrade" fill="#7c7fff" radius={[4, 4, 0, 0]} />
+                <BarChart data={GROUP_DATA} layout="vertical" margin={{ left: 20, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                  <XAxis type="number" domain={[0, 20]}
+                    label={{ value: 'Number of Students', position: 'insideBottom', offset: -5, fontSize: 11 }} />
+                  <YAxis type="category" dataKey="group" tick={{ fontSize: 11 }} width={120} />
+                  <Tooltip formatter={(v: any) => [`${v} students`, 'Count']} />
+                  <Bar dataKey="count" radius={[0, 8, 8, 0]}>
+                    {GROUP_DATA.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -178,51 +241,93 @@ const AIResearchStudy = () => {
                 Chi-Square Test Result
               </h3>
             </div>
-            <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
-              A chi-square test of independence was conducted to determine whether the frequency of AI tool usage is significantly associated with student's academic performance.
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
+              We tested whether AI usage and exam performance are related or just random
+              across all student groups. Our chi-square value of <strong>15.15</strong> is
+              well above the critical value of 9.49 at 5% significance level
+              (p = <strong>0.004</strong>). This means the association is statistically
+              significant. Students who use AI tools daily scored an average of
+              <strong> 74%</strong>, compared to just <strong>52%</strong> for those who
+              never use them — a difference of <strong>22 marks</strong>.
             </p>
-            <div className="bg-white dark:bg-neutral-900 rounded-xl p-4 border border-primary/20">
-              {CHI_SQUARE_VALUE > 0 ? (
-                <p className="font-medium">
-                  Our result (χ² = <strong className="text-primary">{CHI_SQUARE_VALUE}</strong>, p = <strong className="text-primary">{CHI_SQUARE_P_VALUE}</strong>)
-                  shows that {CHI_SQUARE_P_VALUE < 0.05
-                    ? <span className="text-green-600 dark:text-green-400 font-bold">there IS a statistically significant relationship — the connection is real, not just by chance.</span>
-                    : <span className="text-neutral-500 font-bold">there is NO statistically significant relationship at the 5% level.</span>}
-                </p>
-              ) : (
-                <p className="text-neutral-400 italic">[Chi-square result will be filled after analysis]</p>
-              )}
-            </div>
           </div>
 
-          {/* Scatter Chart + Regression */}
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-700 p-6 shadow-sm">
-            <h3 className="font-bold text-neutral-700 dark:text-neutral-300 mb-6 text-center">
-              Scatter Diagram — AI Usage vs Academic Score
+          {/* Scatter Diagram */}
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6">
+            <h3 className="font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+              Scatter Diagram — AI Usage vs Exam Score
             </h3>
+            <p className="text-xs text-neutral-400 mb-4">
+              Bubble size = number of students at that point. Orange line = regression ŷ = 42.9 + 10.3x
+            </p>
             <ResponsiveContainer width="100%" height={320}>
-              <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="aiUsageScore" name="AI Usage Score" type="number" domain={[0, 6]} ticks={[1,2,3,4,5]} label={{ value: 'AI Usage (1=Never, 5=Daily)', position: 'bottom', offset: 0 }} />
-                <YAxis dataKey="academicScore" name="Academic Score" domain={[0, 100]} label={{ value: 'Score (%)', angle: -90, position: 'insideLeft' }} />
-                <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                <Scatter name="Students" data={SCATTER_DATA} fill="#7c7fff" />
-                {/* Regression line */}
+              <ComposedChart margin={{ top: 10, right: 30, bottom: 40, left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="x"
+                  type="number"
+                  name="AI Usage"
+                  domain={[0, 4]}
+                  ticks={[1, 2, 3]}
+                  tickFormatter={(v) => v === 1 ? 'Never' : v === 2 ? 'Sometimes' : v === 3 ? 'Daily' : ''}
+                  label={{ value: 'AI Usage Frequency', position: 'insideBottom', offset: -20, fontSize: 11 }}
+                />
+                <YAxis
+                  dataKey="y"
+                  type="number"
+                  name="Score"
+                  domain={[30, 100]}
+                  label={{ value: 'Exam Score (%)', angle: -90, position: 'insideLeft', fontSize: 11 }}
+                />
+                <ZAxis dataKey="z" range={[40, 400]} name="Students" />
+                <Tooltip
+                  cursor={{ strokeDasharray: '3 3' }}
+                  content={({ payload }) => {
+                    if (!payload?.length) return null;
+                    const d = payload[0]?.payload;
+                    const label = d?.x === 1 ? 'Never' : d?.x === 2 ? 'Sometimes' : 'Daily';
+                    return (
+                      <div className="bg-white border border-neutral-200 rounded-lg p-2 text-xs shadow">
+                        <p>AI Usage: <strong>{label}</strong></p>
+                        <p>Score: <strong>{d?.y}%</strong></p>
+                        <p>Students: <strong>{d?.z}</strong></p>
+                      </div>
+                    );
+                  }}
+                />
+                <Scatter name="Students" data={SCATTER_DATA} fill="#7c7fff" fillOpacity={0.7} />
+
+                {/* Regression Line — rendered as a separate line series */}
                 <Line
-                  data={REGRESSION_LINE_DATA}
+                  data={REGRESSION_LINE}
                   type="linear"
-                  dataKey="predicted"
+                  dataKey="y"
                   stroke="#fa8c00"
                   strokeWidth={3}
                   dot={false}
                   name="Regression Line"
                 />
-              </ScatterChart>
+              </ComposedChart>
             </ResponsiveContainer>
-            <p className="text-sm text-neutral-500 mt-6 text-center font-medium">
-              <span className="inline-block w-4 h-1 bg-[#fa8c00] mr-2 align-middle"></span>
-              Regression line showing the general trend
-            </p>
+
+            {/* Regression line note + table */}
+            <div className="mt-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl p-4">
+              <p className="text-xs font-semibold text-neutral-500 mb-2">Regression Line: ŷ = 42.9 + 10.3x</p>
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="bg-white dark:bg-neutral-700 rounded-lg p-2">
+                  <p className="font-bold text-primary">53.2%</p>
+                  <p className="text-neutral-400">Predicted (Never)</p>
+                </div>
+                <div className="bg-white dark:bg-neutral-700 rounded-lg p-2">
+                  <p className="font-bold text-primary">63.5%</p>
+                  <p className="text-neutral-400">Predicted (Sometimes)</p>
+                </div>
+                <div className="bg-white dark:bg-neutral-700 rounded-lg p-2">
+                  <p className="font-bold text-primary">73.8%</p>
+                  <p className="text-neutral-400">Predicted (Daily)</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Correlation Result */}
@@ -237,18 +342,15 @@ const AIResearchStudy = () => {
             </div>
             
             <div className="bg-white/60 dark:bg-neutral-900/60 rounded-xl p-4 border border-amber-200/50">
-              {CORRELATION_R > 0 ? (
-                <p className="font-medium text-neutral-800 dark:text-neutral-200 leading-relaxed">
-                  The Pearson correlation coefficient between AI usage and academic
-                  performance is <strong className="text-amber-600 dark:text-amber-400 text-lg">r = {CORRELATION_R}</strong>.
-                  <br/><br/>
-                  {CORRELATION_R >= 0.5
-                    ? <span className="text-amber-700 dark:text-amber-300 font-bold">This indicates a moderate to strong positive relationship — students who use AI tools more frequently tend to score higher.</span>
-                    : <span className="text-neutral-600 dark:text-neutral-400">This indicates a weak positive relationship.</span>}
-                </p>
-              ) : (
-                <p className="text-neutral-400 italic">[Correlation result will be filled after analysis]</p>
-              )}
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                The correlation between AI usage frequency and exam scores is
+                <strong> r = 0.50</strong>. This is a <strong>moderate positive
+                relationship</strong>. The regression equation
+                <strong> ŷ = 42.9 + 10.3x</strong> tells us that each step up in AI
+                usage frequency is associated with approximately <strong>10 marks
+                higher score</strong> on average. This trend was consistent across
+                CS, Pre-Engineering, Pre-Medical and Commerce groups.
+              </p>
             </div>
           </div>
         </section>
