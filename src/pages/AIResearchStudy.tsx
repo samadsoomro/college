@@ -313,17 +313,17 @@ const AIResearchStudy = () => {
 
             <ChartCard title="Participants by College Group"
               subtitle="50 students surveyed across all 4 subject groups at GCFMN">
-              <defs>
-                {COLORS.map((color, i) => (
-                  <linearGradient key={i} id={`hbar-${i}`} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor={color} stopOpacity={0.7} />
-                    <stop offset="100%" stopColor={color} stopOpacity={1} />
-                  </linearGradient>
-                ))}
-              </defs>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={GROUP_DATA} layout="vertical"
                   margin={{ top: 5, right: 40, left: 10, bottom: 5 }}>
+                  <defs>
+                    {COLORS.map((color, i) => (
+                      <linearGradient key={i} id={`hbar-${i}`} x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor={color} stopOpacity={0.7} />
+                        <stop offset="100%" stopColor={color} stopOpacity={1} />
+                      </linearGradient>
+                    ))}
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                   <XAxis type="number" domain={[0, 18]}
                     tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
