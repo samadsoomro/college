@@ -18,7 +18,9 @@
   <script>
     (function () {
       try {
-        const cached = localStorage.getItem('gcfm-full-settings');
+        const pathParts = window.location.pathname.split('/');
+        const slug = pathParts[1] || 'gcfm';
+        const cached = localStorage.getItem(`${slug}-full-settings`);
         if (cached) {
           const settings = JSON.parse(cached);
           if (settings.primaryColor) {

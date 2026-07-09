@@ -171,7 +171,7 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [settings, setSettings] = useState<SiteSettings>(() => {
     try {
-      const cached = localStorage.getItem("gcfm-full-settings");
+      const cached = localStorage.getItem("generic-full-settings");
       if (cached) {
         const parsed = JSON.parse(cached);
         // Ensure we immediately update CSS variables too if we have them
@@ -277,7 +277,7 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Cache the full settings in localStorage to prevent flash on next load
     try {
-      localStorage.setItem("gcfm-full-settings", JSON.stringify(newSettings));
+      localStorage.setItem("generic-full-settings", JSON.stringify(newSettings));
     } catch (e) {
       console.warn("[BrandingContext] Failed to cache settings:", e);
     }
@@ -305,7 +305,7 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // Apply cached settings immediately to prevent flash
     try {
-      const cachedData = localStorage.getItem("gcfm-full-settings");
+      const cachedData = localStorage.getItem("generic-full-settings");
       if (cachedData) {
         const parsedSettings = JSON.parse(cachedData);
         console.log(

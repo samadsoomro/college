@@ -292,7 +292,7 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
           
           // Sync with index.html hydration script
           try {
-            localStorage.setItem('gcfm-full-settings', JSON.stringify(bustered));
+            localStorage.setItem(`${lowSlug}-full-settings`, JSON.stringify(bustered));
           } catch (e) {}
 
           // Prefer color from settings if it exists
@@ -378,7 +378,8 @@ export const CollegeProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       // Sync with index.html hydration script
       try {
-        localStorage.setItem('gcfm-full-settings', JSON.stringify(bustered));
+        const lowSlug = collegeSlug?.toLowerCase() || 'gcfm';
+        localStorage.setItem(`${lowSlug}-full-settings`, JSON.stringify(bustered));
       } catch (e) {}
 
       if (bustered.primaryColor) {

@@ -466,6 +466,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           academic_section_enabled: true,
           academic_section_heading: terms.academicSectionHeading,
           academic_section_subheading: terms.academicSectionSubheading,
+          features_heading: `Why Choose ${shortName}?`,
+          affiliations_heading: `${terms.termInstitution} Affiliations & Authorities`,
         });
 
         // 5. Seed default stats:
