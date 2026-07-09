@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { v2 as cloudinary } from 'cloudinary';
+import { getInstituteTerms } from '../src/utils/instituteTerms';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -328,53 +329,273 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json(mapped);
       }
       if (req.method === 'POST') {
-        const { name, shortName, slug: newSlug, adminEmail, adminPassword } = req.body || {};
+        const token = req.headers['x-admin-token'];
+        if (token !== (process.env.ADMIN_API_TOKEN || 'gcfm-admin-token-2026'))
+          return res.status(403).json({ error: 'Unauthorized' });
 
-        if (!name || !shortName || !newSlug) {
-          return res.status(400).json({ error: 'Missing required college fields' });
-        }
+        const {
+          name: collegeName, shortName, slug, adminEmail, adminPassword,
+          instituteType = 'college', instituteTypeCustom = ''
+        } = req.body || {};
 
-        const bucketName = `college-${newSlug}`;
+        if (!collegeName || !shortName || !slug || !adminEmail)
+          return res.status(400).json({ error: 'All fields required' });
 
-        const { data, error } = await supabase
+        // 1. Create college:
+        const { data: college, error: colErr } = await supabase
           .from('colleges')
-          .insert({ 
-            name, 
-            short_name: shortName, 
-            slug: newSlug, 
-            storage_bucket: bucketName,
-            is_active: true 
-          })
-          .select()
-          .single();
-          
-        if (error) return res.status(500).json({ error: error.message });
-        
-        if (adminEmail && adminPassword) {
-          const hashedPassword = await bcrypt.hash(adminPassword, 10);
-          const { error: adminError } = await supabase
-            .from('admin_credentials')
-            .insert({
-              college_id: data.id,
-              admin_email: adminEmail.trim().toLowerCase(),
-              password_hash: hashedPassword,
-              secret_key: '',
-              is_active: true,
-              role: 'client_admin'
-            });
+          .insert({
+            name: collegeName,
+            short_name: shortName,
+            slug,
+            institute_type: instituteType,
+            institute_type_custom: instituteTypeCustom,
+            storage_bucket: `college-${slug}`,
+            is_active: true
+          }).select('*').single();
 
-          if (adminError) {
-            console.error("Failed to create admin auth for new college:", adminError);
-          }
-        }
+        if (colErr) return res.status(500).json({ error: colErr.message });
+        const colId = college.id;
+
+        // 2. Get terminology based on institute type:
+        const terms = getInstituteTerms(instituteType, collegeName, shortName, instituteTypeCustom);
+
+        // 3. Create site_settings with all terminology pre-set:
+        await supabase.from('site_settings').insert({
+          college_id: colId,
+          institute_full_name: collegeName,
+          institute_short_name: shortName,
+          primary_color: '#1a56db',
+          footer_title: `${collegeName} Library`,
+          footer_tagline: `Welcome to ${collegeName}`,
+          contact_address: 'Address, City, Country',
+          contact_phone: '+1 XXX XXX XXXX',
+          contact_email: adminEmail,
+          office_hours: 'Mon-Fri: 8:00 AM - 4:00 PM\nSat-Sun: Closed',
+          credits_text: `Powered by College CMS`,
+
+          // Auto-set terminology:
+          term_institution: terms.termInstitution,
+          term_card_menu: terms.termCardMenu,
+          term_principal: terms.termPrincipal,
+
+          // Auto-set page headings:
+          blog_heading: terms.blogHeading,
+          blog_description: terms.blogDescription,
+          notes_heading: terms.notesHeading,
+          notes_description: terms.notesDescription,
+          events_heading: terms.eventsHeading,
+          events_description: terms.eventsDescription,
+          notifications_heading: terms.notificationsHeading,
+          notifications_description: terms.notificationsDescription,
+          contact_heading: terms.contactHeading,
+          contact_description: terms.contactDescription,
+          projects_page_heading: terms.projectsPageHeading,
+          projects_page_subheading: terms.projectsPageSubheading,
+          projects_dept_heading: terms.projectsDeptHeading,
+
+          // Feature toggles — all off by default:
+          show_projects_menu: false,
+          show_my_research: false,
+          show_projects_menu_nav: false,
+        });
+
+        // 4. Seed home_content:
+        await supabase.from('home_content').insert({
+          college_id: colId,
+          hero_heading: `Welcome to ${collegeName}`,
+          hero_subheading: `Excellence in Education`,
+          hero_overlay_text: collegeName,
+          hero_tagline: `Est. ${new Date().getFullYear()}`,
+          hero_tagline_enabled: false,
+          cta_heading: `Ready to Join ${shortName}?`,
+          cta_subheading: 'Apply for your library card today and access all resources.',
+          academic_section_enabled: true,
+          academic_section_heading: terms.academicSectionHeading,
+          academic_section_subheading: terms.academicSectionSubheading,
+        });
+
+        // 5. Seed default stats:
+        const defaultStats = [
+          { label: 'Books Available',     value: '1,000+',  icon: 'BookOpen',  display_order: 1 },
+          { label: 'Registered Students', value: '500+',    icon: 'Users',     display_order: 2 },
+          { label: 'Faculty Members',     value: '50+',     icon: 'Award',     display_order: 3 },
+          { label: 'Years of Excellence', value: '25+',     icon: 'Star',      display_order: 4 },
+        ];
+        await supabase.from('home_stats').insert(
+          defaultStats.map(s => ({ ...s, college_id: colId }))
+        );
+
+        // 6. Seed default FAQs:
+        const cardTerm = terms.termCardMenu;
+        await supabase.from('home_faqs').insert([
+          {
+            college_id: colId,
+            question: `How do I get a ${cardTerm}?`,
+            answer: `Fill out the ${cardTerm} application form on our website. Once submitted, your card will be reviewed and activated. You can then use it to borrow books and access resources.`,
+            display_order: 1, is_active: true
+          },
+          {
+            college_id: colId,
+            question: 'Can I access resources from home?',
+            answer: `Yes! Log in using your ${cardTerm} ID to access e-books, study notes, and digital resources from anywhere at any time.`,
+            display_order: 2, is_active: true
+          },
+          {
+            college_id: colId,
+            question: 'How long can I borrow books?',
+            answer: 'Students can borrow books for up to 14 days. Please return or renew on time to avoid fines.',
+            display_order: 3, is_active: true
+          },
+          {
+            college_id: colId,
+            question: `What services does ${collegeName} offer?`,
+            answer: `${collegeName} offers a digital library, study notes, event management, notification system, and student card services — all managed through our online portal.`,
+            display_order: 4, is_active: true
+          },
+        ]);
+
+        // 7. Seed default academic programs based on type:
+        const schoolPrograms = [
+          { title: 'Sciences',     subjects: 'Physics, Chemistry, Biology',      icon: 'FlaskConical', display_order: 1 },
+          { title: 'Mathematics',  subjects: 'Algebra, Geometry, Statistics',     icon: 'Calculator',   display_order: 2 },
+          { title: 'Languages',    subjects: 'English, Urdu, Literature',         icon: 'BookOpen',     display_order: 3 },
+          { title: 'Social Studies', subjects: 'History, Geography, Civics',      icon: 'Globe',        display_order: 4 },
+        ];
+        const collegePrograms = [
+          { title: 'Pre-Engineering', subjects: 'Physics, Chemistry, Mathematics', icon: 'Cog',          display_order: 1 },
+          { title: 'Pre-Medical',     subjects: 'Zoology, Botany, Chemistry',      icon: 'Microscope',   display_order: 2 },
+          { title: 'Computer Science', subjects: 'CS, Mathematics, Statistics',    icon: 'Laptop',       display_order: 3 },
+          { title: 'Commerce',        subjects: 'Commerce, Accounting, Statistics', icon: 'TrendingUp',  display_order: 4 },
+        ];
+        const uniPrograms = [
+          { title: 'Engineering',     subjects: 'Civil, Mechanical, Electrical',  icon: 'Cog',          display_order: 1 },
+          { title: 'Computer Science', subjects: 'AI, Software Eng, Data Science', icon: 'Laptop',       display_order: 2 },
+          { title: 'Business',        subjects: 'MBA, Finance, Marketing',         icon: 'TrendingUp',   display_order: 3 },
+          { title: 'Medicine',        subjects: 'MBBS, Pharmacy, Nursing',         icon: 'Microscope',   display_order: 4 },
+        ];
+
+        const programs = instituteType === 'school' ? schoolPrograms
+                       : instituteType === 'university' ? uniPrograms
+                       : collegePrograms;
+
+        await supabase.from('home_academic_programs').insert(
+          programs.map(p => ({ ...p, college_id: colId }))
+        );
+
+        // 8. Seed sample books:
+        await supabase.from('books').insert([
+          {
+            college_id: colId,
+            book_name: 'Introduction to Computer Science',
+            author_name: 'John Smith',
+            short_intro: 'A comprehensive guide to CS fundamentals',
+            description: 'Perfect for beginners — covers algorithms, data structures, and programming basics.',
+            total_copies: 5,
+            available_copies: 5,
+          },
+          {
+            college_id: colId,
+            book_name: 'Mathematics for Students',
+            author_name: 'Robert Johnson',
+            short_intro: 'Essential mathematics for academic success',
+            description: 'Covers algebra, calculus, statistics, and geometry with practice problems.',
+            total_copies: 3,
+            available_copies: 3,
+          },
+          {
+            college_id: colId,
+            book_name: 'English Grammar & Composition',
+            author_name: 'Mary Williams',
+            short_intro: 'Master English grammar and writing skills',
+            description: 'Complete guide to grammar rules, essay writing, and communication skills.',
+            total_copies: 4,
+            available_copies: 4,
+          },
+        ]);
+
+        // 9. Seed sample notification:
+        await supabase.from('notifications').insert({
+          college_id: colId,
+          title: `Welcome to ${collegeName} Portal`,
+          message: `The ${collegeName} digital library portal is now live. Students can apply for their ${cardTerm}, borrow books, and access study notes online.`,
+          status: 'published',
+        });
+
+        // 10. Seed library card fields based on type:
+        const classOptions = instituteType === 'school'
+          ? '["Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6","Grade 7","Grade 8","Grade 9","Grade 10","Grade 11","Grade 12"]'
+          : instituteType === 'university'
+          ? '["Semester 1","Semester 2","Semester 3","Semester 4","Semester 5","Semester 6","Semester 7","Semester 8"]'
+          : '["Class 11","Class 12"]';
+
+        const fieldOptions = instituteType === 'school'
+          ? '["General Education","Advanced Placement","Special Education"]'
+          : instituteType === 'university'
+          ? '["Computer Science","Engineering","Business","Medicine","Arts"]'
+          : '["Pre-Engineering","Pre-Medical","Computer Science","Commerce"]';
+
+        await supabase.from('library_card_fields').insert([
+          {
+            college_id: colId,
+            field_label: instituteType === 'university' ? 'Semester' : instituteType === 'school' ? 'Grade' : 'Class',
+            field_key: 'class',
+            field_type: 'select',
+            is_required: true,
+            show_on_form: true, show_on_card: true, show_in_admin: true,
+            display_order: 1,
+            options: classOptions,
+          },
+          {
+            college_id: colId,
+            field_label: instituteType === 'university' ? 'Department' : 'Field',
+            field_key: 'field',
+            field_type: 'select',
+            is_required: true,
+            show_on_form: true, show_on_card: true, show_in_admin: true,
+            display_order: 2,
+            options: fieldOptions,
+          },
+        ]);
+
+        // 11. Seed exam paper group:
+        await supabase.from('exam_paper_groups').insert({
+          college_id: colId,
+          title: `Past Examination Papers ${new Date().getFullYear()}`,
+          button_text: 'Access Now',
+          is_enabled: false,
+          display_order: 1,
+        });
+
+        // 12. Seed exam paper entry:
+        await supabase.from('home_exam_papers').insert({
+          college_id: colId,
+          title: `Past Examination Papers ${new Date().getFullYear()}`,
+          button_text: `Access Past Examination Papers ${new Date().getFullYear()}`,
+          is_enabled: false,
+        });
+
+        // 13. Create admin credentials:
+        const hashedPassword = await bcrypt.hash(adminPassword || 'Admin@123', 10);
+        await supabase.from('admin_credentials').insert({
+          admin_email: adminEmail,
+          password_hash: hashedPassword,
+          secret_key: `${slug}-secret-${Date.now()}`,
+          role: 'client_admin',
+          is_active: true,
+          college_id: colId,
+        });
 
         return res.json({
-          id: data.id,
-          name: data.name,
-          shortName: data.short_name,
-          slug: data.slug,
-          isActive: data.is_active,
-          createdAt: data.created_at
+          success: true,
+          message: `${collegeName} created successfully with all default content`,
+          college: { id: colId, name: collegeName, slug, type: instituteType },
+          seeded: {
+            stats: 4, faqs: 4, books: 3,
+            programs: programs.length,
+            notifications: 1,
+            cardFields: 2,
+          }
         });
       }
     }
