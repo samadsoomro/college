@@ -116,12 +116,12 @@ const SuperAdminDashboard: React.FC = () => {
     setIsLoading(true);
     try {
       // Check for duplicate slug BEFORE submitting
-      const slugCheck = await fetch(`/api/colleges/${formData.slug}`);
-      if (slugCheck.ok) {
+      const existingSlugs = colleges.map(c => c.slug);
+      if (existingSlugs.includes(formData.slug.toLowerCase())) {
         toast({
-          title: "Error",
-          description: "This slug already exists. Choose a different one.",
-          variant: "destructive",
+          title: "Slug already taken",
+          description: `"${formData.slug}" is already in use. Choose a different slug.`,
+          variant: "destructive"
         });
         setIsLoading(false);
         return;
@@ -129,8 +129,19 @@ const SuperAdminDashboard: React.FC = () => {
 
       const res = await fetch("/api/super-admin/colleges", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-token": import.meta.env.VITE_ADMIN_TOKEN || "gcfm-admin-token-2026"
+        },
+        body: JSON.stringify({
+          collegeName: formData.name,
+          shortName: formData.shortName,
+          slug: formData.slug,
+          adminEmail: formData.adminEmail,
+          adminPassword: formData.adminPassword,
+          instituteType: formData.instituteType || 'college',
+          instituteTypeCustom: formData.instituteTypeCustom || '',
+        }),
       });
 
       if (res.ok) {
@@ -534,9 +545,9 @@ const SuperAdminDashboard: React.FC = () => {
 
       {/* Add College Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-white border-none shadow-2xl overflow-hidden p-0">
-          <form onSubmit={handleCreateCollege}>
-            <div className="bg-slate-900 px-6 py-6 text-white border-b border-slate-800">
+        <DialogContent className="sm:max-w-[520px] bg-white border-none shadow-2xl overflow-hidden p-0 max-h-[90vh] flex flex-col">
+          <form onSubmit={handleCreateCollege} className="flex flex-col overflow-hidden flex-1">
+            <div className="bg-slate-900 px-6 py-6 text-white border-b border-slate-800 flex-shrink-0">
               <DialogTitle className="text-xl font-bold flex items-center gap-2">
                 <Plus className="text-primary" />
                 Register New Instance
@@ -546,7 +557,7 @@ const SuperAdminDashboard: React.FC = () => {
               </DialogDescription>
             </div>
 
-            <div className="px-6 py-6 space-y-6">
+            <div className="px-6 py-6 space-y-6 overflow-y-auto flex-1">
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Building2 size={14} />
@@ -705,12 +716,12 @@ const SuperAdminDashboard: React.FC = () => {
               )}
             </div>
 
-            <DialogFooter className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+            <DialogFooter className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 flex-shrink-0">
               <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-primary hover:bg-primary/90 min-w-[120px]" disabled={isLoading}>
-                {isLoading ? <Loader2 size={18} className="animate-spin" /> : "Deploy Instance"}
+              <Button type="submit" className="bg-primary hover:bg-primary/90 min-w-[140px]" disabled={isLoading}>
+                {isLoading ? <Loader2 size={18} className="animate-spin" /> : "🚀 Deploy Instance"}
               </Button>
             </DialogFooter>
           </form>
