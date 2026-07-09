@@ -94,8 +94,8 @@ const defaultSettings: SiteSettings = {
   primaryColor: "#006600",
   navbarLogo: null,
   loadingLogo: null,
-  instituteShortName: "COL",
-  instituteFullName: "College",
+  instituteShortName: "",
+  instituteFullName: "",
   footerTitle: "",
   footerDescription: "",
   facebookUrl: "",
@@ -147,9 +147,9 @@ const defaultSettings: SiteSettings = {
   showProjectsMenu: false,
   projectsPageHeading: 'Our College Projects',
   projectsPageSubheading: 'Student & Faculty Research Projects',
-  projectsDeptHeading: 'Statistics & Computer Science Dept.',
-  showMyResearch: true,
-  myResearchSupervisor: 'Prof. Munaf & Prof. M. Waqqar Qadri',
+  projectsDeptHeading: '',
+  showMyResearch: false,
+  myResearchSupervisor: '',
   updatedAt: new Date().toISOString(),
 };
 

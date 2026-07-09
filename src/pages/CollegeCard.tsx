@@ -330,7 +330,7 @@ const CollegeCard = () => {
       validThrough: submissionResult.validThrough,
       formData: submissionResult.formData,
       settings,
-      collegeSlug: collegeSlug || "gcfm",
+      collegeSlug: collegeSlug || "",
       collegeLogo,
       customFields: customFields
     }, toast);

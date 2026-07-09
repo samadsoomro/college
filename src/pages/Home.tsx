@@ -657,7 +657,7 @@ const Home: React.FC = () => {
               className="text-3xl lg:text-4xl font-bold text-foreground mb-4"
             >
               {content.featuresHeading ||
-                `Why Choose ${settings?.instituteShortName || 'College'}?`}
+                `Why Choose ${settings?.instituteShortName || settings?.instituteFullName || 'College'}?`}
             </h2>
             </AnimatedSection>
             <AnimatedSection delay={100}>
@@ -728,7 +728,7 @@ const Home: React.FC = () => {
                 <p 
                   className="text-muted-foreground mt-2"
                 >
-                  Find answers to common questions about our college services.
+                  Find answers to common questions about our {settings?.termInstitution?.toLowerCase() || 'college'} services.
                 </p>
               </AnimatedSection>
             </div>

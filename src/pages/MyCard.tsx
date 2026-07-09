@@ -66,7 +66,7 @@ const MyCard = () => {
         dynamicFields: cardData.dynamicFields
       },
       settings,
-      collegeSlug: collegeSlug || "gcfm",
+      collegeSlug: collegeSlug || "",
       collegeLogo,
       customFields: [] // We don't necessarily have definitions here, but the data is in dynamicFields
     }, toast);

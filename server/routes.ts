@@ -2474,7 +2474,17 @@ export function registerRoutes(app: Express): void {
       if (!college || !college.isActive) {
         return res.status(404).json({ error: "College not found" });
       }
-      res.json(college);
+      
+      const settings = await storage.getSiteSettings(college.id);
+      
+      res.json({
+        ...college,
+        termInstitution: settings?.termInstitution || 'College',
+        termCardMenu: settings?.termCardMenu || 'College Card',
+        termPrincipal: settings?.termPrincipal || 'Principal',
+        instituteShortName: college.shortName || settings?.instituteShortName || '',
+        instituteFullName: settings?.instituteFullName || college.name || '',
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

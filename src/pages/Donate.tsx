@@ -343,7 +343,7 @@ const Donate = () => {
                         </Button>
                       </div>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Account Title: {settings?.accountTitle || "GCFMN Library"}
+                        Account Title: {settings?.accountTitle || `${settings?.instituteShortName || 'Library'} Account`}
                       </p>
                     </div>
 
@@ -368,7 +368,7 @@ const Donate = () => {
                             Account Title
                           </p>
                           <p className="font-bold mb-2">
-                            {settings?.accountTitle || "GCFMN Library"}
+                            {settings?.accountTitle || `${settings?.instituteShortName || 'Library'} Account`}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             Account Number
