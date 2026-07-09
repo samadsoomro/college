@@ -2,7 +2,50 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { v2 as cloudinary } from 'cloudinary';
-import { getInstituteTerms } from '../src/utils/instituteTerms';
+
+// ── Institute Terms Helper — inline to avoid import path issues ──
+function getInstituteTerms(
+  type: string,
+  name: string,
+  shortName: string,
+  customType?: string
+) {
+  const inst = type === 'college'    ? 'College'
+             : type === 'school'     ? 'School'
+             : type === 'university' ? 'University'
+             : customType || 'Institute';
+
+  const card = type === 'college'    ? 'College Card'
+             : type === 'school'     ? 'Library Card'
+             : type === 'university' ? 'Student Card'
+             : 'ID Card';
+
+  const principal = type === 'college'    ? 'Principal'
+                  : type === 'school'     ? 'Principal'
+                  : type === 'university' ? 'Vice Chancellor'
+                  : 'Director';
+
+  return {
+    termInstitution: inst,
+    termCardMenu: card,
+    termPrincipal: principal,
+    blogHeading: `${shortName} News & Updates`,
+    blogDescription: `Stay informed with the latest academic updates from ${name}`,
+    notesHeading: 'Study Notes',
+    notesDescription: `Download notes and resources shared by ${name} faculty`,
+    eventsHeading: `${inst} Events`,
+    eventsDescription: `Stay updated with upcoming events and activities at ${name}`,
+    notificationsHeading: 'Notifications',
+    notificationsDescription: `Official announcements, news, and updates from ${name}`,
+    contactHeading: 'Contact Us',
+    contactDescription: `Get in touch with ${name} for official information and student support`,
+    projectsPageHeading: `${name} Projects`,
+    projectsPageSubheading: `Student & Faculty Research Projects`,
+    projectsDeptHeading: `${inst} Research Department`,
+    academicSectionHeading: 'Academic Programs',
+    academicSectionSubheading: `Excellence in Education at ${name}`,
+  };
+}
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
