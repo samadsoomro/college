@@ -377,18 +377,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(403).json({ error: 'Unauthorized' });
 
         const {
-          name: collegeName, shortName, slug, adminEmail, adminPassword,
-          instituteType = 'college', instituteTypeCustom = ''
+        const {
+          collegeName,
+          name,
+          shortName,
+          slug,
+          adminEmail,
+          adminPassword,
+          instituteType = 'college',
+          instituteTypeCustom = ''
         } = req.body || {};
 
-        if (!collegeName || !shortName || !slug || !adminEmail)
+        const resolvedName = collegeName || name || '';
+
+        if (!resolvedName || !shortName || !slug || !adminEmail) {
+          console.log('[REGISTER] Missing fields:', { resolvedName, shortName, slug, adminEmail });
           return res.status(400).json({ error: 'All fields required' });
+        }
 
         // 1. Create college:
         const { data: college, error: colErr } = await supabase
           .from('colleges')
           .insert({
-            name: collegeName,
+            name: resolvedName,
             short_name: shortName,
             slug,
             institute_type: instituteType,
@@ -401,16 +412,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const colId = college.id;
 
         // 2. Get terminology based on institute type:
-        const terms = getInstituteTerms(instituteType, collegeName, shortName, instituteTypeCustom);
+        const terms = getInstituteTerms(instituteType, resolvedName, shortName, instituteTypeCustom);
 
         // 3. Create site_settings with all terminology pre-set:
         await supabase.from('site_settings').insert({
           college_id: colId,
-          institute_full_name: collegeName,
+          institute_full_name: resolvedName,
           institute_short_name: shortName,
           primary_color: '#1a56db',
-          footer_title: `${collegeName} Library`,
-          footer_tagline: `Welcome to ${collegeName}`,
+          footer_title: `${resolvedName} Library`,
+          footer_tagline: `Welcome to ${resolvedName}`,
           contact_address: 'Address, City, Country',
           contact_phone: '+1 XXX XXX XXXX',
           contact_email: adminEmail,
@@ -446,9 +457,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 4. Seed home_content:
         await supabase.from('home_content').insert({
           college_id: colId,
-          hero_heading: `Welcome to ${collegeName}`,
+          hero_heading: `Welcome to ${resolvedName}`,
           hero_subheading: `Excellence in Education`,
-          hero_overlay_text: collegeName,
+          hero_overlay_text: resolvedName,
           hero_tagline: `Est. ${new Date().getFullYear()}`,
           hero_tagline_enabled: false,
           cta_heading: `Ready to Join ${shortName}?`,

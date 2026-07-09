@@ -127,6 +127,15 @@ const SuperAdminDashboard: React.FC = () => {
         return;
       }
 
+      console.log('[REGISTER] Submitting:', {
+        name: formData.name,
+        shortName: formData.shortName,
+        slug: formData.slug,
+        adminEmail: formData.adminEmail,
+        hasPassword: !!formData.adminPassword,
+        instituteType: formData.instituteType,
+      });
+
       const res = await fetch("/api/super-admin/colleges", {
         method: "POST",
         headers: {
@@ -134,10 +143,11 @@ const SuperAdminDashboard: React.FC = () => {
           "x-admin-token": import.meta.env.VITE_ADMIN_TOKEN || "gcfm-admin-token-2026"
         },
         body: JSON.stringify({
+          name: formData.name,
           collegeName: formData.name,
           shortName: formData.shortName,
-          slug: formData.slug,
-          adminEmail: formData.adminEmail,
+          slug: formData.slug.toLowerCase().trim(),
+          adminEmail: formData.adminEmail.trim(),
           adminPassword: formData.adminPassword,
           instituteType: formData.instituteType || 'college',
           instituteTypeCustom: formData.instituteTypeCustom || '',
