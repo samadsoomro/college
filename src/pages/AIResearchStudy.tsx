@@ -353,18 +353,18 @@ const AIResearchStudy = () => {
               </span>
             </div>
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 text-center border border-neutral-100 dark:border-neutral-700">
-                  <p className="text-2xl font-black text-primary">15.15</p>
-                  <p className="text-xs text-neutral-500 mt-1">χ² Value</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-white dark:bg-neutral-800 rounded-xl p-2 sm:p-4 text-center border border-neutral-100 dark:border-neutral-700 min-w-0">
+                  <p className="text-base sm:text-2xl font-black text-primary truncate">15.15</p>
+                  <p className="text-[10px] sm:text-xs text-neutral-500 mt-0.5">χ² Value</p>
                 </div>
-                <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 text-center border border-neutral-100 dark:border-neutral-700">
-                  <p className="text-2xl font-black text-green-600 dark:text-green-400">0.004</p>
-                  <p className="text-xs text-neutral-500 mt-1">p-value</p>
+                <div className="bg-white dark:bg-neutral-800 rounded-xl p-2 sm:p-4 text-center border border-neutral-100 dark:border-neutral-700 min-w-0">
+                  <p className="text-base sm:text-2xl font-black text-green-600 dark:text-green-400 truncate">0.004</p>
+                  <p className="text-[10px] sm:text-xs text-neutral-500 mt-0.5">p-value</p>
                 </div>
-                <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 text-center border border-neutral-100 dark:border-neutral-700">
-                  <p className="text-2xl font-black text-amber-600 dark:text-amber-400">9.49</p>
-                  <p className="text-xs text-neutral-500 mt-1">Critical Value</p>
+                <div className="bg-white dark:bg-neutral-800 rounded-xl p-2 sm:p-4 text-center border border-neutral-100 dark:border-neutral-700 min-w-0">
+                  <p className="text-base sm:text-2xl font-black text-amber-600 dark:text-amber-400 truncate">9.49</p>
+                  <p className="text-[10px] sm:text-xs text-neutral-500 mt-0.5">Critical Value</p>
                 </div>
               </div>
               <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
@@ -392,66 +392,70 @@ const AIResearchStudy = () => {
           <div className="mt-6">
             <ChartCard title="Scatter Diagram — AI Usage vs Exam Score"
               subtitle="Bubble size = number of students at that point • Orange = regression line ŷ = 42.9 + 10.3x">
-              <ResponsiveContainer width="100%" height={320}>
-                <ComposedChart margin={{ top: 10, right: 20, bottom: 40, left: 20 }}>
-                  <defs>
-                    <linearGradient id="scatter-grad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#7c7fff" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#7c7fff" stopOpacity={0.4} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis
-                    dataKey="x" type="number" name="AI Usage"
-                    domain={[0.5, 3.5]} ticks={[1, 2, 3]}
-                    tickFormatter={(v) => v === 1 ? 'Never' : v === 2 ? 'Sometimes' : v === 3 ? 'Daily' : ''}
-                    tick={{ fontSize: 12, fontWeight: 600 }}
-                    axisLine={false} tickLine={false}
-                    label={{ value: 'AI Usage Frequency', position: 'insideBottom', offset: -25, fontSize: 11, fill: '#94a3b8' }}
-                  />
-                  <YAxis
-                    dataKey="y" type="number" name="Score"
-                    domain={[25, 100]}
-                    tick={{ fontSize: 11 }}
-                    axisLine={false} tickLine={false}
-                    tickFormatter={(v) => `${v}%`}
-                    label={{ value: 'Exam Score (%)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }}
-                  />
-                  <ZAxis dataKey="z" range={[40, 600]} name="Students" />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      const d = payload[0]?.payload;
-                      if (!d) return null;
-                      const label = d.x === 1 ? 'Never' : d.x === 2 ? 'Sometimes' : 'Daily';
-                      return (
-                        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 shadow-xl text-xs">
-                          <p className="font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
-                            AI Usage: {label}
-                          </p>
-                          <p className="text-neutral-600 dark:text-neutral-400">
-                            Score: <strong>{d.y}%</strong>
-                          </p>
-                          <p className="text-neutral-600 dark:text-neutral-400">
-                            Students: <strong>{d.z}</strong>
-                          </p>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Scatter data={SCATTER_DATA} fill="url(#scatter-grad)" stroke="#7c7fff" strokeWidth={1} />
-                  <Line
-                    data={REGRESSION_LINE}
-                    type="monotone"
-                    dataKey="y"
-                    stroke="#fa8c00"
-                    strokeWidth={2.5}
-                    dot={false}
-                    strokeDasharray="6 3"
-                    legendType="none"
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+              <div className="overflow-x-auto -mx-1">
+                <div className="min-w-[480px]">
+                  <ResponsiveContainer width="100%" height={320}>
+                    <ComposedChart margin={{ top: 10, right: 20, bottom: 40, left: 20 }}>
+                      <defs>
+                        <linearGradient id="scatter-grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#7c7fff" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#7c7fff" stopOpacity={0.4} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="x" type="number" name="AI Usage"
+                        domain={[0.5, 3.5]} ticks={[1, 2, 3]}
+                        tickFormatter={(v) => v === 1 ? 'Never' : v === 2 ? 'Sometimes' : v === 3 ? 'Daily' : ''}
+                        tick={{ fontSize: 12, fontWeight: 600 }}
+                        axisLine={false} tickLine={false}
+                        label={{ value: 'AI Usage Frequency', position: 'insideBottom', offset: -25, fontSize: 11, fill: '#94a3b8' }}
+                      />
+                      <YAxis
+                        dataKey="y" type="number" name="Score"
+                        domain={[25, 100]}
+                        tick={{ fontSize: 11 }}
+                        axisLine={false} tickLine={false}
+                        tickFormatter={(v) => `${v}%`}
+                        label={{ value: 'Exam Score (%)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }}
+                      />
+                      <ZAxis dataKey="z" range={[40, 600]} name="Students" />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0]?.payload;
+                          if (!d) return null;
+                          const label = d.x === 1 ? 'Never' : d.x === 2 ? 'Sometimes' : 'Daily';
+                          return (
+                            <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl px-4 py-3 shadow-xl text-xs">
+                              <p className="font-semibold text-neutral-700 dark:text-neutral-300 mb-2">
+                                AI Usage: {label}
+                              </p>
+                              <p className="text-neutral-600 dark:text-neutral-400">
+                                Score: <strong>{d.y}%</strong>
+                              </p>
+                              <p className="text-neutral-600 dark:text-neutral-400">
+                                Students: <strong>{d.z}</strong>
+                              </p>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Scatter data={SCATTER_DATA} fill="url(#scatter-grad)" stroke="#7c7fff" strokeWidth={1} />
+                      <Line
+                        data={REGRESSION_LINE}
+                        type="monotone"
+                        dataKey="y"
+                        stroke="#fa8c00"
+                        strokeWidth={2.5}
+                        dot={false}
+                        strokeDasharray="6 3"
+                        legendType="none"
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
               {/* Regression table */}
               <div className="mt-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-xl p-4 border border-neutral-100 dark:border-neutral-700">
