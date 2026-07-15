@@ -190,14 +190,12 @@ const AIResearchStudy = () => {
           </div>
         </div>
 
-        {/* 4 Quick Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* 3 Quick Stat Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard label="Students Surveyed" value="50" sub="All groups"
             icon={Users} color="primary" />
           <StatCard label="Chi-Square (χ²)" value="15.15" sub="Test statistic"
             icon={TrendingUp} color="green" />
-          <StatCard label="P-Value" value="0.004" sub="Highly significant"
-            icon={Target} color="amber" />
           <StatCard label="Correlation (r)" value="0.50" sub="Moderate positive"
             icon={Activity} color="purple" />
         </div>
@@ -370,14 +368,23 @@ const AIResearchStudy = () => {
                 </div>
               </div>
               <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                We tested whether AI usage and exam performance are related or just random across all student groups.
-                Our chi-square value of <strong className="text-neutral-800 dark:text-neutral-200">15.15</strong> is
-                well above the critical value of 9.49 at 5% significance level
-                (p = <strong className="text-neutral-800 dark:text-neutral-200">0.004</strong>).
-                This means the association is statistically significant. Students who use AI tools daily scored an
-                average of <strong className="text-green-600 dark:text-green-400">74%</strong>, compared to just
-                <strong className="text-red-500"> 52%</strong> for those who never use them — a difference of
-                <strong className="text-primary"> 22 marks</strong>.
+                We tested whether AI usage and exam performance are related or just random
+                across all student groups.
+                <br /><br />
+                Calculated χ² value = <strong className="text-neutral-800 dark:text-neutral-200">15.15</strong>
+                <br />
+                Tabulated χ² value = <strong className="text-neutral-800 dark:text-neutral-200">9.488</strong>
+                <br />
+                (at 5% level of significance, df = 4)
+                <br /><br />
+                Since <strong className="text-primary">15.15 &gt; 9.488</strong>, we reject the null
+                hypothesis. This means the association between AI tool usage and academic
+                performance is <strong className="text-green-600 dark:text-green-400">statistically significant</strong>.
+                <br /><br />
+                Students who use AI tools daily scored an average of{' '}
+                <strong className="text-green-600 dark:text-green-400">74%</strong>, compared to just{' '}
+                <strong className="text-red-500">52%</strong> for those who never use them — a difference of{' '}
+                <strong className="text-primary">22 marks</strong>.
               </p>
             </div>
           </div>
