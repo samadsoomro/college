@@ -2110,6 +2110,9 @@ export default function AdminDashboard() {
                           <th className="text-left py-5 px-6 text-[11px] font-black uppercase tracking-widest text-neutral-400">
                             Status
                           </th>
+                          <th className="text-left py-5 px-6 text-[11px] font-black uppercase tracking-widest text-neutral-400">
+                            Submitted
+                          </th>
                           <th className="text-center py-5 px-6 text-[11px] font-black uppercase tracking-widest text-neutral-400">
                             Actions
                           </th>
@@ -2172,6 +2175,24 @@ export default function AdminDashboard() {
                               >
                                 {card.status || "pending"}
                               </span>
+                            </td>
+                            <td className="py-5 px-6">
+                              <div className="text-sm text-neutral-700 dark:text-neutral-300 font-medium">
+                                {card.createdAt
+                                  ? new Date(card.createdAt).toLocaleDateString('en-PK', {
+                                      day: '2-digit', month: 'short', year: 'numeric'
+                                    })
+                                  : '—'
+                                }
+                              </div>
+                              <div className="text-xs text-neutral-400 mt-0.5">
+                                {card.createdAt
+                                  ? new Date(card.createdAt).toLocaleTimeString('en-PK', {
+                                      hour: '2-digit', minute: '2-digit', hour12: true
+                                    })
+                                  : ''
+                                }
+                              </div>
                             </td>
                             <td className="py-5 px-6">
                               <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
