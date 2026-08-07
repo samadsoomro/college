@@ -66,6 +66,7 @@ interface SiteSettings {
   projectsPageSubheading: string;
   projectsDeptHeading: string;
   showMyResearch: boolean;
+  showPopulationResearch: boolean;
   myResearchSupervisor: string;
   updatedAt: string;
 }
@@ -149,6 +150,7 @@ const defaultSettings: SiteSettings = {
   projectsPageSubheading: 'Student & Faculty Research Projects',
   projectsDeptHeading: '',
   showMyResearch: false,
+  showPopulationResearch: false,
   myResearchSupervisor: '',
   updatedAt: new Date().toISOString(),
 };

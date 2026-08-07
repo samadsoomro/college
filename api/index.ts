@@ -253,6 +253,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       projectsPageSubheading: s?.projects_page_subheading || 'Student & Faculty Research Projects',
       projectsDeptHeading: s?.projects_dept_heading || 'Statistics & Computer Science Dept.',
       showMyResearch: slug === 'gcfm' ? (s?.show_my_research ?? true) : false,
+      showPopulationResearch: slug === 'gcfm' ? (s?.show_population_research ?? false) : false,
       myResearchSupervisor: s?.my_research_supervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
     });
   }
@@ -1023,6 +1024,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         projectsPageSubheading: d.projects_page_subheading || 'Student & Faculty Research Projects',
         projectsDeptHeading: d.projects_dept_heading || 'Statistics & Computer Science Dept.',
         showMyResearch: slug === 'gcfm' ? (d.show_my_research ?? true) : false,
+        showPopulationResearch: slug === 'gcfm' ? (d.show_population_research ?? false) : false,
         myResearchSupervisor: d.my_research_supervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
       });
     }
@@ -1980,6 +1982,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       projectsPageSubheading: 'projects_page_subheading',
       projectsDeptHeading: 'projects_dept_heading',
       showMyResearch: 'show_my_research',
+      showPopulationResearch: 'show_population_research',
       myResearchSupervisor: 'my_research_supervisor'
     };
     for (const [k, v] of Object.entries(req.body || {})) {
@@ -1992,7 +1995,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (typeof val === 'number' && isNaN(val)) val = null;
       }
       // Handle Boolean fields
-      else if (k === 'cardQrEnabled' || k === 'rbWatermarkEnabled' || k === 'showProjectsMenu' || k === 'showMyResearch') {
+      else if (k === 'cardQrEnabled' || k === 'rbWatermarkEnabled' || k === 'showProjectsMenu' || k === 'showMyResearch' || k === 'showPopulationResearch') {
         if (v === 'true' || v === true) val = true;
         else if (v === 'false' || v === false) val = false;
         else val = null;

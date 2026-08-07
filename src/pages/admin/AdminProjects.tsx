@@ -14,6 +14,7 @@ const AdminProjects = () => {
     supervisor: 'Prof. Munaf & Prof. M. Waqqar Qadri',
     department: 'Statistics & Computer Science Dept.',
   });
+  const [populationResearchVisible, setPopulationResearchVisible] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editProject, setEditProject] = useState<any>(null);
@@ -39,6 +40,7 @@ const AdminProjects = () => {
         supervisor: s.myResearchSupervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
         department: s.projectsDeptHeading || 'Statistics & Computer Science Dept.',
       });
+      setPopulationResearchVisible(s.showPopulationResearch ?? false);
     }
   };
 
@@ -66,6 +68,15 @@ const AdminProjects = () => {
       })
     });
     toast({ title: '✅ My Research settings saved!' });
+  };
+
+  const savePopulationResearchSetting = async () => {
+    await fetch(`/api/${collegeSlug}/admin/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+      body: JSON.stringify({ showPopulationResearch: populationResearchVisible })
+    });
+    toast({ title: '✅ Population Research setting saved!' });
   };
 
   const handleSubmit = async () => {
@@ -222,6 +233,53 @@ const AdminProjects = () => {
           <p className="text-xs text-neutral-500">🔗 Page: /projects/ai-performance-study</p>
         </div>
       </div>
+      )}
+
+      {collegeSlug === 'gcfm' && (
+        <div className="border-2 border-green-200 dark:border-green-800 rounded-xl p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📊</span>
+            <div>
+              <h3 className="font-bold text-base">Population Growth Research (Maths)</h3>
+              <p className="text-xs text-neutral-400">
+                Hardcoded page at /gcfm/projects/karachi-population-model
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between border rounded-lg px-4 py-3">
+            <div>
+              <p className="font-medium text-sm">Show on Projects page</p>
+              <p className="text-xs text-neutral-400">Appears as 2nd card after AI research</p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={populationResearchVisible}
+                onChange={e => setPopulationResearchVisible(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className={`text-sm font-semibold ${populationResearchVisible ? 'text-green-600' : 'text-neutral-400'}`}>
+                {populationResearchVisible ? 'ON' : 'OFF'}
+              </span>
+            </label>
+          </div>
+
+          <div className="bg-neutral-50 dark:bg-neutral-800 rounded-lg p-3 space-y-1">
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Hardcoded Info</p>
+            <p className="text-xs text-neutral-500">📌 Researchers: Abdul Samad & Muhammad Salman Bhatti</p>
+            <p className="text-xs text-neutral-500">🎓 Supervisor: Muhammad Ali, Lecturer Mathematics</p>
+            <p className="text-xs text-neutral-500">📅 Published: August 2026</p>
+            <p className="text-xs text-neutral-500">🔗 Page: /projects/karachi-population-model</p>
+          </div>
+
+          <button
+            onClick={savePopulationResearchSetting}
+            className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700"
+          >
+            💾 Save Population Research Settings
+          </button>
+        </div>
       )}
 
       {/* Add Project Button */}

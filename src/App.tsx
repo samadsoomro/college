@@ -33,6 +33,7 @@ import Faculty from "@/pages/Faculty";
 import NotFound from "@/pages/NotFound";
 import Projects from "@/pages/Projects";
 import AIResearchStudy from "@/pages/AIResearchStudy";
+import KarachiPopulationModel from "@/pages/KarachiPopulationModel";
 
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import CollegeLayout from "@/components/layout/CollegeLayout";
@@ -85,6 +86,7 @@ const App = () => (
               <Route path="contact" element={<Contact />} />
               <Route path="projects" element={<Projects />} />
               <Route path="projects/ai-performance-study" element={<AIResearchStudy />} />
+              <Route path="projects/karachi-population-model" element={<KarachiPopulationModel />} />
               <Route path="admin-dashboard/*" element={
                 <ProtectedRoute><AdminDashboard /></ProtectedRoute>
               } />

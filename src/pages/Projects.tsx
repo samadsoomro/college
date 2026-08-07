@@ -98,6 +98,60 @@ const Projects = () => {
               </div>
             )}
 
+            {/* Population Research Card — GCFM only, shows after AI research card */}
+            {collegeSlug === 'gcfm' && settings?.showPopulationResearch && (
+              <div className="col-span-full">
+                <div className="relative bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-green-900/10 dark:via-neutral-900 dark:to-emerald-900/10 border-2 border-green-200 dark:border-green-800 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-green-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start">
+                    <div className="flex-1 space-y-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 bg-green-600 text-white text-xs px-3 py-1.5 rounded-full font-semibold">
+                          <FlaskConical size={12} /> Live Research
+                        </span>
+                        <span className="text-xs text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-full">
+                          📅 August 2026
+                        </span>
+                      </div>
+                      <h2 className="text-xl md:text-2xl font-bold text-neutral-800 dark:text-neutral-100 leading-tight">
+                        Modeling and Predicting Population Growth of Karachi Using Differential Equations
+                      </h2>
+                      <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed max-w-2xl">
+                        Application of the exponential growth model P = P₀·e^(kt) to real Karachi census data (1981–2023), projecting population to 35.4 million by 2040 with 97.6% model accuracy.
+                      </p>
+                      <Link
+                        to={`/${collegeSlug}/projects/karachi-population-model`}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 transition-all hover:shadow-lg"
+                      >
+                        🔍 View Research →
+                      </Link>
+                    </div>
+                    <div className="flex-shrink-0 bg-white dark:bg-neutral-800 border border-green-100 dark:border-neutral-700 rounded-2xl p-5 space-y-3 min-w-[220px] shadow-sm">
+                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Researchers</p>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <span>👤</span>
+                          <div>
+                            <p className="font-bold text-neutral-800 dark:text-neutral-100 text-sm">Abdul Samad &</p>
+                            <p className="font-bold text-neutral-800 dark:text-neutral-100 text-sm">Muhammad Salman Bhatti</p>
+                            <p className="text-xs text-neutral-500">Class 12 (CS), Batch 2024–2026</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span>🎓</span>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">Supervised by: Muhammad Ali, Lecturer Mathematics</p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span>🏛️</span>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">Mathematics Dept. of GCFMN</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* PDF Project Cards */}
             {projects.map(project => (
               <div key={project.id}
