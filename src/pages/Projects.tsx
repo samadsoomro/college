@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useCollege } from '@/contexts/CollegeContext';
+import { FlaskConical } from 'lucide-react';
 
 const Projects = () => {
   const { collegeSlug } = useParams();
