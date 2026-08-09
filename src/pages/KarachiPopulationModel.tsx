@@ -96,7 +96,7 @@ const ChartCard = ({ title, subtitle, children }: any) => (
 );
 
 const MathStep = ({ children }: { children: React.ReactNode }) => (
-  <div style={mathBlockStyle} className="my-4">
+  <div style={mathBlockStyle} className="my-4 math-block">
     {children}
   </div>
 );
@@ -146,7 +146,7 @@ const KarachiPopulationModel = () => {
             <div className="flex flex-wrap gap-4 pt-3 border-t border-white/20 text-sm text-white/85">
               <span className="inline-flex items-center gap-1.5">
                 <Users size={14} />
-                <strong>Abdul Samad & Muhammad Salman Bhatti</strong> — Class 12 (CS), Batch 2024–2026
+                <strong>Abdul Samad & Muhammad Salman Bhatti</strong> — Class 12 (Mathematics), Batch 2024–2026
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <BookOpen size={14} /> Supervised by: [Prof. Name], Lecturer Mathematics, GCFMN
@@ -173,7 +173,7 @@ const KarachiPopulationModel = () => {
         {/* Section 2 — Data */}
         <Section icon={BookOpen} title="Census Data Used">
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
-            Let <strong>t = 0</strong> correspond to year 1981. So <strong>P₀ = 5,208,132</strong> (base population).
+            Let <strong>t = 0</strong> correspond to year 1981. So <strong>P<sub>0</sub> = 5,208,132</strong> (base population).
           </p>
           <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-700">
             <table className="w-full text-sm">
@@ -212,14 +212,14 @@ const KarachiPopulationModel = () => {
             <div className="mt-2">dP / <span style={{ textDecoration: 'line-through' }}>P</span>  =  k dt</div>
             <div className="mt-2">∫ dP/P  =  ∫ k dt</div>
             <div className="mt-2">ln|P|  =  kt + c</div>
-            <div className="mt-2">e^(ln|P|)  =  e^(kt + c)</div>
-            <div className="mt-2">P  =  e^(kt) · e^c</div>
+            <div className="mt-2">e<sup>ln|P|</sup>  =  e<sup>kt + c</sup></div>
+            <div className="mt-2">P  =  e<sup>kt</sup> · e<sup>c</sup></div>
           </MathStep>
           <BoxedResult>
-            P  =  P₀ · e^(kt)
+            P  =  P<sub>0</sub> · e<sup>kt</sup>
           </BoxedResult>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">
-            Where P₀ = e^c = initial population
+            Where P<sub>0</sub> = e<sup>c</sup> = initial population
           </p>
         </Section>
 
@@ -229,9 +229,9 @@ const KarachiPopulationModel = () => {
             Using 1981 as our base year (t = 0) and the 2023 census as our second point (t = 42):
           </p>
           <MathStep>
-            <div>20,382,881  =  5,208,132 × e^(42k)</div>
-            <div className="mt-2">e^(42k)  =  20,382,881 ÷ 5,208,132</div>
-            <div className="mt-2">e^(42k)  =  3.9137</div>
+            <div>20,382,881  =  5,208,132 × e<sup>42k</sup></div>
+            <div className="mt-2">e<sup>42k</sup>  =  20,382,881 ÷ 5,208,132</div>
+            <div className="mt-2">e<sup>42k</sup>  =  3.9137</div>
             <div className="mt-2">42k  =  ln(3.9137)</div>
             <div className="mt-2">42k  =  1.3651</div>
             <div className="mt-2">k  =  1.3651 ÷ 42</div>
@@ -249,8 +249,8 @@ const KarachiPopulationModel = () => {
 
           <h3 className="font-semibold text-neutral-700 dark:text-neutral-300 mb-2">Doubling Time:</h3>
           <MathStep>
-            <div>2<span style={{ textDecoration: 'line-through' }}>P₀</span>  =  <span style={{ textDecoration: 'line-through' }}>P₀</span> × e^(0.0325 × t)</div>
-            <div className="mt-2">2  =  e^(0.0325 × t)</div>
+            <div>2<span style={{ textDecoration: 'line-through' }}>P<sub>0</sub></span>  =  <span style={{ textDecoration: 'line-through' }}>P<sub>0</sub></span> × e<sup>0.0325 × t</sup></div>
+            <div className="mt-2">2  =  e<sup>0.0325 × t</sup></div>
             <div className="mt-2">ln(2)  =  0.0325t</div>
             <div className="mt-2">0.6931  =  0.0325t</div>
           </MathStep>
@@ -260,8 +260,8 @@ const KarachiPopulationModel = () => {
 
           <h3 className="font-semibold text-neutral-700 dark:text-neutral-300 mb-2 mt-6">Tripling Time:</h3>
           <MathStep>
-            <div>3<span style={{ textDecoration: 'line-through' }}>P₀</span>  =  <span style={{ textDecoration: 'line-through' }}>P₀</span> × e^(0.0325 × t)</div>
-            <div className="mt-2">3  =  e^(0.0325 × t)</div>
+            <div>3<span style={{ textDecoration: 'line-through' }}>P<sub>0</sub></span>  =  <span style={{ textDecoration: 'line-through' }}>P<sub>0</sub></span> × e<sup>0.0325 × t</sup></div>
+            <div className="mt-2">3  =  e<sup>0.0325 × t</sup></div>
             <div className="mt-2">ln(3)  =  0.0325t</div>
             <div className="mt-2">1.0986  =  0.0325t</div>
           </MathStep>
@@ -324,16 +324,16 @@ const KarachiPopulationModel = () => {
         <Section icon={TrendingUp} title="Population Predictions">
           <MathStep>
             <div className="font-semibold text-neutral-600 dark:text-neutral-400 text-base mb-2" style={{ fontFamily: 'inherit' }}>2030 (t = 49):</div>
-            <div>P(49)  =  5,208,132 × e^(0.0325 × 49)</div>
-            <div className="mt-1">P(49)  =  5,208,132 × e^(1.5925)</div>
+            <div>P(49)  =  5,208,132 × e<sup>0.0325 × 49</sup></div>
+            <div className="mt-1">P(49)  =  5,208,132 × e<sup>1.5925</sup></div>
             <div className="mt-1">P(49)  =  5,208,132 × 4.9156</div>
           </MathStep>
           <BoxedResult>2030 → 25,597,000</BoxedResult>
 
           <MathStep>
             <div className="font-semibold text-neutral-600 dark:text-neutral-400 text-base mb-2" style={{ fontFamily: 'inherit' }}>2040 (t = 59):</div>
-            <div>P(59)  =  5,208,132 × e^(0.0325 × 59)</div>
-            <div className="mt-1">P(59)  =  5,208,132 × e^(1.9175)</div>
+            <div>P(59)  =  5,208,132 × e<sup>0.0325 × 59</sup></div>
+            <div className="mt-1">P(59)  =  5,208,132 × e<sup>1.9175</sup></div>
             <div className="mt-1">P(59)  =  5,208,132 × 6.8008</div>
           </MathStep>
           <BoxedResult>2040 → 35,424,000</BoxedResult>
@@ -400,7 +400,7 @@ const KarachiPopulationModel = () => {
           bgColor="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5"
           className="border-primary/30">
           <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-            This study shows that the exponential differential equation model <strong className="text-neutral-800 dark:text-neutral-200">P = P₀·e^(kt)</strong>, derived from the intermediate Mathematics syllabus, produces meaningful real-world predictions. Based on this model, Karachi is projected to reach <strong className="text-primary">25.6 million by 2030</strong> and <strong className="text-primary">35.4 million by 2040</strong>, assuming the current growth rate of 3.25% per year continues.
+            This study shows that the exponential differential equation model <strong className="text-neutral-800 dark:text-neutral-200">P = P<sub>0</sub>·e<sup>kt</sup></strong>, derived from the intermediate Mathematics syllabus, produces meaningful real-world predictions. Based on this model, Karachi is projected to reach <strong className="text-primary">25.6 million by 2030</strong> and <strong className="text-primary">35.4 million by 2040</strong>, assuming the current growth rate of 3.25% per year continues.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
             {[

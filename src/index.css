@@ -452,3 +452,18 @@
 .exam-paper-btn:hover {
   animation: none;
 }
+
+/* Superscript inside Caveat handwritten math blocks */
+.math-block sup {
+  font-size: 0.72em;
+  vertical-align: super;
+  line-height: 0;
+  font-family: 'Caveat', cursive;
+}
+
+.math-block sub {
+  font-size: 0.72em;
+  vertical-align: sub;
+  line-height: 0;
+  font-family: 'Caveat', cursive;
+}
