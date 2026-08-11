@@ -2,11 +2,19 @@ import { Printer } from 'lucide-react';
 
 interface PrintButtonProps {
   label?: string;
+  documentTitle?: string;
 }
 
-export const PrintButton = ({ label = 'Print Research' }: PrintButtonProps) => {
+export const PrintButton = ({ label = 'Print Research', documentTitle }: PrintButtonProps) => {
   const handlePrint = () => {
+    const originalTitle = document.title;
+    if (documentTitle) {
+      document.title = documentTitle;
+    }
     window.print();
+    if (documentTitle) {
+      document.title = originalTitle;
+    }
   };
 
   return (

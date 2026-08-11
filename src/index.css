@@ -414,9 +414,8 @@
 /* ── Print Styles — A4 Research Pages ──────────────── */
 @media print {
 
-  /* Hide everything except research content */
-  body > * { display: none !important; }
-  .research-print-content { display: block !important; }
+  /* Hide specific structural elements instead of body > * to keep #root visible */
+  #root { display: block !important; }
 
   /* Page setup — A4 */
   @page {

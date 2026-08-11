@@ -124,7 +124,7 @@ const KarachiPopulationModel = () => {
           </Link>
 
           {/* Print Button */}
-          <PrintButton label="Print Research (A4)" />
+          <PrintButton label="Print Research (A4)" documentTitle="Karachi_Population_Model" />
         </div>
 
         {/* Print-only header (shows only when printing) */}
@@ -445,6 +445,9 @@ const KarachiPopulationModel = () => {
 
         {/* Print Footer — shows only when printing */}
         <div className="print-footer hidden">
+          <div style={{ marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
+            Researcher Details: Abdul Samad & Muhammad Salman Bhatti — Class 12 (Mathematics), Batch 2024–2026
+          </div>
           Govt. College for Men Nazimabad (GCFMN), Karachi • Mathematics Department • August 2026 •
           Live at: college-managment-system-coral.vercel.app/gcfm/projects/karachi-population-model
         </div>

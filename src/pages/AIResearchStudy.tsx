@@ -149,7 +149,7 @@ const AIResearchStudy = () => {
             className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-semibold bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 px-4 py-2 rounded-xl hover:shadow-sm transition-all">
             <ArrowLeft size={16} /> Back to Projects
           </Link>
-          <PrintButton label="Print Research (A4)" />
+          <PrintButton label="Print Research (A4)" documentTitle="AI_Research_Study" />
         </div>
 
         {/* Print-only header */}
@@ -577,6 +577,9 @@ const AIResearchStudy = () => {
 
         {/* Print Footer */}
         <div className="print-footer hidden">
+          <div style={{ marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
+            Researcher Details: Abdul Samad — Class 12 (CS), Batch 2024–2026
+          </div>
           Govt. College for Men Nazimabad (GCFMN), Karachi • Statistics Department • June 2026 •
           Live at: college-managment-system-coral.vercel.app/gcfm/projects/ai-performance-study
         </div>
