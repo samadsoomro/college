@@ -411,17 +411,198 @@
   }
 }
 
-/* Print Protection */
+/* ── Print Styles — A4 Research Pages ──────────────── */
 @media print {
+
+  /* Hide everything except research content */
+  body > * { display: none !important; }
+  .research-print-content { display: block !important; }
+
+  /* Page setup — A4 */
+  @page {
+    size: A4 portrait;
+    margin: 18mm 15mm 18mm 15mm;
+  }
+
+  /* Reset body for print */
   body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt !important;
+    font-family: 'Inter', Arial, sans-serif !important;
+  }
+
+  /* Research content wrapper */
+  .research-print-content {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Hide elements not needed in print */
+  .print-hide,
+  .print-btn-container,
+  nav, header, footer,
+  .navbar, .sidebar {
     display: none !important;
   }
-}
 
-/* Print Protection */
-@media print {
-  body {
-    display: none !important;
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Page break control */
+  .print-page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .print-no-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Hero header — simplified for print */
+  .research-hero-print {
+    background: #1a1a2e !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    border-radius: 8px !important;
+    padding: 16px 20px !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Stat cards — 4 in a row for print */
+  .stat-cards-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .stat-card-print {
+    border: 1.5px solid #d1d5db !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    text-align: center !important;
+    background: white !important;
+  }
+
+  /* Sections */
+  section {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    margin-bottom: 14px !important;
+    padding: 12px 16px !important;
+    background: white !important;
+    page-break-inside: avoid;
+  }
+
+  /* Math blocks — keep handwritten Caveat font */
+  .math-block {
+    font-family: 'Caveat', cursive !important;
+    font-size: 13pt !important;
+    border-left: 3px solid #c0392b !important;
+    padding: 10px 14px !important;
+    background: repeating-linear-gradient(
+      transparent, transparent 22px,
+      #e8e8e8 22px, #e8e8e8 23px
+    ) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    margin: 8px 0 !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Boxed results */
+  .boxed-result-print {
+    border: 2px solid #1a56db !important;
+    border-radius: 6px !important;
+    padding: 6px 14px !important;
+    display: inline-block !important;
+    font-family: 'Caveat', cursive !important;
+    font-size: 13pt !important;
+    font-weight: 600 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Tables */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9.5pt !important;
+    margin: 8px 0 !important;
+  }
+
+  th {
+    background: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    padding: 6px 10px !important;
+    border: 1px solid #d1d5db !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+  }
+
+  td {
+    padding: 5px 10px !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* Charts — recharts SVG prints naturally */
+  .recharts-wrapper {
+    page-break-inside: avoid !important;
+  }
+
+  /* Force chart containers to show on print */
+  .chart-print-container {
+    width: 100% !important;
+    height: 200px !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Hide chart tooltips on print */
+  .recharts-tooltip-wrapper { display: none !important; }
+
+  /* Superscripts in print */
+  sup {
+    font-size: 0.65em !important;
+    vertical-align: super !important;
+    line-height: 0 !important;
+  }
+
+  sub {
+    font-size: 0.65em !important;
+    vertical-align: sub !important;
+    line-height: 0 !important;
+  }
+
+  /* Text colors — all black for print */
+  p, h1, h2, h3, h4, li, td, th, span {
+    color: black !important;
+  }
+
+  /* Green/primary accent — keep for boxed items */
+  .text-primary { color: #1a56db !important; }
+  .text-green-600 { color: #16a34a !important; }
+  .text-red-500 { color: #dc2626 !important; }
+
+  /* Print footer */
+  .print-footer {
+    display: block !important;
+    margin-top: 20px !important;
+    padding-top: 10px !important;
+    border-top: 1px solid #d1d5db !important;
+    font-size: 8pt !important;
+    color: #6b7280 !important;
+    text-align: center !important;
   }
 }
 

@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
+import { PrintButton } from '@/components/PrintButton';
 import { useCollege } from '@/contexts/CollegeContext';
 import {
   ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid,
@@ -112,14 +113,37 @@ const KarachiPopulationModel = () => {
   const { settings } = useCollege();
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-foreground pt-20 md:pt-24">
+    <div className="research-print-content min-h-screen bg-neutral-50 dark:bg-neutral-950 text-foreground pt-20 md:pt-24">
       <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
 
-        {/* Back */}
-        <Link to={`/${collegeSlug}/projects`}
-          className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-semibold bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 px-4 py-2 rounded-xl hover:shadow-sm transition-all">
-          <ArrowLeft size={16} /> Back to Projects
-        </Link>
+        {/* Back button — hidden on print */}
+        <div className="flex items-center justify-between print-hide">
+          <Link to={`/${collegeSlug}/projects`}
+            className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-semibold bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 px-4 py-2 rounded-xl hover:shadow-sm transition-all">
+            <ArrowLeft size={16} /> Back to Projects
+          </Link>
+
+          {/* Print Button */}
+          <PrintButton label="Print Research (A4)" />
+        </div>
+
+        {/* Print-only header (shows only when printing) */}
+        <div className="print-only hidden">
+          <div className="research-hero-print">
+            <h1 style={{ color: 'white', fontSize: '16pt', fontWeight: 'bold', marginBottom: '6px' }}>
+              Modeling and Predicting Population Growth of Karachi Using Differential Equations
+            </h1>
+            <p style={{ color: '#cbd5e1', fontSize: '10pt' }}>
+              Abdul Samad & Muhammad Salman Bhatti — Class 12 (Mathematics), Batch 2024–2026
+            </p>
+            <p style={{ color: '#94a3b8', fontSize: '9pt', marginTop: '4px' }}>
+              Supervised by: [Prof. Name], Lecturer Mathematics, GCFMN • Published: August 2026
+            </p>
+            <p style={{ color: '#94a3b8', fontSize: '9pt' }}>
+              Mathematics Department — Govt. College for Men Nazimabad, Karachi
+            </p>
+          </div>
+        </div>
 
         {/* Hero Header */}
         <div className="relative bg-gradient-to-br from-primary via-primary/90 to-primary/70 rounded-3xl p-8 md:p-10 text-white overflow-hidden shadow-2xl">
@@ -164,14 +188,14 @@ const KarachiPopulationModel = () => {
         </div>
 
         {/* Section 1 — Why */}
-        <Section icon={Target} title="Why We Did This Study">
+        <Section icon={Target} title="Why We Did This Study" className="print-no-break">
           <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
             Differential equations are one of the most powerful tools in mathematics. Rather than studying them only for examinations, this project applies the exponential growth model to real census data from Karachi — one of the world's largest cities — to understand how its population has grown and where it is heading. The same mathematical principles that model population growth are used in modern AI and machine learning prediction systems.
           </p>
         </Section>
 
         {/* Section 2 — Data */}
-        <Section icon={BookOpen} title="Census Data Used">
+        <Section icon={BookOpen} title="Census Data Used" className="print-no-break">
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
             Let <strong>t = 0</strong> correspond to year 1981. So <strong>P<sub>0</sub> = 5,208,132</strong> (base population).
           </p>
@@ -203,7 +227,7 @@ const KarachiPopulationModel = () => {
         </Section>
 
         {/* Section 3 — Mathematical Model */}
-        <Section icon={Calculator} title="The Mathematical Model">
+        <Section icon={Calculator} title="The Mathematical Model" className="print-page-break print-no-break">
           <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed mb-4">
             Since the rate of increase in population is proportional to the number of inhabitants:
           </p>
@@ -224,7 +248,7 @@ const KarachiPopulationModel = () => {
         </Section>
 
         {/* Section 4 — Finding k */}
-        <Section icon={Calculator} title="Finding the Growth Rate k">
+        <Section icon={Calculator} title="Finding the Growth Rate k" className="print-no-break">
           <p className="text-neutral-600 dark:text-neutral-400 mb-4">
             Using 1981 as our base year (t = 0) and the 2023 census as our second point (t = 42):
           </p>
@@ -242,7 +266,7 @@ const KarachiPopulationModel = () => {
         </Section>
 
         {/* Section 5 — Doubling & Tripling */}
-        <Section icon={Clock} title="Doubling and Tripling Time">
+        <Section icon={Clock} title="Doubling and Tripling Time" className="print-no-break">
           <p className="text-neutral-600 dark:text-neutral-400 mb-4">
             A classic application of this model is finding how long it takes for the population to double or triple.
           </p>
@@ -283,7 +307,7 @@ const KarachiPopulationModel = () => {
         </Section>
 
         {/* Section 6 — Verification */}
-        <Section icon={CheckCircle2} title="Model Verification">
+        <Section icon={CheckCircle2} title="Model Verification" className="print-no-break">
           <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-700">
             <table className="w-full text-sm">
               <thead className="bg-neutral-50 dark:bg-neutral-800">
@@ -321,7 +345,7 @@ const KarachiPopulationModel = () => {
         </Section>
 
         {/* Section 7 — Predictions */}
-        <Section icon={TrendingUp} title="Population Predictions">
+        <Section icon={TrendingUp} title="Population Predictions" className="print-no-break">
           <MathStep>
             <div className="font-semibold text-neutral-600 dark:text-neutral-400 text-base mb-2" style={{ fontFamily: 'inherit' }}>2030 (t = 49):</div>
             <div>P(49)  =  5,208,132 × e<sup>0.0325 × 49</sup></div>
@@ -386,7 +410,7 @@ const KarachiPopulationModel = () => {
         </div>
 
         {/* Section 9 — Discussion */}
-        <Section icon={Lightbulb} title="What This Means">
+        <Section icon={Lightbulb} title="What This Means" className="print-no-break">
           <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
             The exponential model predicts 1998 population with 97.6% accuracy. The larger deviation in 2017 reflects a real-world slowdown in growth during 2010–2017. A more advanced logistic growth model would account for these changes by introducing a carrying capacity.
           </p>
@@ -398,7 +422,7 @@ const KarachiPopulationModel = () => {
         {/* Section 10 — Conclusion */}
         <Section icon={CheckCircle2} title="Conclusion & Recommendations"
           bgColor="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5"
-          className="border-primary/30">
+          className="border-primary/30 print-no-break">
           <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
             This study shows that the exponential differential equation model <strong className="text-neutral-800 dark:text-neutral-200">P = P<sub>0</sub>·e<sup>kt</sup></strong>, derived from the intermediate Mathematics syllabus, produces meaningful real-world predictions. Based on this model, Karachi is projected to reach <strong className="text-primary">25.6 million by 2030</strong> and <strong className="text-primary">35.4 million by 2040</strong>, assuming the current growth rate of 3.25% per year continues.
           </p>
@@ -418,6 +442,12 @@ const KarachiPopulationModel = () => {
             ))}
           </div>
         </Section>
+
+        {/* Print Footer — shows only when printing */}
+        <div className="print-footer hidden">
+          Govt. College for Men Nazimabad (GCFMN), Karachi • Mathematics Department • August 2026 •
+          Live at: college-managment-system-coral.vercel.app/gcfm/projects/karachi-population-model
+        </div>
 
         {/* Footer */}
         <div className="flex items-center justify-center gap-2 text-xs text-neutral-400 dark:text-neutral-500 pb-8">

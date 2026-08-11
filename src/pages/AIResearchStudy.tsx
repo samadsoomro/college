@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
+import { PrintButton } from '@/components/PrintButton';
 import { useCollege } from '@/contexts/CollegeContext';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
@@ -139,14 +140,35 @@ const AIResearchStudy = () => {
   const supervisor = settings?.myResearchSupervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri';
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-20 md:pt-24">
+    <div className="research-print-content min-h-screen bg-background text-foreground pt-20 md:pt-24">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 md:py-10 space-y-8 md:space-y-12">
 
-        {/* Back button */}
-        <Link to={`/${collegeSlug}/projects`}
-          className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-semibold bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 px-4 py-2 rounded-xl hover:shadow-sm transition-all">
-          <ArrowLeft size={16} /> Back to Projects
-        </Link>
+        {/* Back + Print row */}
+        <div className="flex items-center justify-between print-hide">
+          <Link to={`/${collegeSlug}/projects`}
+            className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-semibold bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 px-4 py-2 rounded-xl hover:shadow-sm transition-all">
+            <ArrowLeft size={16} /> Back to Projects
+          </Link>
+          <PrintButton label="Print Research (A4)" />
+        </div>
+
+        {/* Print-only header */}
+        <div className="print-only hidden">
+          <div className="research-hero-print">
+            <h1 style={{ color: 'white', fontSize: '16pt', fontWeight: 'bold', marginBottom: '6px' }}>
+              AI Tools & Academic Performance Among All Groups Students
+            </h1>
+            <p style={{ color: '#cbd5e1', fontSize: '10pt' }}>
+              Abdul Samad — Class 12 (CS), Batch 2024–2026
+            </p>
+            <p style={{ color: '#94a3b8', fontSize: '9pt', marginTop: '4px' }}>
+              {supervisor} • Published: June 2026
+            </p>
+            <p style={{ color: '#94a3b8', fontSize: '9pt' }}>
+              Statistics Department — Govt. College for Men Nazimabad, Karachi
+            </p>
+          </div>
+        </div>
 
         {/* Hero Header */}
         <div className="relative bg-gradient-to-br from-primary via-primary/90 to-primary/70 rounded-3xl p-8 md:p-10 text-white overflow-hidden shadow-2xl">
@@ -201,7 +223,7 @@ const AIResearchStudy = () => {
         </div>
 
         {/* Section 1 — Why */}
-        <Section icon={Target} title="Why We Did This Study">
+        <Section icon={Target} title="Why We Did This Study" className="print-no-break">
           <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
             Artificial intelligence tools like ChatGPT, Gemini, and Copilot are rapidly
             changing how students study and complete academic tasks. We wanted to
@@ -550,6 +572,13 @@ const AIResearchStudy = () => {
         <div className="flex items-center justify-center gap-2 text-xs text-neutral-400 dark:text-neutral-500 pb-8">
           <FlaskConical size={12} />
           <span>Research conducted at GCFMN, Karachi • Statistics Department • June 2026</span>
+        </div>
+
+
+        {/* Print Footer */}
+        <div className="print-footer hidden">
+          Govt. College for Men Nazimabad (GCFMN), Karachi • Statistics Department • June 2026 •
+          Live at: college-managment-system-coral.vercel.app/gcfm/projects/ai-performance-study
         </div>
 
       </div>
