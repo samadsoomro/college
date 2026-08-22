@@ -1,9 +1,15 @@
 {
   "version": 2,
-  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/gcfm",
+      "permanent": false
+    }
+  ],
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index.ts" },
-    { "source": "/og/:slug", "destination": "/api/index.ts" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/:path*",  "destination": "/api/index.ts" },
+    { "source": "/og/:slug",    "destination": "/api/index.ts" },
+    { "source": "/(.*)",        "destination": "/index.html" }
   ]
 }
