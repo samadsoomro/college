@@ -137,7 +137,7 @@ const KarachiPopulationModel = () => {
               Abdul Samad & Muhammad Salman Bhatti — Class 12 (Mathematics), Batch 2024–2026
             </p>
             <p style={{ color: '#94a3b8', fontSize: '9pt', marginTop: '4px' }}>
-              Supervised by: [Prof. Name], Lecturer Mathematics, GCFMN • Published: August 2026
+              Supervised by: Prof. Nazeer Ahmed, Head of Mathematics Dept., GCFMN • Published: August 2026
             </p>
             <p style={{ color: '#94a3b8', fontSize: '9pt' }}>
               Mathematics Department — Govt. College for Men Nazimabad, Karachi
@@ -173,7 +173,7 @@ const KarachiPopulationModel = () => {
                 <strong>Abdul Samad & Muhammad Salman Bhatti</strong> — Class 12 (Mathematics), Batch 2024–2026
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <BookOpen size={14} /> Supervised by: [Prof. Name], Lecturer Mathematics, GCFMN
+                <BookOpen size={14} /> Supervised by: Prof. Nazeer Ahmed, Head of Mathematics Dept., GCFMN
               </span>
             </div>
           </div>

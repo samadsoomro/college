@@ -268,7 +268,7 @@ const AdminProjects = () => {
           <div className="bg-neutral-50 dark:bg-neutral-800 rounded-lg p-3 space-y-1">
             <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Hardcoded Info</p>
             <p className="text-xs text-neutral-500">📌 Researchers: Abdul Samad & Muhammad Salman Bhatti</p>
-            <p className="text-xs text-neutral-500">🎓 Supervisor: Muhammad Ali, Lecturer Mathematics</p>
+            <p className="text-xs text-neutral-500">🎓 Supervisor: Prof. Nazeer Ahmed, Head of Maths Dept.</p>
             <p className="text-xs text-neutral-500">📅 Published: August 2026</p>
             <p className="text-xs text-neutral-500">🔗 Page: /projects/population-model</p>
           </div>
