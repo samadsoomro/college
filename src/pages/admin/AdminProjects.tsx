@@ -154,7 +154,7 @@ const AdminProjects = () => {
           <div>
             <h3 className="font-bold text-base">My Research — AI Study</h3>
             <p className="text-xs text-neutral-400">
-              This is a special hardcoded research page at /projects/ai-performance-study
+              This is a special hardcoded research page at /projects/ai-study
             </p>
           </div>
         </div>
@@ -230,7 +230,7 @@ const AdminProjects = () => {
           <p className="text-xs text-neutral-500">📌 Title: AI Tools & Academic Performance Among CS Students</p>
           <p className="text-xs text-neutral-500">👤 Researcher: Abdul Samad — Class 12 (CS), Batch 2024–2026</p>
           <p className="text-xs text-neutral-500">📅 Published: June 2026</p>
-          <p className="text-xs text-neutral-500">🔗 Page: /projects/ai-performance-study</p>
+          <p className="text-xs text-neutral-500">🔗 Page: /projects/ai-study</p>
         </div>
       </div>
       )}
@@ -242,7 +242,7 @@ const AdminProjects = () => {
             <div>
               <h3 className="font-bold text-base">Population Growth Research (Maths)</h3>
               <p className="text-xs text-neutral-400">
-                Hardcoded page at /gcfm/projects/karachi-population-model
+                Hardcoded page at /gcfm/projects/population-model
               </p>
             </div>
           </div>
@@ -270,7 +270,7 @@ const AdminProjects = () => {
             <p className="text-xs text-neutral-500">📌 Researchers: Abdul Samad & Muhammad Salman Bhatti</p>
             <p className="text-xs text-neutral-500">🎓 Supervisor: Muhammad Ali, Lecturer Mathematics</p>
             <p className="text-xs text-neutral-500">📅 Published: August 2026</p>
-            <p className="text-xs text-neutral-500">🔗 Page: /projects/karachi-population-model</p>
+            <p className="text-xs text-neutral-500">🔗 Page: /projects/population-model</p>
           </div>
 
           <button

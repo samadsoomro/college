@@ -581,7 +581,7 @@ const AIResearchStudy = () => {
             Researcher Details: Abdul Samad — Class 12 (CS), Batch 2024–2026
           </div>
           Govt. College for Men Nazimabad (GCFMN), Karachi • Statistics Department • June 2026 •
-          Live at: college-managment-system-coral.vercel.app/gcfm/projects/ai-performance-study
+          Live at: college-managment-system-coral.vercel.app/gcfm/projects/ai-study
         </div>
 
       </div>

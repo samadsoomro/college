@@ -66,7 +66,7 @@ const Projects = () => {
                         using chi-square analysis, correlation methods, and regression modeling.
                       </p>
                       <Link
-                        to={`/${collegeSlug}/projects/ai-performance-study`}
+                        to={`/${collegeSlug}/projects/ai-study`}
                         className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all hover:shadow-lg hover:translate-y-[-1px]"
                       >
                         🔍 View Live Research <span className="text-lg">→</span>
@@ -121,7 +121,7 @@ const Projects = () => {
                         Application of the exponential growth model P = P₀·e^(kt) to real Karachi census data (1981–2023), projecting population to 35.4 million by 2040 with 97.6% model accuracy.
                       </p>
                       <Link
-                        to={`/${collegeSlug}/projects/karachi-population-model`}
+                        to={`/${collegeSlug}/projects/population-model`}
                         className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 transition-all hover:shadow-lg"
                       >
                         🔍 View Research →

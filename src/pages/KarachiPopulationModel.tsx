@@ -449,7 +449,7 @@ const KarachiPopulationModel = () => {
             Researcher Details: Abdul Samad & Muhammad Salman Bhatti — Class 12 (Mathematics), Batch 2024–2026
           </div>
           Govt. College for Men Nazimabad (GCFMN), Karachi • Mathematics Department • August 2026 •
-          Live at: college-managment-system-coral.vercel.app/gcfm/projects/karachi-population-model
+          Live at: college-managment-system-coral.vercel.app/gcfm/projects/population-model
         </div>
 
         {/* Footer */}
