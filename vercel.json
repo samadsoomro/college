@@ -4,46 +4,37 @@
     { "source": "/", "destination": "/gcfm", "permanent": false },
 
     { "source": "/projects", "destination": "/gcfm/projects", "permanent": false },
-    { "source": "/projects/karachi-population-model", "destination": "/gcfm/projects/karachi-population-model", "permanent": false },
-    { "source": "/projects/ai-performance-study", "destination": "/gcfm/projects/ai-performance-study", "permanent": false },
+
+    { "source": "/projects/ai-study", "destination": "/gcfm/projects/ai-study", "permanent": false },
+    { "source": "/projects/population-model", "destination": "/gcfm/projects/population-model", "permanent": false },
+
+    { "source": "/projects/ai-performance-study", "destination": "/gcfm/projects/ai-study", "permanent": false },
+    { "source": "/projects/karachi-population-model", "destination": "/gcfm/projects/population-model", "permanent": false },
+
     { "source": "/projects/:path*", "destination": "/gcfm/projects/:path*", "permanent": false },
 
     { "source": "/books", "destination": "/gcfm/books", "permanent": false },
     { "source": "/books/:path*", "destination": "/gcfm/books/:path*", "permanent": false },
-
     { "source": "/notes", "destination": "/gcfm/notes", "permanent": false },
     { "source": "/notes/:path*", "destination": "/gcfm/notes/:path*", "permanent": false },
-
     { "source": "/rare-books", "destination": "/gcfm/rare-books", "permanent": false },
     { "source": "/rare-books/:path*", "destination": "/gcfm/rare-books/:path*", "permanent": false },
-
     { "source": "/blog", "destination": "/gcfm/blog", "permanent": false },
     { "source": "/blog/:path*", "destination": "/gcfm/blog/:path*", "permanent": false },
-
     { "source": "/events", "destination": "/gcfm/events", "permanent": false },
     { "source": "/events/:path*", "destination": "/gcfm/events/:path*", "permanent": false },
-
     { "source": "/notifications", "destination": "/gcfm/notifications", "permanent": false },
     { "source": "/notifications/:path*", "destination": "/gcfm/notifications/:path*", "permanent": false },
-
     { "source": "/contact", "destination": "/gcfm/contact", "permanent": false },
-
     { "source": "/college-card", "destination": "/gcfm/college-card", "permanent": false },
-
     { "source": "/my-card", "destination": "/gcfm/my-card", "permanent": false },
-
     { "source": "/login", "destination": "/gcfm/login", "permanent": false },
-
     { "source": "/about", "destination": "/gcfm/about", "permanent": false },
     { "source": "/about/:path*", "destination": "/gcfm/about/:path*", "permanent": false },
-
     { "source": "/history", "destination": "/gcfm/history", "permanent": false },
     { "source": "/history/:path*", "destination": "/gcfm/history/:path*", "permanent": false },
-
     { "source": "/faculty", "destination": "/gcfm/faculty", "permanent": false },
-
     { "source": "/donations", "destination": "/gcfm/donations", "permanent": false },
-
     { "source": "/register", "destination": "/gcfm/register", "permanent": false }
   ],
   "rewrites": [
