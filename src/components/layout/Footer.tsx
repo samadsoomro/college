@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   Mail,
@@ -17,6 +17,16 @@ const Footer: React.FC = () => {
   const { collegeSlug } = useParams<{ collegeSlug: string }>();
   const currentYear = new Date().getFullYear();
   const { settings } = useCollege();
+  const [govtCollegeLinks, setGovtCollegeLinks] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (settings?.showGovtCollegesStrip) {
+      fetch(`/api/${collegeSlug}/govt-college-links`)
+        .then(r => r.json())
+        .then(data => setGovtCollegeLinks(Array.isArray(data) ? data : []))
+        .catch(() => {});
+    }
+  }, [collegeSlug, settings?.showGovtCollegesStrip]);
 
   return (
     <footer className="bg-gradient-to-b from-slate-800 to-slate-900 text-white mt-auto">
@@ -156,6 +166,66 @@ const Footer: React.FC = () => {
               </Link>
             </div>
           </div>
+
+          {/* Maker Profile — GCFM only */}
+          {collegeSlug === 'gcfm' && settings?.showMakerProfile && (
+            <div className="border-t border-white/10 pt-8 mt-8">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center gap-5">
+
+                {/* Left — Project Badge */}
+                <div className="flex-shrink-0 w-14 h-14 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
+                  <span className="text-white text-2xl">💻</span>
+                </div>
+
+                {/* Middle — Info */}
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-1">
+                    Student Development Project
+                  </p>
+                  <h4 className="text-white font-bold text-base leading-snug">
+                    Built by the Computer Science Department
+                  </h4>
+                  <p className="text-white/70 text-sm mt-1">
+                    Govt. College For Men Nazimabad (GCFMN), Karachi
+                  </p>
+                  <div className="flex flex-wrap gap-3 mt-3">
+                    <span className="inline-flex items-center gap-1.5 bg-white/10 text-white/80 text-xs px-3 py-1.5 rounded-full">
+                      👨💼 Prof. Ubedullah Anwar — Head of CS Dept.
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 bg-primary/30 text-white text-xs px-3 py-1.5 rounded-full font-semibold">
+                      👨💻 Abdul Samad — Class 12 (CS)
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 bg-primary/30 text-white text-xs px-3 py-1.5 rounded-full font-semibold">
+                      👨💻 Muhammad Salman Bhatti — Class 12 (CS)
+                    </span>
+                  </div>
+                  <p className="text-white/40 text-xs mt-2">Batch 2024–2026</p>
+                </div>
+
+                {/* Right — Links */}
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  <a
+                    href="https://govt-college-formen.vercel.app/projects"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl transition-colors text-center"
+                  >
+                    🔬 View Research Projects
+                  </a>
+                  <a
+                    href="https://github.com/samadsoomro/college"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl transition-colors text-center"
+                  >
+                    💻 GitHub Repository
+                  </a>
+                </div>
+
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -220,6 +290,49 @@ const Footer: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Govt Colleges Scrolling Strip — all colleges with ON/OFF */}
+      {settings?.showGovtCollegesStrip && govtCollegeLinks.length > 0 && (
+        <div className="border-t border-white/10 pt-5 mt-2 pb-5">
+          <p className="text-xs font-semibold text-white/40 uppercase tracking-widest text-center mb-4">
+            {settings?.govtCollegesStripHeading || 'Govt Colleges'}
+          </p>
+      
+          {/* Scrolling strip */}
+          <div className="overflow-hidden relative">
+            <div
+              className="flex gap-6 items-center"
+              style={{
+                animation: 'scrollStrip 20s linear infinite',
+                width: 'max-content',
+              }}
+            >
+              {/* Duplicate for seamless loop */}
+              {[...govtCollegeLinks, ...govtCollegeLinks].map((college, i) => (
+                <a
+                  key={i}
+                  href={college.website_url || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-2.5 transition-colors flex-shrink-0"
+                >
+                  {college.logo_url ? (
+                    <img src={college.logo_url} alt={college.name}
+                      className="h-7 w-7 rounded-full object-contain bg-white p-0.5" />
+                  ) : (
+                    <div className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white">
+                      {college.name?.charAt(0)}
+                    </div>
+                  )}
+                  <span className="text-white/80 text-xs font-medium whitespace-nowrap">
+                    {college.name}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </footer>
   );
 };

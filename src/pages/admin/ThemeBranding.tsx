@@ -821,12 +821,146 @@ const ThemeBranding: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* 9. Maker Profile Toggle — GCFM only */}
+        {collegeSlug === 'gcfm' && (
+          <Card className="shadow-md">
+            <CardContent className="pt-6">
+              <h2 className="text-xl font-bold flex items-center gap-2 mb-6 border-b pb-2">
+                👨‍💻 Maker Profile Footer Section
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Shows a professional "Built by CS Dept" section at the bottom of the homepage footer.
+                Highlights Abdul Samad, Muhammad Salman Bhatti and Prof. Ubedullah Anwar.
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Show on homepage footer</span>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox"
+                    checked={formData.showMakerProfile || false}
+                    onChange={e => setFormData((prev: any) => ({ ...prev, showMakerProfile: e.target.checked }))}
+                    className="w-4 h-4" />
+                  <span className={`text-sm font-semibold ${formData.showMakerProfile ? 'text-green-600' : 'text-neutral-400'}`}>
+                    {formData.showMakerProfile ? 'ON' : 'OFF'}
+                  </span>
+                </label>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 10. Govt Colleges Strip */}
+        <Card className="shadow-md">
+          <CardContent className="pt-6">
+            <h2 className="text-xl font-bold flex items-center gap-2 mb-6 border-b pb-2">
+              🏛️ Govt Colleges Strip
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Scrolling strip of govt college logos at the bottom of footer. Editable per college.
+            </p>
+
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-medium">Show strip on footer</span>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox"
+                  checked={formData.showGovtCollegesStrip || false}
+                  onChange={e => setFormData((prev: any) => ({ ...prev, showGovtCollegesStrip: e.target.checked }))}
+                  className="w-4 h-4" />
+                <span className={`text-sm font-semibold ${formData.showGovtCollegesStrip ? 'text-green-600' : 'text-neutral-400'}`}>
+                  {formData.showGovtCollegesStrip ? 'ON' : 'OFF'}
+                </span>
+              </label>
+            </div>
+
+            <div className="space-y-2 mb-4">
+              <label className="text-xs font-bold uppercase text-muted-foreground">Strip Heading</label>
+              <Input
+                value={formData.govtCollegesStripHeading || 'Govt Colleges'}
+                onChange={e => setFormData((prev: any) => ({ ...prev, govtCollegesStripHeading: e.target.value }))}
+                placeholder="Govt Colleges"
+              />
+            </div>
+
+            {/* Manage College Links */}
+            <GovtCollegeLinksManager collegeSlug={collegeSlug!} />
+          </CardContent>
+        </Card>
+
         <div className="fixed bottom-6 right-6">
           <Button type="submit" size="lg" disabled={loading} className="gap-2 shadow-2xl h-14 px-8 text-lg font-bold transition-all hover:scale-105 active:scale-95">
             {loading ? <RefreshCcw className="animate-spin" size={20}/> : <Save size={20}/>} {loading ? "Saving..." : "Save All Changes"}
           </Button>
         </div>
       </form>
+    </div>
+  );
+};
+
+// ── Govt College Links Manager (inline component) ──────────────────────────
+const GovtCollegeLinksManager = ({ collegeSlug }: { collegeSlug: string }) => {
+  const [links, setLinks] = useState<any[]>([]);
+  const [form, setForm] = useState({ name: '', logoUrl: '', websiteUrl: '' });
+  const adminToken = import.meta.env.VITE_ADMIN_TOKEN || 'gcfm-admin-token-2026';
+
+  const fetchLinks = async () => {
+    const res = await fetch(`/api/${collegeSlug}/admin/govt-college-links`, {
+      headers: { 'x-admin-token': adminToken }
+    });
+    if (res.ok) setLinks(await res.json());
+  };
+
+  useEffect(() => { fetchLinks(); }, []);
+
+  const addLink = async () => {
+    if (!form.name) return;
+    await fetch(`/api/${collegeSlug}/admin/govt-college-links`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+      body: JSON.stringify({ name: form.name, logoUrl: form.logoUrl, websiteUrl: form.websiteUrl })
+    });
+    setForm({ name: '', logoUrl: '', websiteUrl: '' });
+    fetchLinks();
+  };
+
+  const deleteLink = async (id: string) => {
+    await fetch(`/api/${collegeSlug}/admin/govt-college-links/${id}`, {
+      method: 'DELETE', headers: { 'x-admin-token': adminToken }
+    });
+    fetchLinks();
+  };
+
+  return (
+    <div className="space-y-3 pt-2 border-t border-neutral-100">
+      <p className="text-xs font-semibold text-neutral-500 pt-2">College Links in Strip</p>
+
+      {links.map(link => (
+        <div key={link.id} className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2">
+            {link.logo_url && <img src={link.logo_url} className="h-6 w-6 rounded-full object-contain" alt="" />}
+            <div>
+              <p className="text-sm font-medium">{link.name}</p>
+              {link.website_url && <p className="text-xs text-neutral-400 truncate max-w-[150px]">{link.website_url}</p>}
+            </div>
+          </div>
+          <button type="button" onClick={() => deleteLink(link.id)} className="text-xs text-red-500 hover:text-red-700">🗑️</button>
+        </div>
+      ))}
+
+      {/* Add new link form */}
+      <div className="space-y-2 pt-2">
+        <input type="text" placeholder="College Name *"
+          value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+          className="w-full border rounded-lg px-3 py-1.5 text-sm dark:bg-neutral-900 dark:border-neutral-700" />
+        <input type="text" placeholder="Website URL (https://...)"
+          value={form.websiteUrl} onChange={e => setForm(p => ({ ...p, websiteUrl: e.target.value }))}
+          className="w-full border rounded-lg px-3 py-1.5 text-sm dark:bg-neutral-900 dark:border-neutral-700" />
+        <input type="text" placeholder="Logo URL (paste from Cloudinary)"
+          value={form.logoUrl} onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
+          className="w-full border rounded-lg px-3 py-1.5 text-sm dark:bg-neutral-900 dark:border-neutral-700" />
+        <button type="button" onClick={addLink}
+          className="w-full py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
+          ➕ Add College to Strip
+        </button>
+      </div>
     </div>
   );
 };

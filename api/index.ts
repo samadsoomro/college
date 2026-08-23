@@ -1026,6 +1026,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         showMyResearch: slug === 'gcfm' ? (d.show_my_research ?? true) : false,
         showPopulationResearch: slug === 'gcfm' ? (d.show_population_research ?? false) : false,
         myResearchSupervisor: d.my_research_supervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
+        showGovtCollegesStrip: d.show_govt_colleges_strip || false,
+        govtCollegesStripHeading: d.govt_colleges_strip_heading || 'Govt Colleges',
+        showMakerProfile: d.show_maker_profile || false,
       });
     }
 
@@ -1983,7 +1986,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       projectsDeptHeading: 'projects_dept_heading',
       showMyResearch: 'show_my_research',
       showPopulationResearch: 'show_population_research',
-      myResearchSupervisor: 'my_research_supervisor'
+      myResearchSupervisor: 'my_research_supervisor',
+      showGovtCollegesStrip: 'show_govt_colleges_strip',
+      govtCollegesStripHeading: 'govt_colleges_strip_heading',
+      showMakerProfile: 'show_maker_profile'
     };
     for (const [k, v] of Object.entries(req.body || {})) {
       if (!fieldMap[k]) continue; // Only allow mapped fields to be updated
@@ -1995,7 +2001,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (typeof val === 'number' && isNaN(val)) val = null;
       }
       // Handle Boolean fields
-      else if (k === 'cardQrEnabled' || k === 'rbWatermarkEnabled' || k === 'showProjectsMenu' || k === 'showMyResearch' || k === 'showPopulationResearch') {
+      else if (k === 'cardQrEnabled' || k === 'rbWatermarkEnabled' || k === 'showProjectsMenu' || k === 'showMyResearch' || k === 'showPopulationResearch' || k === 'showGovtCollegesStrip' || k === 'showMakerProfile') {
         if (v === 'true' || v === true) val = true;
         else if (v === 'false' || v === false) val = false;
         else val = null;
@@ -2050,7 +2056,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       notificationsHeading: updated.notifications_heading || 'Notifications',
       notificationsDescription: updated.notifications_description || 'Official announcements and updates',
       contactHeading: updated.contact_heading || 'Contact Us',
-      contactDescription: updated.contact_description || 'Get in touch with us for official information and student support'
+      contactDescription: updated.contact_description || 'Get in touch with us for official information and student support',
+      showGovtCollegesStrip: updated.show_govt_colleges_strip || false,
+      govtCollegesStripHeading: updated.govt_colleges_strip_heading || 'Govt Colleges',
+      showMakerProfile: updated.show_maker_profile || false
     });
   }
 
@@ -2904,6 +2913,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { error: userErr } = await supabase.from('users').delete().eq('id', profile.user_id).eq('college_id', col.id);
         if (userErr) console.error('[DELETE USER] Error deleting account:', userErr);
       }
+      return res.json({ success: true });
+    }
+
+    // ── GOVT COLLEGE LINKS ────────────────────────────────────────────────────────
+    // GET /api/:slug/govt-college-links — public
+    if (isApi && resource === 'govt-college-links' && !sub1 && req.method === 'GET') {
+      const colId = await getCollegeId(slug);
+      if (!colId) return res.status(404).json({ error: 'Not found' });
+      const { data } = await supabase.from('govt_college_links')
+        .select('*').eq('college_id', colId).eq('is_active', true)
+        .order('display_order', { ascending: true });
+      return res.json(data || []);
+    }
+    
+    // GET /api/:slug/admin/govt-college-links
+    if (isApi && resource === 'admin' && sub1 === 'govt-college-links' && !sub2 && req.method === 'GET') {
+      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      const colId = await getCollegeId(slug);
+      const { data } = await supabase.from('govt_college_links')
+        .select('*').eq('college_id', colId).order('display_order');
+      return res.json(data || []);
+    }
+    
+    // POST /api/:slug/admin/govt-college-links
+    if (isApi && resource === 'admin' && sub1 === 'govt-college-links' && !sub2 && req.method === 'POST') {
+      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      const colId = await getCollegeId(slug);
+      const { name, logoUrl, websiteUrl, displayOrder } = req.body || {};
+      const { data, error } = await supabase.from('govt_college_links')
+        .insert({ college_id: colId, name, logo_url: logoUrl, website_url: websiteUrl, display_order: displayOrder || 0, is_active: true })
+        .select('*').single();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json(data);
+    }
+    
+    // DELETE /api/:slug/admin/govt-college-links/:id
+    if (req.method === 'DELETE' && isApi && resource === 'admin' && sub1 === 'govt-college-links' && sub2) {
+      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+      const colId = await getCollegeId(slug);
+      await supabase.from('govt_college_links').delete().eq('id', sub2).eq('college_id', colId);
       return res.json({ success: true });
     }
 

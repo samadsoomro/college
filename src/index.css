@@ -647,3 +647,12 @@
   line-height: 0;
   font-family: 'Caveat', cursive;
 }
+
+@keyframes scrollStrip {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-strip { animation: none !important; }
+}
