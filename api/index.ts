@@ -2909,15 +2909,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // ── PROJECTS MODULE ─────────────────────────────────────────────────────────────
     
-    // GET /api/:slug/projects — public
+    // GET /api/:slug/projects
     if (isApi && resource === 'projects' && !sub1 && req.method === 'GET') {
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'Not found' });
-      const { data } = await supabase
-        .from('projects').select('*')
-        .eq('college_id', colId).eq('is_visible', true)
+      if (!colId) return res.status(404).json({ error: 'College not found' });
+    
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('college_id', colId)
+        .eq('is_visible', true)
         .order('created_at', { ascending: false });
-      return res.json(data || []);
+    
+      console.log('[PROJECTS GET]', { slug, colId, count: data?.length, error: error?.message });
+    
+      return res.json(Array.isArray(data) ? data : []);
     }
     
     // GET /api/:slug/admin/projects — admin
@@ -2932,24 +2938,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json(data || []);
     }
     
-    // POST /api/:slug/admin/projects — admin
+    // POST /api/:slug/admin/projects
     if (isApi && resource === 'admin' && sub1 === 'projects' && !sub2 && req.method === 'POST') {
-      if (!isAdminRequest(req)) return res.status(403).json({ error: 'Unauthorized' });
+      if (!checkAdminToken(req)) return res.status(403).json({ error: 'Unauthorized' });
+    
       const colId = await getCollegeId(slug);
-      if (!colId) return res.status(404).json({ error: 'Not found' });
-      
-      const { title, researcherName, classBatch, supervisor, department, description, pdfUrl, publishDate } = req.body;
-      if (!title || !researcherName) return res.status(400).json({ error: 'Title and researcher name are required' });
-      
-      const { data, error } = await supabase.from('projects').insert([{
-        college_id: colId,
-        title, researcher_name: researcherName,
-        class_batch: classBatch, supervisor, department,
-        description, pdf_url: pdfUrl, publish_date: publishDate,
-        is_visible: true
-      }]);
-      if (error) return res.status(500).json({ error: error.message });
-      return res.json({ success: true, data });
+      if (!colId) return res.status(404).json({ error: 'College not found' });
+    
+      const {
+        title, researcherName, classBatch, supervisor,
+        department, description, pdfUrl, publishDate
+      } = req.body || {};
+    
+      console.log('[PROJECT ADD]', { slug, colId, title, researcherName, pdfUrl });
+    
+      if (!title || !researcherName) {
+        return res.status(400).json({ error: 'Title and researcher name are required' });
+      }
+    
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          college_id: colId,
+          title: title?.trim(),
+          researcher_name: researcherName?.trim(),
+          class_batch: classBatch || '',
+          supervisor: supervisor || '',
+          department: department || '',
+          description: description || '',
+          pdf_url: pdfUrl || null,
+          publish_date: publishDate || null,
+          is_visible: true,
+        })
+        .select('*')
+        .single();
+    
+      if (error) {
+        console.error('[PROJECT ADD ERROR]', error.message, error.details);
+        return res.status(500).json({ error: error.message });
+      }
+    
+      console.log('[PROJECT ADDED]', data?.id);
+      return res.json(data);
     }
     
     // PATCH /api/:slug/admin/projects/:id — admin

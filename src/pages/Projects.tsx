@@ -156,10 +156,10 @@ const Projects = () => {
             {/* PDF Project Cards */}
             {projects.map(project => (
               <div key={project.id}
-                className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 shadow-sm flex flex-col gap-3 hover:shadow-md transition-shadow">
-
+                className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow">
+            
                 <div className="flex items-center justify-between">
-                  <span className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-3 py-1 rounded-full font-medium">
+                  <span className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 px-3 py-1 rounded-full font-medium">
                     📋 Research Project
                   </span>
                   {project.publish_date && (
@@ -168,38 +168,47 @@ const Projects = () => {
                     </span>
                   )}
                 </div>
-
+            
                 <h3 className="font-bold text-neutral-800 dark:text-neutral-100 text-base leading-snug">
                   {project.title}
                 </h3>
-
+            
                 <div className="text-xs text-neutral-500 space-y-1">
-                  {project.researcher_name && <p>👤 <span className="font-medium">{project.researcher_name}</span>{project.class_batch ? ` — ${project.class_batch}` : ''}</p>}
+                  {project.researcher_name && (
+                    <p>👤 <span className="font-medium">{project.researcher_name}</span>
+                      {project.class_batch ? ` — ${project.class_batch}` : ''}
+                    </p>
+                  )}
                   {project.supervisor && <p>🎓 Supervised by: {project.supervisor}</p>}
                   {project.department && <p>🏛️ {project.department}</p>}
                 </div>
-
+            
                 {project.description && (
                   <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed line-clamp-3">
                     {project.description}
                   </p>
                 )}
-
-                {project.pdf_url && (
+            
+                {/* PDF View Button — only if pdf_url exists */}
+                {project.pdf_url ? (
                   <a
                     href={project.pdf_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-auto inline-flex items-center justify-center gap-2 w-full py-2.5 border-2 border-primary text-primary rounded-xl font-semibold text-sm hover:bg-primary/5 transition-colors"
+                    className="mt-auto inline-flex items-center justify-center gap-2 w-full py-2.5 border-2 border-primary text-primary hover:bg-primary/5 rounded-xl font-semibold text-sm transition-colors"
                   >
                     📄 View Report
                   </a>
+                ) : (
+                  <div className="mt-auto py-2.5 text-center text-xs text-neutral-300 border border-dashed border-neutral-200 rounded-xl">
+                    No PDF uploaded yet
+                  </div>
                 )}
               </div>
             ))}
-
-            {/* Empty state */}
-            {!settings?.showMyResearch && projects.length === 0 && (
+            
+            {/* Empty state — only when no PDF projects AND no hardcoded research */}
+            {projects.length === 0 && !settings?.showMyResearch && !settings?.showPopulationResearch && (
               <div className="col-span-full text-center py-16 text-neutral-400">
                 No projects published yet.
               </div>
