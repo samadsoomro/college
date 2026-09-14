@@ -152,7 +152,7 @@ const defaultSettings: SiteSettings = {
   projectsDeptHeading: '',
   showMyResearch: false,
   showPopulationResearch: false,
-  showQuantumResearch: false,
+  showQuantumResearch: true,
   myResearchSupervisor: '',
   updatedAt: new Date().toISOString(),
 };

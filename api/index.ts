@@ -254,7 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       projectsDeptHeading: s?.projects_dept_heading || 'Statistics & Computer Science Dept.',
       showMyResearch: slug === 'gcfm' ? (s?.show_my_research ?? true) : false,
       showPopulationResearch: slug === 'gcfm' ? (s?.show_population_research ?? false) : false,
-      showQuantumResearch: slug === 'gcfm' ? (s?.show_quantum_research ?? false) : false,
+      showQuantumResearch: slug === 'gcfm' ? (s?.show_quantum_research ?? true) : false,
       myResearchSupervisor: s?.my_research_supervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
     });
   }
@@ -2062,7 +2062,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       showGovtCollegesStrip: updated.show_govt_colleges_strip || false,
       govtCollegesStripHeading: updated.govt_colleges_strip_heading || 'Govt Colleges',
       showMakerProfile: updated.show_maker_profile || false,
-      showQuantumResearch: updated.show_quantum_research || false
+      showQuantumResearch: updated.show_quantum_research ?? true
     });
   }
 

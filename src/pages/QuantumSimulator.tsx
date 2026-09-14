@@ -477,8 +477,8 @@ const QuantumSimulator = () => {
               <div className="space-y-4">
                 <h3 className="font-semibold text-neutral-700 dark:text-neutral-300">General Qubit State:</h3>
                 <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-5 text-center">
-                  <BlockMath math="|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle" />
-                  <p className="text-sm text-neutral-500 mt-2">where <InlineMath math="|\\alpha|^2 + |\\beta|^2 = 1" /></p>
+                  <BlockMath math={String.raw`|\psi\rangle = \alpha|0\rangle + \beta|1\rangle`} />
+                  <p className="text-sm text-neutral-500 mt-2">where <InlineMath math={String.raw`|\alpha|^2 + |\beta|^2 = 1`} /></p>
                 </div>
 
                 <h3 className="font-semibold text-neutral-700 dark:text-neutral-300 mt-4">BB84 States — Two Bases:</h3>
@@ -486,30 +486,30 @@ const QuantumSimulator = () => {
                   <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
                     <p className="font-bold text-primary text-sm mb-2">Z-Basis (Rectilinear)</p>
                     <div className="text-center space-y-1">
-                      <BlockMath math="|0\\rangle = \\begin{pmatrix} 1 \\\\ 0 \\end{pmatrix}" />
-                      <BlockMath math="|1\\rangle = \\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}" />
+                      <BlockMath math={String.raw`|0\rangle = \begin{pmatrix} 1 \\ 0 \end{pmatrix}`} />
+                      <BlockMath math={String.raw`|1\rangle = \begin{pmatrix} 0 \\ 1 \end{pmatrix}`} />
                     </div>
                   </div>
                   <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
                     <p className="font-bold text-amber-700 dark:text-amber-400 text-sm mb-2">X-Basis (Diagonal)</p>
                     <div className="text-center space-y-1">
-                      <BlockMath math="|+\\rangle = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 \\\\ 1 \\end{pmatrix}" />
-                      <BlockMath math="|-\\rangle = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 \\\\ -1 \\end{pmatrix}" />
+                      <BlockMath math={String.raw`|+\rangle = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ 1 \end{pmatrix}`} />
+                      <BlockMath math={String.raw`|-\rangle = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ -1 \end{pmatrix}`} />
                     </div>
                   </div>
                 </div>
 
                 <h3 className="font-semibold text-neutral-700 dark:text-neutral-300 mt-4">Hadamard Transform:</h3>
                 <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-5">
-                  <BlockMath math="H = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}" />
+                  <BlockMath math={String.raw`H = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}`} />
                   <p className="text-sm text-neutral-500 text-center mt-2">
-                    Applying H converts between Z and X basis: <InlineMath math="H|0\\rangle = |+\\rangle" />, <InlineMath math="H|1\\rangle = |-\\rangle" />
+                    Applying H converts between Z and X basis: <InlineMath math={String.raw`H|0\rangle = |+\rangle`} />, <InlineMath math={String.raw`H|1\rangle = |-\rangle`} />
                   </p>
                 </div>
 
                 <h3 className="font-semibold text-neutral-700 dark:text-neutral-300 mt-4">Wrong Basis Measurement (50/50 rule):</h3>
                 <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-5">
-                  <BlockMath math="P(\\text{error} | \\text{wrong basis}) = \\frac{1}{2}" />
+                  <BlockMath math={String.raw`P(\text{error} | \text{wrong basis}) = \frac{1}{2}`} />
                   <p className="text-sm text-neutral-500 text-center mt-2">
                     When Eve measures in the wrong basis, she gets a random result and introduces errors.
                   </p>
@@ -517,7 +517,7 @@ const QuantumSimulator = () => {
 
                 <h3 className="font-semibold text-neutral-700 dark:text-neutral-300 mt-4">Expected QBER from Eve:</h3>
                 <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-5">
-                  <BlockMath math="QBER \\approx \\frac{p_e}{4}" />
+                  <BlockMath math={String.raw`QBER \approx \frac{p_e}{4}`} />
                   <p className="text-sm text-neutral-500 text-center mt-2">
                     where <InlineMath math="p_e" /> is Eve's interception probability. At 100% interception, expected QBER ≈ 25%.
                   </p>
@@ -756,12 +756,21 @@ const QuantumSimulator = () => {
         {activeTab === 'about' && (
           <div className="space-y-6">
             <Section icon={Info} title="About This Research">
-              <div className="space-y-4">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <h3 className="font-bold text-neutral-800 dark:text-neutral-100 text-lg border-b border-neutral-100 dark:border-neutral-800 pb-2">Conclusion & Recommendations</h3>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                    This classical simulation of the BB84 Quantum Key Distribution protocol demonstrates that quantum cryptography provides unconditional security guaranteed by the laws of quantum mechanics. As eavesdropping directly increases the Quantum Bit Error Rate (QBER), Alice and Bob can definitively detect interception when QBER exceeds the security threshold (typically 11%). 
+                  </p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                    <strong>Recommendations:</strong> Future iterations of this project can explore simulating photon loss, dark counts in avalanche photodiodes, and implementing error correction (Cascade protocol) and privacy amplification to distill the final secret key.
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {[
                     { label: 'Type', value: 'Computational Investigation' },
                     { label: 'Protocol', value: 'BB84 (Bennett-Brassard 1984)' },
-                    { label: 'Language', value: 'TypeScript' },
                     { label: 'Department', value: 'Physics & CS, GCFMN' },
                     { label: 'Simulation', value: 'Classical (not quantum hardware)' },
                     { label: 'Published', value: '2026' },
@@ -774,10 +783,6 @@ const QuantumSimulator = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-3 pt-2">
-                  <a href="https://github.com/samadsoomro/college" target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-900 dark:bg-neutral-700 text-white rounded-xl font-semibold text-sm hover:bg-neutral-700 transition-colors">
-                    💻 GitHub Repository
-                  </a>
                   <PrintButton label="Download Research Report (A4)" />
                 </div>
               </div>
