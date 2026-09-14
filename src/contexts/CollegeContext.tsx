@@ -67,6 +67,7 @@ interface SiteSettings {
   projectsDeptHeading: string;
   showMyResearch: boolean;
   showPopulationResearch: boolean;
+  showQuantumResearch: boolean;
   myResearchSupervisor: string;
   updatedAt: string;
 }
@@ -151,6 +152,7 @@ const defaultSettings: SiteSettings = {
   projectsDeptHeading: '',
   showMyResearch: false,
   showPopulationResearch: false,
+  showQuantumResearch: false,
   myResearchSupervisor: '',
   updatedAt: new Date().toISOString(),
 };

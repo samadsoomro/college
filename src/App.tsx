@@ -34,6 +34,7 @@ import NotFound from "@/pages/NotFound";
 import Projects from "@/pages/Projects";
 import AIResearchStudy from "@/pages/AIResearchStudy";
 import KarachiPopulationModel from "@/pages/KarachiPopulationModel";
+import QuantumSimulator from "@/pages/QuantumSimulator";
 
 import SuperAdminDashboard from "@/pages/SuperAdminDashboard";
 import CollegeLayout from "@/components/layout/CollegeLayout";
@@ -87,6 +88,7 @@ const App = () => (
               <Route path="projects" element={<Projects />} />
               <Route path="projects/ai-study" element={<AIResearchStudy />} />
               <Route path="projects/population-model" element={<KarachiPopulationModel />} />
+              <Route path="projects/quantum-simulator" element={<QuantumSimulator />} />
               <Route path="admin-dashboard/*" element={
                 <ProtectedRoute><AdminDashboard /></ProtectedRoute>
               } />

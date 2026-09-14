@@ -254,6 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       projectsDeptHeading: s?.projects_dept_heading || 'Statistics & Computer Science Dept.',
       showMyResearch: slug === 'gcfm' ? (s?.show_my_research ?? true) : false,
       showPopulationResearch: slug === 'gcfm' ? (s?.show_population_research ?? false) : false,
+      showQuantumResearch: slug === 'gcfm' ? (s?.show_quantum_research ?? false) : false,
       myResearchSupervisor: s?.my_research_supervisor || 'Prof. Munaf & Prof. M. Waqqar Qadri',
     });
   }
@@ -1986,6 +1987,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       projectsDeptHeading: 'projects_dept_heading',
       showMyResearch: 'show_my_research',
       showPopulationResearch: 'show_population_research',
+      showQuantumResearch: 'show_quantum_research',
       myResearchSupervisor: 'my_research_supervisor',
       showGovtCollegesStrip: 'show_govt_colleges_strip',
       govtCollegesStripHeading: 'govt_colleges_strip_heading',
@@ -2001,7 +2003,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (typeof val === 'number' && isNaN(val)) val = null;
       }
       // Handle Boolean fields
-      else if (k === 'cardQrEnabled' || k === 'rbWatermarkEnabled' || k === 'showProjectsMenu' || k === 'showMyResearch' || k === 'showPopulationResearch' || k === 'showGovtCollegesStrip' || k === 'showMakerProfile') {
+      else if (k === 'cardQrEnabled' || k === 'rbWatermarkEnabled' || k === 'showProjectsMenu' || k === 'showMyResearch' || k === 'showPopulationResearch' || k === 'showQuantumResearch' || k === 'showGovtCollegesStrip' || k === 'showMakerProfile') {
         if (v === 'true' || v === true) val = true;
         else if (v === 'false' || v === false) val = false;
         else val = null;
@@ -2059,7 +2061,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contactDescription: updated.contact_description || 'Get in touch with us for official information and student support',
       showGovtCollegesStrip: updated.show_govt_colleges_strip || false,
       govtCollegesStripHeading: updated.govt_colleges_strip_heading || 'Govt Colleges',
-      showMakerProfile: updated.show_maker_profile || false
+      showMakerProfile: updated.show_maker_profile || false,
+      showQuantumResearch: updated.show_quantum_research || false
     });
   }
 

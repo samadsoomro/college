@@ -153,6 +153,60 @@ const Projects = () => {
               </div>
             )}
 
+            {/* Quantum Simulator Research Card — GCFM only */}
+            {collegeSlug === 'gcfm' && settings?.showQuantumResearch && (
+              <div className="col-span-full">
+                <div className="relative bg-gradient-to-br from-slate-900 via-primary/80 to-slate-800 border-2 border-primary/50 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden text-white">
+                  <div className="absolute top-0 right-0 w-32 h-32 border-2 border-white/20 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start">
+                    <div className="flex-1 space-y-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 bg-white/20 border border-white/30 text-white text-xs px-3 py-1.5 rounded-full font-semibold">
+                          <FlaskConical size={12} /> Live Research
+                        </span>
+                        <span className="text-xs text-white/90 bg-white/10 border border-white/20 px-3 py-1.5 rounded-full">
+                          📅 2026
+                        </span>
+                      </div>
+                      <h2 className="text-xl md:text-2xl font-bold text-white leading-tight">
+                        BB84 Quantum Cryptography Simulator
+                      </h2>
+                      <p className="text-white/80 text-sm leading-relaxed max-w-2xl">
+                        A classical computational simulation of the BB84 quantum key distribution (QKD) protocol. Models Alice, Eve, Bob interactions and analyzes Quantum Bit Error Rate (QBER).
+                      </p>
+                      <Link
+                        to={`/${collegeSlug}/projects/quantum-simulator`}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary rounded-xl font-bold text-sm hover:bg-neutral-100 transition-all hover:shadow-lg"
+                      >
+                        ⚛️ View Simulator →
+                      </Link>
+                    </div>
+                    <div className="flex-shrink-0 bg-white/10 border border-white/20 backdrop-blur-sm rounded-2xl p-5 space-y-3 min-w-[220px] shadow-sm">
+                      <p className="text-xs font-semibold text-white/60 uppercase tracking-wide">Researchers</p>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <span>👤</span>
+                          <div>
+                            <p className="font-bold text-white text-sm">Abdul Samad &</p>
+                            <p className="font-bold text-white text-sm">Muhammad Salman Bhatti</p>
+                            <p className="text-xs text-white/70">Class 12 (CS), Batch 2024–2026</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span>🎓</span>
+                          <p className="text-xs text-white/80">Supervised by: Muhammad Javed Akhtar</p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span>🏛️</span>
+                          <p className="text-xs text-white/80">Physics Dept. of GCFMN</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* PDF Project Cards */}
             {projects.map(project => (
               <div key={project.id}
@@ -208,7 +262,7 @@ const Projects = () => {
             ))}
             
             {/* Empty state — only when no PDF projects AND no hardcoded research */}
-            {projects.length === 0 && !settings?.showMyResearch && !settings?.showPopulationResearch && (
+            {projects.length === 0 && !settings?.showMyResearch && !settings?.showPopulationResearch && !settings?.showQuantumResearch && (
               <div className="col-span-full text-center py-16 text-neutral-400">
                 No projects published yet.
               </div>
