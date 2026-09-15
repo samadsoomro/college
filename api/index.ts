@@ -1752,14 +1752,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           {
             folder: `colleges/${slug}/${category || 'uploads'}`,
             resource_type: isPDF ? 'raw' : 'image',
-            // Auto-optimize images:
-            ...(isPDF ? {} : {
+            public_id: `${Date.now()}-${filename.replace(/\.[^.]+$/, '')}`,
+            // Auto-optimize images, and for PDFs - add format to ensure correct URL:
+            ...(isPDF ? { format: 'pdf' } : {
               transformation: [
                 { quality: 'auto', fetch_format: 'webp' },
                 { width: 1200, crop: 'limit' }
               ]
-            }),
-            public_id: `${Date.now()}-${(filename || 'file').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '_')}`
+            })
           },
           (error, result) => {
             if (error) reject(error);
@@ -2965,17 +2965,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (isApi && resource === 'projects' && !sub1 && req.method === 'GET') {
       const colId = await getCollegeId(slug);
       if (!colId) return res.status(404).json({ error: 'College not found' });
-    
+
       const { data, error } = await supabase
         .from('projects')
         .select('*')
         .eq('college_id', colId)
         .eq('is_visible', true)
         .order('created_at', { ascending: false });
-    
-      console.log('[PROJECTS GET]', { slug, colId, count: data?.length, error: error?.message });
-    
-      return res.json(Array.isArray(data) ? data : []);
+
+      if (error) {
+        console.error('[PROJECTS PUBLIC GET ERROR]', error.message);
+        return res.status(500).json({ error: error.message });
+      }
+
+      // Map to camelCase + fix PDF URL missing extension
+      const mapped = (data || []).map((p: any) => {
+        let pdfUrl = p.pdf_url || null;
+        // Append .pdf if Cloudinary raw URL missing extension:
+        if (pdfUrl && !pdfUrl.includes('.pdf') && pdfUrl.includes('/raw/upload/')) {
+          pdfUrl = pdfUrl + '.pdf';
+        }
+        return {
+          id: p.id,
+          title: p.title,
+          researcherName: p.researcher_name,
+          classBatch: p.class_batch || '',
+          supervisor: p.supervisor || '',
+          department: p.department || '',
+          description: p.description || '',
+          pdfUrl,
+          publishDate: p.publish_date,
+          isVisible: p.is_visible,
+          createdAt: p.created_at,
+        };
+      });
+
+      console.log('[PROJECTS PUBLIC]', slug, 'count:', mapped.length);
+      return res.json(mapped);
     }
     
     // GET /api/:slug/admin/projects — admin
@@ -2987,7 +3013,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('projects').select('*')
         .eq('college_id', colId)
         .order('created_at', { ascending: false });
-      return res.json(data || []);
+
+      const mapped = (data || []).map((p: any) => {
+        let pdfUrl = p.pdf_url || null;
+        if (pdfUrl && !pdfUrl.includes('.pdf') && pdfUrl.includes('/raw/upload/')) {
+          pdfUrl = pdfUrl + '.pdf';
+        }
+        return {
+          id: p.id,
+          title: p.title,
+          researcherName: p.researcher_name,
+          classBatch: p.class_batch,
+          supervisor: p.supervisor,
+          department: p.department,
+          description: p.description,
+          pdfUrl,
+          publishDate: p.publish_date,
+          isVisible: p.is_visible,
+          createdAt: p.created_at,
+        };
+      });
+
+      return res.json(mapped);
     }
     
     // POST /api/:slug/admin/projects

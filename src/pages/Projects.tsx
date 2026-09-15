@@ -10,16 +10,23 @@ const Projects = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const res = await fetch(`/api/${collegeSlug}/projects`);
-        if (!res.ok) { setProjects([]); setLoading(false); return; }
-        const data = await res.json();
-        setProjects(Array.isArray(data) ? data : []);
-      } catch { setProjects([]); }
-      setLoading(false);
-    };
-    loadProjects();
+    if (!collegeSlug) return;
+    fetch(`/api/${collegeSlug}/projects`)
+      .then(async res => {
+        const text = await res.text();
+        console.log('[PROJECTS FETCH]', res.status, text.substring(0, 200));
+        try {
+          const data = JSON.parse(text);
+          setProjects(Array.isArray(data) ? data : []);
+        } catch {
+          setProjects([]);
+        }
+      })
+      .catch(err => {
+        console.error('[PROJECTS ERROR]', err);
+        setProjects([]);
+      })
+      .finally(() => setLoading(false));
   }, [collegeSlug]);
 
   return (
@@ -206,58 +213,73 @@ const Projects = () => {
             )}
 
             {/* PDF Project Cards */}
-            {projects.map(project => (
-              <div key={project.id}
-                className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow">
-            
-                <div className="flex items-center justify-between">
-                  <span className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 px-3 py-1 rounded-full font-medium">
-                    📋 Research Project
-                  </span>
-                  {project.publish_date && (
-                    <span className="text-xs text-neutral-400">
-                      {new Date(project.publish_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+            {projects.map(project => {
+              const pdfUrl = project.pdfUrl || project.pdf_url || null;
+              const title = project.title || '';
+              const researcher = project.researcherName || project.researcher_name || '';
+              const classBatch = project.classBatch || project.class_batch || '';
+              const supervisor = project.supervisor || '';
+              const department = project.department || '';
+              const description = project.description || '';
+              const publishDate = project.publishDate || project.publish_date || null;
+
+              return (
+                <div key={project.id}
+                  className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-6 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow">
+                
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-3 py-1 rounded-full font-medium">
+                      📋 Research Project
                     </span>
-                  )}
-                </div>
-            
-                <h3 className="font-bold text-neutral-800 dark:text-neutral-100 text-base leading-snug">
-                  {project.title}
-                </h3>
-            
-                <div className="text-xs text-neutral-500 space-y-1">
-                  {project.researcher_name && (
-                    <p>👤 <span className="font-medium">{project.researcher_name}</span>
-                      {project.class_batch ? ` — ${project.class_batch}` : ''}
+                    {publishDate && (
+                      <span className="text-xs text-neutral-400">
+                        {new Date(publishDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                
+                  {/* Title */}
+                  <h3 className="font-bold text-neutral-800 dark:text-neutral-100 text-base leading-snug">
+                    {title}
+                  </h3>
+                
+                  {/* Details */}
+                  <div className="text-xs text-neutral-500 space-y-1">
+                    {researcher && (
+                      <p>👤 <span className="font-medium">{researcher}</span>
+                        {classBatch ? ` — ${classBatch}` : ''}
+                      </p>
+                    )}
+                    {supervisor && <p>🎓 Supervised by: {supervisor}</p>}
+                    {department && <p>🏛️ {department}</p>}
+                  </div>
+                
+                  {/* Description */}
+                  {description && (
+                    <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed line-clamp-3">
+                      {description}
                     </p>
                   )}
-                  {project.supervisor && <p>🎓 Supervised by: {project.supervisor}</p>}
-                  {project.department && <p>🏛️ {project.department}</p>}
+                
+                  {/* PDF Button */}
+                  {pdfUrl ? (
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-auto inline-flex items-center justify-center gap-2 w-full py-2.5 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors"
+                    >
+                      📄 View Research Report
+                    </a>
+                  ) : (
+                    <div className="mt-auto py-2.5 text-center text-xs text-neutral-300 border border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl">
+                      PDF not uploaded yet
+                    </div>
+                  )}
                 </div>
-            
-                {project.description && (
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed line-clamp-3">
-                    {project.description}
-                  </p>
-                )}
-            
-                {/* PDF View Button — only if pdf_url exists */}
-                {project.pdf_url ? (
-                  <a
-                    href={project.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-auto inline-flex items-center justify-center gap-2 w-full py-2.5 border-2 border-primary text-primary hover:bg-primary/5 rounded-xl font-semibold text-sm transition-colors"
-                  >
-                    📄 View Report
-                  </a>
-                ) : (
-                  <div className="mt-auto py-2.5 text-center text-xs text-neutral-300 border border-dashed border-neutral-200 rounded-xl">
-                    No PDF uploaded yet
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
             
             {/* Empty state — only when no PDF projects AND no hardcoded research */}
             {projects.length === 0 && !settings?.showMyResearch && !settings?.showPopulationResearch && !settings?.showQuantumResearch && (
