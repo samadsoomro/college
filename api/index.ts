@@ -2978,25 +2978,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: error.message });
       }
 
-      // Map to camelCase + fix PDF URL missing extension
+      // Map to keep DB fields intact but fix PDF URL missing extension
       const mapped = (data || []).map((p: any) => {
-        let pdfUrl = p.pdf_url || null;
+        let pdf_url = p.pdf_url || null;
         // Append .pdf if Cloudinary raw URL missing extension:
-        if (pdfUrl && !pdfUrl.includes('.pdf') && pdfUrl.includes('/raw/upload/')) {
-          pdfUrl = pdfUrl + '.pdf';
+        if (pdf_url && !pdf_url.includes('.pdf') && pdf_url.includes('/raw/upload/')) {
+          pdf_url = pdf_url + '.pdf';
         }
         return {
-          id: p.id,
-          title: p.title,
-          researcherName: p.researcher_name,
-          classBatch: p.class_batch || '',
-          supervisor: p.supervisor || '',
-          department: p.department || '',
-          description: p.description || '',
-          pdfUrl,
-          publishDate: p.publish_date,
-          isVisible: p.is_visible,
-          createdAt: p.created_at,
+          ...p,
+          pdf_url,
+          pdfUrl: pdf_url // Include camelCase fallback just in case
         };
       });
 
@@ -3015,22 +3007,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .order('created_at', { ascending: false });
 
       const mapped = (data || []).map((p: any) => {
-        let pdfUrl = p.pdf_url || null;
-        if (pdfUrl && !pdfUrl.includes('.pdf') && pdfUrl.includes('/raw/upload/')) {
-          pdfUrl = pdfUrl + '.pdf';
+        let pdf_url = p.pdf_url || null;
+        if (pdf_url && !pdf_url.includes('.pdf') && pdf_url.includes('/raw/upload/')) {
+          pdf_url = pdf_url + '.pdf';
         }
         return {
-          id: p.id,
-          title: p.title,
-          researcherName: p.researcher_name,
-          classBatch: p.class_batch,
-          supervisor: p.supervisor,
-          department: p.department,
-          description: p.description,
-          pdfUrl,
-          publishDate: p.publish_date,
-          isVisible: p.is_visible,
-          createdAt: p.created_at,
+          ...p,
+          pdf_url,
         };
       });
 
