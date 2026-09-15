@@ -44,14 +44,13 @@ const Projects = () => {
             {/* My Research card ONLY shows on gcfm slug: */}
             {collegeSlug === 'gcfm' && settings?.showMyResearch && (
               <div className="col-span-full">
-                <div className="relative bg-gradient-to-br from-primary/5 via-white to-primary/10 dark:from-primary/10 dark:via-neutral-900 dark:to-primary/5 border-2 border-primary/30 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+                <div className="relative bg-gradient-to-br from-primary/5 via-white to-primary/10 dark:from-primary/10 dark:via-neutral-900 dark:to-primary/5 border-2 border-primary/20 dark:border-primary/30 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2" />
                   <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start">
                     <div className="flex-1 space-y-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex items-center gap-1.5 bg-primary text-white text-xs px-3 py-1.5 rounded-full font-semibold">
-                          🔬 Live Research
+                          <FlaskConical size={12} /> Live Research
                         </span>
                         <span className="text-xs text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-full">
                           📅 June 2026
@@ -67,12 +66,12 @@ const Projects = () => {
                       </p>
                       <Link
                         to={`/${collegeSlug}/projects/ai-study`}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all hover:shadow-lg hover:translate-y-[-1px]"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all hover:shadow-lg hover:-translate-y-0.5"
                       >
-                        🔍 View Live Research <span className="text-lg">→</span>
+                        🔍 View Live Research →
                       </Link>
                     </div>
-                    <div className="flex-shrink-0 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl p-5 space-y-3 min-w-[220px] shadow-sm">
+                    <div className="flex-shrink-0 bg-white dark:bg-neutral-800 border border-primary/10 dark:border-neutral-700 rounded-2xl p-5 space-y-3 min-w-[220px] shadow-sm">
                       <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Researcher</p>
                       <div className="space-y-2">
                         <div className="flex items-start gap-2">
@@ -102,12 +101,12 @@ const Projects = () => {
             {/* Population Research Card — GCFM only, shows after AI research card */}
             {collegeSlug === 'gcfm' && settings?.showPopulationResearch && (
               <div className="col-span-full">
-                <div className="relative bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-green-900/10 dark:via-neutral-900 dark:to-emerald-900/10 border-2 border-green-200 dark:border-green-800 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-green-100/50 rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="relative bg-gradient-to-br from-primary/5 via-white to-primary/10 dark:from-primary/10 dark:via-neutral-900 dark:to-primary/5 border-2 border-primary/20 dark:border-primary/30 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2" />
                   <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start">
                     <div className="flex-1 space-y-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 bg-green-600 text-white text-xs px-3 py-1.5 rounded-full font-semibold">
+                        <span className="inline-flex items-center gap-1.5 bg-primary text-white text-xs px-3 py-1.5 rounded-full font-semibold">
                           <FlaskConical size={12} /> Live Research
                         </span>
                         <span className="text-xs text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-full">
@@ -122,12 +121,12 @@ const Projects = () => {
                       </p>
                       <Link
                         to={`/${collegeSlug}/projects/population-model`}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 transition-all hover:shadow-lg"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all hover:shadow-lg hover:-translate-y-0.5"
                       >
-                        🔍 View Research →
+                        🔍 View Live Research →
                       </Link>
                     </div>
-                    <div className="flex-shrink-0 bg-white dark:bg-neutral-800 border border-green-100 dark:border-neutral-700 rounded-2xl p-5 space-y-3 min-w-[220px] shadow-sm">
+                    <div className="flex-shrink-0 bg-white dark:bg-neutral-800 border border-primary/10 dark:border-neutral-700 rounded-2xl p-5 space-y-3 min-w-[220px] shadow-sm">
                       <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Researchers</p>
                       <div className="space-y-2">
                         <div className="flex items-start gap-2">
@@ -156,49 +155,48 @@ const Projects = () => {
             {/* Quantum Simulator Research Card — GCFM only */}
             {collegeSlug === 'gcfm' && settings?.showQuantumResearch && (
               <div className="col-span-full">
-                <div className="relative bg-gradient-to-br from-slate-900 via-primary/80 to-slate-800 border-2 border-primary/50 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden text-white">
-                  <div className="absolute top-0 right-0 w-32 h-32 border-2 border-white/20 rounded-full -translate-y-1/2 translate-x-1/2" />
+                <div className="relative bg-gradient-to-br from-primary/5 via-white to-primary/10 dark:from-primary/10 dark:via-neutral-900 dark:to-primary/5 border-2 border-primary/20 dark:border-primary/30 rounded-2xl p-6 md:p-8 shadow-lg overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2" />
                   <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start">
                     <div className="flex-1 space-y-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 bg-white/20 border border-white/30 text-white text-xs px-3 py-1.5 rounded-full font-semibold">
+                        <span className="inline-flex items-center gap-1.5 bg-primary text-white text-xs px-3 py-1.5 rounded-full font-semibold">
                           <FlaskConical size={12} /> Live Research
                         </span>
-                        <span className="text-xs text-white/90 bg-white/10 border border-white/20 px-3 py-1.5 rounded-full">
-                          📅 2026
+                        <span className="text-xs text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-full">
+                          📅 September 2026
                         </span>
                       </div>
-                      <h2 className="text-xl md:text-2xl font-bold text-white leading-tight">
+                      <h2 className="text-xl md:text-2xl font-bold text-neutral-800 dark:text-neutral-100 leading-tight">
                         BB84 Quantum Cryptography Simulator
                       </h2>
-                      <p className="text-white/80 text-sm leading-relaxed max-w-2xl">
+                      <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed max-w-2xl">
                         A classical computational simulation of the BB84 quantum key distribution (QKD) protocol. Models Alice, Eve, Bob interactions and analyzes Quantum Bit Error Rate (QBER).
                       </p>
                       <Link
                         to={`/${collegeSlug}/projects/quantum-simulator`}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-white text-primary rounded-xl font-bold text-sm hover:bg-neutral-100 transition-all hover:shadow-lg"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all hover:shadow-lg hover:-translate-y-0.5"
                       >
                         ⚛️ View Simulator →
                       </Link>
                     </div>
-                    <div className="flex-shrink-0 bg-white/10 border border-white/20 backdrop-blur-sm rounded-2xl p-5 space-y-3 min-w-[220px] shadow-sm">
-                      <p className="text-xs font-semibold text-white/60 uppercase tracking-wide">Researchers</p>
+                    <div className="flex-shrink-0 bg-white dark:bg-neutral-800 border border-primary/10 dark:border-neutral-700 rounded-2xl p-5 space-y-3 min-w-[220px] shadow-sm">
+                      <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Researcher</p>
                       <div className="space-y-2">
                         <div className="flex items-start gap-2">
                           <span>👤</span>
                           <div>
-                            <p className="font-bold text-white text-sm">Abdul Samad &</p>
-                            <p className="font-bold text-white text-sm">Muhammad Salman Bhatti</p>
-                            <p className="text-xs text-white/70">Class 12 (CS), Batch 2024–2026</p>
+                            <p className="font-bold text-neutral-800 dark:text-neutral-100 text-sm">Muhammad Salman Bhatti</p>
+                            <p className="text-xs text-neutral-500">Class 12 (CS), Batch 2024–2026</p>
                           </div>
                         </div>
                         <div className="flex items-start gap-2">
                           <span>🎓</span>
-                          <p className="text-xs text-white/80">Supervised by: Muhammad Javed Akhtar</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">Supervised by: Muhammad Javed Akhtar</p>
                         </div>
                         <div className="flex items-start gap-2">
                           <span>🏛️</span>
-                          <p className="text-xs text-white/80">Physics Dept. of GCFMN</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">Physics Dept. of GCFMN</p>
                         </div>
                       </div>
                     </div>

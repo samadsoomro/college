@@ -176,7 +176,7 @@ const QuantumSimulator = () => {
               A classical computational simulation of the BB84 quantum key distribution (QKD) protocol.
             </p>
             <div style={{ display: 'flex', gap: '16px', fontSize: '9pt', color: 'rgba(255,255,255,0.7)', marginTop: '8px' }}>
-              <span>Researcher: Abdul Samad</span>
+              <span>Researcher: Muhammad Salman Bhatti</span>
               <span>•</span>
               <span>Class 12 (CS), Batch 2024–2026</span>
               <span>•</span>
@@ -227,7 +227,7 @@ const QuantumSimulator = () => {
             <div className="flex flex-wrap gap-4 pt-3 border-t border-white/20 text-sm text-white/85">
               <span className="inline-flex items-center gap-1.5">
                 <Users size={14} />
-                <strong>Abdul Samad & Muhammad Salman Bhatti</strong> — Class 12 (CS), Batch 2024–2026
+                <strong>Muhammad Salman Bhatti</strong> - Class 12 (CS), Batch 2024–2026
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <BookOpen size={14} /> Supervised by: Muhammad Javed Akhtar, Physics Dept., GCFMN
