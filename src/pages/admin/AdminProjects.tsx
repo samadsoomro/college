@@ -457,6 +457,12 @@ const AdminProjects = () => {
               {proj.supervisor && <p className="text-xs text-neutral-400">🎓 {proj.supervisor}</p>}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              {proj.pdf_url && (
+                <a href={proj.pdf_url} target="_blank" rel="noopener noreferrer"
+                  className="px-2 py-1 bg-primary text-white rounded text-xs font-medium inline-flex items-center gap-1">
+                  📄 View Results
+                </a>
+              )}
               <button onClick={() => toggleVisibility(proj)}
                 className={`px-2 py-1 rounded text-xs font-medium ${proj.is_visible ? 'bg-neutral-100 text-neutral-600' : 'bg-green-100 text-green-700'}`}>
                 {proj.is_visible ? '👁️ Hide' : '👁️ Show'}

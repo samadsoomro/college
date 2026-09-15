@@ -2970,7 +2970,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('projects')
         .select('*')
         .eq('college_id', colId)
-        .eq('is_visible', true)
         .order('created_at', { ascending: false });
 
       if (error) {
