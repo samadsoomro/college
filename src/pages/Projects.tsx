@@ -146,7 +146,7 @@ const Projects = () => {
                         </div>
                         <div className="flex items-start gap-2">
                           <span>🎓</span>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400">Supervised by: Prof. Nazeer Ahmed, Head of Maths Dept.</p>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400">Supervised by: Prof. Muhammad Ali , Associate Professor, Maths Dept.</p>
                         </div>
                         <div className="flex items-start gap-2">
                           <span>🏛️</span>
