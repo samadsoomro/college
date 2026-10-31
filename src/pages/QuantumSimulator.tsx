@@ -182,7 +182,7 @@ const QuantumSimulator = () => {
               <span>•</span>
               <span>Supervised by: Muhammad Javed Akhtar</span>
               <span>•</span>
-              <span>September 2026</span>
+              <span>March 2026</span>
             </div>
           </div>
         </div>
@@ -203,7 +203,7 @@ const QuantumSimulator = () => {
                 <Microscope size={12} /> Physics & CS Dept. — GCFMN
               </span>
               <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/20 text-white/90 text-xs px-3 py-1.5 rounded-full">
-                <Calendar size={12} /> 2026
+                <Calendar size={12} /> March 2026
               </span>
             </div>
             <div>
@@ -773,7 +773,7 @@ const QuantumSimulator = () => {
                     { label: 'Protocol', value: 'BB84 (Bennett-Brassard 1984)' },
                     { label: 'Department', value: 'Physics & CS, GCFMN' },
                     { label: 'Simulation', value: 'Classical (not quantum hardware)' },
-                    { label: 'Published', value: '2026' },
+                    { label: 'Published', value: 'March 2026' },
                   ].map(({ label, value }) => (
                     <div key={label} className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-3">
                       <p className="text-xs text-neutral-400">{label}</p>
@@ -792,7 +792,7 @@ const QuantumSimulator = () => {
 
         {/* Print Footer */}
         <div className="print-footer hidden">
-          Govt. College for Men Nazimabad (GCFMN), Karachi • Physics & CS Department • 2026 •
+          Govt. College for Men Nazimabad (GCFMN), Karachi • Physics & CS Department • March 2026 •
           Live at: govt-college-formen.vercel.app/projects/quantum-simulator
         </div>
 

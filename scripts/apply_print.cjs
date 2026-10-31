@@ -47,7 +47,7 @@ function processKarachi() {
               Abdul Samad & Muhammad Salman Bhatti — Class 12 (Mathematics), Batch 2024–2026
             </p>
             <p style={{ color: '#94a3b8', fontSize: '9pt', marginTop: '4px' }}>
-              Supervised by: [Prof. Name], Lecturer Mathematics, GCFMN • Published: August 2026
+              Supervised by: [Prof. Name], Lecturer Mathematics, GCFMN • Published: December 2025
             </p>
             <p style={{ color: '#94a3b8', fontSize: '9pt' }}>
               Mathematics Department — Govt. College for Men Nazimabad, Karachi
@@ -69,7 +69,7 @@ function processKarachi() {
   const footerMarker = `{/* Footer */}`;
   const newFooter = `{/* Print Footer — shows only when printing */}
         <div className="print-footer hidden">
-          Govt. College for Men Nazimabad (GCFMN), Karachi • Mathematics Department • August 2026 •
+          Govt. College for Men Nazimabad (GCFMN), Karachi • Mathematics Department • December 2025 •
           Live at: college-managment-system-coral.vercel.app/gcfm/projects/karachi-population-model
         </div>
 

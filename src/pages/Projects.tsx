@@ -117,7 +117,7 @@ const Projects = () => {
                           <FlaskConical size={12} /> Live Research
                         </span>
                         <span className="text-xs text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-full">
-                          📅 August 2026
+                          📅 December 2025
                         </span>
                       </div>
                       <h2 className="text-xl md:text-2xl font-bold text-neutral-800 dark:text-neutral-100 leading-tight">
@@ -171,7 +171,7 @@ const Projects = () => {
                           <FlaskConical size={12} /> Live Research
                         </span>
                         <span className="text-xs text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-full">
-                          📅 September 2026
+                          📅 March 2026
                         </span>
                       </div>
                       <h2 className="text-xl md:text-2xl font-bold text-neutral-800 dark:text-neutral-100 leading-tight">

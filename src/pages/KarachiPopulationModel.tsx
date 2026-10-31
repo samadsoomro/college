@@ -137,7 +137,7 @@ const KarachiPopulationModel = () => {
               Abdul Samad & Muhammad Salman Bhatti — Class 12 (Mathematics), Batch 2024–2026
             </p>
             <p style={{ color: '#94a3b8', fontSize: '9pt', marginTop: '4px' }}>
-              Supervised by: Prof. Muhammd Ali,Associate Professor, Maths Dept., GCFMN • Published: August 2026
+              Supervised by: Prof. Muhammd Ali,Associate Professor, Maths Dept., GCFMN • Published: December 2025
             </p>
             <p style={{ color: '#94a3b8', fontSize: '9pt' }}>
               Mathematics Department — Govt. College for Men Nazimabad, Karachi
@@ -160,7 +160,7 @@ const KarachiPopulationModel = () => {
                 <BarChart3 size={12} /> Mathematics Dept. — GCFMN
               </span>
               <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/20 text-white/90 text-xs px-3 py-1.5 rounded-full">
-                <Calendar size={12} /> August 2026
+                <Calendar size={12} /> December 2025
               </span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold leading-tight">
@@ -448,14 +448,14 @@ const KarachiPopulationModel = () => {
           <div style={{ marginBottom: '8px', fontWeight: 'bold', color: 'black' }}>
             Researcher Details: Abdul Samad & Muhammad Salman Bhatti — Class 12 (Mathematics), Batch 2024–2026
           </div>
-          Govt. College for Men Nazimabad (GCFMN), Karachi • Mathematics Department • August 2026 •
+          Govt. College for Men Nazimabad (GCFMN), Karachi • Mathematics Department • December 2025 •
           Live at: college-managment-system-coral.vercel.app/gcfm/projects/population-model
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-center gap-2 text-xs text-neutral-400 dark:text-neutral-500 pb-8">
           <FlaskConical size={12} />
-          <span>Research conducted at GCFMN, Karachi • Mathematics Department • August 2026</span>
+          <span>Research conducted at GCFMN, Karachi • Mathematics Department • December 2025</span>
         </div>
 
       </div>
