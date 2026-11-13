@@ -280,10 +280,18 @@ const Footer: React.FC = () => {
       <div className="border-t border-white/10 py-6">
         <div className="container">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-white/70 text-sm text-center md:text-left">
-              © {currentYear} {settings.instituteShortName}. All rights
-              reserved.
-            </p>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-1">
+              <p className="text-white/70 text-sm text-center md:text-left">
+                © {currentYear} {settings.instituteShortName}. All rights
+                reserved.
+              </p>
+              <button
+                onClick={() => window.dispatchEvent(new Event('open-cookie-settings'))}
+                className="text-xs text-white/50 hover:text-white/80 underline"
+              >
+                Cookie Settings
+              </button>
+            </div>
             <p className="text-white/70 text-sm text-center md:text-right">
               {settings.footerTagline}
             </p>

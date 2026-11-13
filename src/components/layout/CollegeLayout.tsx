@@ -7,6 +7,7 @@ import Footer from "./Footer";
 import ScrollToTop from "../common/ScrollToTop";
 import BackToTop from "../common/BackToTop";
 import SplashScreen from "../common/SplashScreen";
+import { CookieBanner } from '@/components/CookieBanner';
 
 const CollegeLayoutContent: React.FC = () => {
   const location = useLocation();
@@ -28,6 +29,7 @@ const CollegeLayoutContent: React.FC = () => {
       </main>
       {!isAdminRoute && <Footer />}
       {!isAdminRoute && <BackToTop />}
+      {!isAdminRoute && <CookieBanner />}
     </div>
   );
 };
